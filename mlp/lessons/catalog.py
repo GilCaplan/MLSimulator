@@ -345,8 +345,67 @@ NEW_LESSONS = {
     },
 }
 
+NEW_LESSONS.update({
+    "convolutions": {
+        "id": "convolutions", "stage": "Vision", "emoji": "🔍", "title": "Convolutions: seeing shapes anywhere",
+        "tagline": "Treat a picture as a table of pixels and the model can't recognise a shape that moved.",
+        "modeled_on": "Galaxy morphology classification (SDSS) — shapes stand in for galaxy types",
+        "learn": [
+            {"icon": "🔢", "heading": "A picture is a grid of numbers", "body": "A 32×32 colour image is 3,072 numbers. A classic model like logistic regression or a random forest treats each one as a separate column: 'pixel 517 is bright'."},
+            {"icon": "📍", "heading": "Pixels-as-a-table can't generalise position", "body": "If a star appeared top-left during training, pixel-based models learn 'stars light up the top-left pixels'. Show them a star at the bottom-right and they've never seen those pixels light up."},
+            {"icon": "🔦", "heading": "Convolutions slide a pattern detector", "body": "A **convolution filter** is a tiny 3×3 pattern (an edge, a corner, a colour blob) that slides over the whole image and lights up wherever it matches. The *same* detector works everywhere — that's **weight sharing**."},
+            {"icon": "🧱", "heading": "Stacking layers", "body": "Early filters find edges, later ones combine them into corners and points, and **global average pooling** asks 'did this pattern appear anywhere?' — so the network recognises a star wherever it is."},
+        ],
+        "demo": "convolutions",
+        "demo_caption": "Slide a filter across the picture and watch where it lights up — then move the shape and compare a pixel model with a convolution.",
+        "quiz": [
+            {"q": "Why does a logistic regression on raw pixels struggle when objects move around the image?",
+             "options": ["It's too slow", "Each pixel is a separate feature, so a shape in a new place lights up pixels it never learned about", "It can't handle colour", "It needs more classes"],
+             "answer": 1, "explain": "Pixel models tie what they learn to exact positions."},
+            {"q": "What makes a convolution layer work at any position?",
+             "options": ["It has a weight per pixel", "The same small filter is applied across the whole image (weight sharing)", "It uses decision trees", "It removes colour"],
+             "answer": 1, "explain": "One detector, slid everywhere."},
+        ],
+        "challenge": {
+            "title": "Shape spotter", "dataset_name": "Shapes anywhere (practice)",
+            "story": "A telescope team sorts objects by shape. Their models treat each image as 3,072 independent pixel columns — and they barely beat guessing because the shapes show up anywhere in the frame.",
+            "task": "Classify shapes in new images with at least 70% accuracy.",
+            "hints": ["Train once: how do the 'pixels as a table' models do compared with the 25% baseline?", "Which model in the gallery is built for pictures?", "Add the **Image CNN** (or Tiny ResNet) on the Models step and train again."],
+            "solution": "Logistic regression and random forests stay near 24–38%. A CNN with global average pooling recognises the shapes anywhere: ≈90%.",
+        },
+    },
+    "augmentation": {
+        "id": "augmentation", "stage": "Vision", "emoji": "🔄", "title": "Data augmentation",
+        "tagline": "Teach the model what doesn't change the answer.",
+        "modeled_on": "Image classification with limited, tidy training photos",
+        "learn": [
+            {"icon": "📸", "heading": "Training photos are too tidy", "body": "All training shapes are **centred and upright**. Real photos aren't: things are off-centre, rotated, darker or partly hidden."},
+            {"icon": "🤔", "heading": "The model only knows what it saw", "body": "A CNN trained on upright squares has never seen a square standing on its corner. To it, a rotated square may look like a new shape."},
+            {"icon": "🔄", "heading": "Augmentation", "body": "While training, randomly **rotate, shift, flip, brighten or cut out** parts of each image. The label stays the same, so the model learns that these changes *don't matter*. It's free extra data."},
+            {"icon": "⚠️", "heading": "Only label-preserving changes", "body": "Flipping a cat is fine; flipping an arrow pointing left makes it point right — a different label! Pick augmentations that keep the answer the same. Augmentation applies to neural nets during training only."},
+        ],
+        "demo": "augmentation",
+        "demo_caption": "Turn augmentations on and watch one training photo multiply into many variations — and see how a model trained with them handles rotated shapes.",
+        "quiz": [
+            {"q": "Your digit classifier is trained on centred digits but users upload off-centre ones. What helps?",
+             "options": ["Fewer epochs", "Random shift augmentation during training", "Grayscale", "A bigger test set"],
+             "answer": 1, "explain": "Shifting during training teaches position doesn't matter."},
+            {"q": "Which augmentation would be WRONG for classifying left vs right arrows?",
+             "options": ["Brightness", "Small shifts", "Horizontal flips", "Cutout"],
+             "answer": 2, "explain": "A horizontal flip turns a left arrow into a right arrow — it changes the label."},
+        ],
+        "challenge": {
+            "title": "Shapes in the wild", "dataset_name": "Tidy shapes (practice)",
+            "story": "Every training photo shows a shape **centred and upright**. In the field, shapes appear anywhere and at any angle — and the current CNN gets confused.",
+            "task": "Train a model that recognises shapes at any position and angle (≥ 80% on real-world photos).",
+            "hints": ["Look at the training gallery on the Images step — what do all the photos have in common?", "On **Prepare → Augmentation**, add random rotation and shift.", "Try rotation up to 180° and shift around 30%, then train the CNN again."],
+            "solution": "Without augmentation the CNN reaches ≈66% on shifted, rotated shapes. With rotation + shift augmentation it reaches ≈85–94% — same data, same model.",
+        },
+    },
+})
+
 ORDER = ["baselines", "missing", "outliers", "leakage", "features", "splits", "scaling", "imbalance", "overfitting",
-         "calibration", "shortcut", "fairness"]
+         "calibration", "shortcut", "fairness", "convolutions", "augmentation"]
 _by_id = {l["id"]: l for l in LESSONS} | NEW_LESSONS
 LESSONS = [{**_by_id[i], "order": n + 1} for n, i in enumerate(ORDER)]
 LESSON_INDEX = {l["id"]: l for l in LESSONS}

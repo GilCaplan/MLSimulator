@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import shutil
+
+import numpy as np
 import threading
 import time
 
@@ -13,7 +15,7 @@ from ..core.jobs import manager
 from ..core.registry import MODEL_INDEX, defaults
 from ..core.store import datasets, new_id, prepared_store, projects
 from ..lessons.catalog import LESSON_INDEX, LESSONS
-from ..lessons.generators import GENERATORS
+from ..lessons.generators import GENERATORS, IMAGE_LESSONS
 from ..lessons.grading import CHALLENGES, goal_label, grade
 from ..util.jsonable import jsonable
 
@@ -85,13 +87,17 @@ def set_progress(lid: str, body: dict = Body(...)):
 def start_challenge(lid: str):
     lesson, ch = LESSON_INDEX[lid], CHALLENGES[lid]
     train, _ = GENERATORS[lid](seed=DATA_SEED)
-    did = datasets.put(train, {"name": lesson["challenge"]["dataset_name"], "source": "lesson", "lesson": lid,
-                               "task_hint": ch["task"], "target_hint": ch["target"]})
+    meta = {"name": lesson["challenge"]["dataset_name"], "source": "lesson", "lesson": lid, "task_hint": ch["task"], "target_hint": ch["target"]}
+    if lid in IMAGE_LESSONS:
+        did = datasets.put(train.frame, meta, images=train.images)
+    else:
+        did = datasets.put(train, meta)
     models = []
     for mid in ch["preset_models"]:
         params = {**defaults(mid), **ch.get("preset_params", {}).get(mid, {})}
         models.append({"key": new_id("m"), "model_id": mid, "params": params, "nn_arch": MODEL_INDEX[mid].get("default_arch")})
     project = projects.create({"name": f"{lesson['emoji']} {lesson['challenge']['title']}", "task": ch["task"], "step": "data",
+                               "modality": ch.get("modality", "tabular"),
                                "dataset_id": did, "target": ch["target"], "pipeline": ch.get("preset_pipeline") or None,
                                "models": models, "challenge": {"lesson_id": lid}})
     prog = _progress().get(lid, {})
@@ -127,8 +133,11 @@ def check(lid: str, body: dict = Body(...)):
         shutil.copy(src, d / "model.joblib")
         joblib.dump(prepared.preprocessor, d / "preprocessor.joblib")
     train, hidden = GENERATORS[lid](seed=DATA_SEED)
-    frame = hidden.drop(columns=[ch["target"]])
-    out = procs.call(res["family"], "predict_frame", model_dir=str(d), frame=frame)
+    if lid in IMAGE_LESSONS:
+        out = procs.call(res["family"], "predict_arrays", model_dir=str(d), images=np.asarray(hidden.images))
+        hidden, train = hidden.frame, train.frame
+    else:
+        out = procs.call(res["family"], "predict_frame", model_dir=str(d), frame=hidden.drop(columns=[ch["target"]]))
     baseline_value = float(train[ch["target"]].mean()) if ch["task"] == "regression" else None
     try:
         graded = grade(lid, hidden, out["predictions"], out.get("probabilities"), out.get("classes"),

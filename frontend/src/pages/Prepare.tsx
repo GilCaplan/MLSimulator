@@ -5,6 +5,7 @@ import { CleanCard } from "../components/prepare/CleanCard";
 import { EncodeCard, OutliersCard } from "../components/prepare/EncodeOutliersCards";
 import { FeaturesCard } from "../components/prepare/features/FeaturesCard";
 import { FlowStrip } from "../components/prepare/FlowStrip";
+import { ImagePrepareStep } from "../components/prepare/image/ImagePrepareStep";
 import { Results, ResultsSkeleton } from "../components/prepare/Results";
 import { SelectCard, TargetCard } from "../components/prepare/SelectTargetCards";
 import { ScaleCard, SplitCard } from "../components/prepare/SplitScaleCards";
@@ -22,6 +23,11 @@ const DEFAULT_OPEN: Record<StageId, boolean> = {
 };
 
 export function PrepareStep() {
+  const image = useProject((s) => s.project?.modality === "image");
+  return image ? <ImagePrepareStep /> : <TabularPrepareStep />;
+}
+
+function TabularPrepareStep() {
   const project = useProject((s) => s.project);
   const dataset = useProject((s) => s.dataset);
   const report = useProject((s) => s.report);

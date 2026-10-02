@@ -46,15 +46,18 @@ export function Templates() {
                 {t.emoji}
               </motion.span>
               {busy === t.id ? <Spinner size={18} color="var(--accent)" /> : (
+                <span className="row" style={{ gap: 4 }}>
+                {t.modality === "image" && <span className="badge" title="Learns from pictures" style={{ padding: "0 7px" }}>🖼️</span>}
                 <span className={`badge ${t.task === "classification" ? "accent" : ""}`} style={t.task === "regression" ? { background: "rgba(191,90,242,.16)", color: "var(--accent-2)" } : undefined}>
                   {t.task === "classification" ? "Classification" : "Regression"}
+                </span>
                 </span>
               )}
             </div>
             <b style={{ fontSize: 15, letterSpacing: "-0.01em" }}>{t.title}</b>
             <span className="small muted" style={{ lineHeight: 1.45 }}>{t.blurb}</span>
             <div className="grow" />
-            <span className="tiny faint">{busy === t.id ? "Setting things up…" : `${t.models.length} models · opens on Models →`}</span>
+            <span className="tiny faint">{busy === t.id ? (t.imageSet ? "Drawing the pictures…" : "Setting things up…") : `${t.models.length} models · opens on Models →`}</span>
           </motion.button>
         ))}
       </motion.div>

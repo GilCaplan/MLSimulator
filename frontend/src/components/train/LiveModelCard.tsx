@@ -5,7 +5,8 @@ import { colorAt } from "../../lib/colors";
 import { useProject, type LiveModel } from "../../lib/store";
 import { Glass, ProgressBar, ProgressRing, Tooltip } from "../glass";
 import { LineChart, type Series } from "../charts";
-import { NetworkDiagram, archToLayers } from "../nn/NetworkDiagram";
+import { NetworkDiagram } from "../nn/NetworkDiagram";
+import { alignWeights, diagramLayers } from "./archLayers";
 import { archFor, fmtMetric, nFeatures, nOutputs, primaryMetric } from "./util";
 
 const STATE: Record<LiveModel["state"], { label: string; cls: string; color: string }> = {
@@ -40,7 +41,9 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
   const st = STATE[m.state];
   const metric = primaryMetric(project?.task);
   const cfg = project?.models.find((c) => c.key === m.key);
-  const layers = useMemo(() => (m.nn ? archToLayers(archFor(cfg ?? { model_id: m.model_id, nn_arch: null }), nFeatures(), nOutputs()) : null), [m.nn, cfg, m.model_id]);
+  const imageShape = useProject((s) => s.report?.image_shape);
+  const layers = useMemo(() => (m.nn ? diagramLayers(archFor(cfg ?? { model_id: m.model_id, nn_arch: null }), nFeatures(), nOutputs(), imageShape) : null), [m.nn, cfg, m.model_id, imageShape]);
+  const weights = useMemo(() => (layers ? alignWeights(m.weights, layers) : undefined), [layers, m.weights]);
   const { series, kind } = curveSeries(m.points);
   const active = m.state === "running" || m.state === "evaluating";
   const indeterminate = m.state === "running" && !m.epochs && (!m.iter || m.iter.n === 0);
@@ -83,7 +86,7 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
         <div style={{ display: m.nn ? "grid" : "block", gridTemplateColumns: m.nn ? "minmax(0, 1fr) minmax(0, 1fr)" : undefined, gap: 14 }}>
           {m.nn && layers && (
             <div className="inset" style={{ padding: 6, overflow: "hidden" }}>
-              <NetworkDiagram layers={layers} height={170} compact training={m.state === "running"} weights={m.weights} speed={1.3} />
+              <NetworkDiagram layers={layers} height={170} compact training={m.state === "running"} weights={weights} speed={1.3} />
               <div className="tiny faint" style={{ textAlign: "center", marginTop: -2 }}>
                 {m.weights ? "Lines = learned weights · blue positive, pink negative" : "Network warming up…"}
               </div>

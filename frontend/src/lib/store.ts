@@ -34,6 +34,7 @@ export function defaultPipeline(target: string, task: Task): PipelineSpec {
     target_transform: "none",
     dedupe: { enabled: false },
     features: [],
+    image: { size: 32, grayscale: false, augment: {} },
     target_filter: { enabled: false, min: null, max: null },
   };
 }

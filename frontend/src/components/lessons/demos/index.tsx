@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
+import { AugmentationDemo } from "./AugmentationDemo";
 import { BaselinesDemo } from "./BaselinesDemo";
 import { CalibrationDemo } from "./CalibrationDemo";
+import { ConvolutionsDemo } from "./ConvolutionsDemo";
 import { FairnessDemo } from "./FairnessDemo";
 import { FeaturesDemo } from "./FeaturesDemo";
 import { ImbalanceDemo } from "./ImbalanceDemo";
@@ -32,4 +34,6 @@ export const DEMOS: Record<string, ComponentType<DemoProps>> = {
   splits: SplitsDemo,
   features: FeaturesDemo,
   calibration: CalibrationDemo,
+  convolutions: ConvolutionsDemo,
+  augmentation: AugmentationDemo,
 };

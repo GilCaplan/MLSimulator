@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { EmptyState, Glass, ProgressRing } from "../components/glass";
 import { BatchPredict } from "../components/library/BatchPredict";
+import { ImagePlayground } from "../components/library/ImagePlayground";
 import { Performance } from "../components/library/Performance";
 import { Playground } from "../components/library/Playground";
 import { Recipe } from "../components/library/Recipe";
@@ -12,6 +13,12 @@ import { pct, timeAgo } from "../lib/format";
 import { navigate } from "../lib/router";
 import { toast } from "../lib/store";
 import type { SavedModel } from "../lib/types";
+
+const IMAGE_JUMPS = [
+  { id: "try", label: "🎨 Try it live" },
+  { id: "performance", label: "🏆 Performance" },
+  { id: "recipe", label: "📜 Recipe" },
+];
 
 const JUMPS = [
   { id: "try", label: "🎮 Try it live" },
@@ -49,7 +56,8 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
             <span className={`badge ${task.badge}`}>{task.icon} {task.label}</span>
             <span className="badge">{spec?.emoji ?? "⚙️"} {model.label}</span>
             <span className="badge">{model.family === "torch" ? "🔥 PyTorch neural net" : "🧰 scikit-learn"}</span>
-            {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} rows` : ""}</span>}
+            {model.modality === "image" && <span className="badge accent">🖼️ Image model{model.image_shape ? ` · ${model.image_shape[2]}×${model.image_shape[1]}` : ""}</span>}
+            {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} ${model.modality === "image" ? "pictures" : "rows"}` : ""}</span>}
             {model.n_params != null && <span className="badge accent">🧮 {model.n_params.toLocaleString()} params</span>}
             <span className="badge">🕒 saved {timeAgo(model.created_at)}</span>
           </div>
@@ -123,13 +131,19 @@ export function ModelPage({ modelId }: { modelId: string }) {
       <Header model={model} onPatch={patch} />
       <motion.nav variants={rise} className="row wrap" style={{ gap: 6, position: "sticky", top: 0, zIndex: 5, pointerEvents: "none" }}>
         <div className="glass strong row" style={{ padding: 4, gap: 2, borderRadius: 999, pointerEvents: "auto" }}>
-          {JUMPS.map((j) => (
+          {(model.modality === "image" ? IMAGE_JUMPS : JUMPS).map((j) => (
             <button key={j.id} className="btn ghost sm" onClick={() => jump(j.id)}>{j.label}</button>
           ))}
         </div>
       </motion.nav>
-      <Playground key={model.id} model={model} />
-      <BatchPredict model={model} />
+      {model.modality === "image" ? (
+        <ImagePlayground key={model.id} model={model} />
+      ) : (
+        <>
+          <Playground key={model.id} model={model} />
+          <BatchPredict model={model} />
+        </>
+      )}
       <Performance model={model} />
       <Recipe model={model} />
     </PageFrame>

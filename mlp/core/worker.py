@@ -113,6 +113,14 @@ def serve_entry(conn, family: str):
             from .nn.builder import summarize
             return summarize(kw["arch"], kw["n_features"], kw["n_out"], kw.get("image_shape"))
         pp, est = load(kw["model_dir"])
+        if op == "predict_arrays":
+            X = pp.transform(np.asarray(kw["images"]))
+            pred = est.predict(X)
+            out = {"predictions": [v.item() if hasattr(v, "item") else v for v in pp.decode_y(pred)]}
+            if pp.task == "classification" and hasattr(est, "predict_proba"):
+                out["probabilities"] = np.round(np.asarray(est.predict_proba(X)), 4).tolist()
+                out["classes"] = pp.classes
+            return out
         if op == "predict_image":
             from .images import decode_data_uri, png_data_uri
             imgs = [decode_data_uri(u) for u in kw["images"]]

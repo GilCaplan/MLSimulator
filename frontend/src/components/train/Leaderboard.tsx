@@ -53,7 +53,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
       <div className="row between wrap" style={{ marginBottom: 14, gap: 10 }}>
         <div className="col" style={{ gap: 2 }}>
           <h3>🏆 Leaderboard</h3>
-          <span className="small muted">Scored on test rows none of the models saw while learning. Click a row for the full report.</span>
+          <span className="small muted">Scored on test {project?.modality === "image" ? "pictures" : "rows"} none of the models saw while learning. Click a row for the full report.</span>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <span className="small muted">Rank by</span>

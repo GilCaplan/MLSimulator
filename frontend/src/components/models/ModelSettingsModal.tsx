@@ -6,7 +6,8 @@ import { Modal } from "../glass";
 import { ArchPreview } from "./ArchPreview";
 import { GcnBuilder, TransformerBuilder } from "./ArchBuilders";
 import { LayerBuilder } from "./LayerBuilder";
-import { badgesFor, familyOf } from "./meta";
+import { badgesFor, familyOf, modalityOf } from "./meta";
+import { ResNetBuilder } from "./VisionBuilders";
 
 /** Write a patch back into one ModelConfig of the current project (debounced autosave via the store). */
 export function patchModel(key: string, patch: Partial<ModelConfig>) {
@@ -55,7 +56,7 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
               <div className="row wrap" style={{ gap: 8 }}>
                 <h3 style={{ fontSize: 20 }}>{label ?? spec.label}</h3>
                 {!spec.nn && <span className="badge">{familyOf(spec.family)?.icon} {spec.family}</span>}
-                {badgesFor(spec).map((b) => <span key={b.text} className={`badge ${b.tone}`}>{b.text}</span>)}
+                {badgesFor(spec, modalityOf(project?.modality)).map((b) => <span key={b.text} className={`badge ${b.tone}`}>{b.text}</span>)}
               </div>
               <p className="muted small" style={{ lineHeight: 1.5, maxWidth: 640 }}>{spec.description}</p>
             </div>
@@ -71,6 +72,7 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
                 <div className="col" style={{ gap: 12 }}>
                   {arch.kind === "ft_transformer" ? <TransformerBuilder arch={arch} onChange={setArch} />
                     : arch.kind === "gcn" ? <GcnBuilder arch={arch} onChange={setArch} />
+                    : arch.kind === "tiny_resnet" ? <ResNetBuilder arch={arch} onChange={setArch} />
                     : <LayerBuilder arch={arch} onChange={setArch} />}
                 </div>
                 <div style={{ position: "sticky", top: 0 }}>

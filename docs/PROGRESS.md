@@ -1,6 +1,6 @@
 # Build progress & resume checkpoint
 
-_Last updated: 2026-10-01 (session 1). If a session ends mid-task, start here._
+_Last updated: 2026-10-02 (session 2). If a session ends mid-task, start here._
 
 ## Done
 - v1 app: tabular classification/regression wizard, 17 classic models + 5 PyTorch nets, synthetic/sample/upload data,
@@ -11,14 +11,26 @@ _Last updated: 2026-10-01 (session 1). If a session ends mid-task, start here._
   (`mlp/core/features.py`, `POST /datasets/{id}/features/preview`), calibration/mistakes/slices in evaluation,
   `options.calibrate`, coach rules, categorical-NaN bug fix.
 
-## In progress (batch 2)
+## Done in session 2
+- Batch 2 complete (frontend for splits/dedupe/feature engineering, baseline row, Mistakes/Calibration tabs,
+  calibrate option, 4 lessons + demos). GitHub repo live: https://github.com/GilCaplan/MLSimulator (CI green).
+- Expansion Phase 0 (problems catalogue `mlp/core/problems.py`, `modality` on projects/registry/prepared,
+  leaderboard direction, process-isolation test `tests/test_process_isolation.py`).
+- Phase 1 Vision backend: `mlp/core/images.py` (image sets, ZIP, ImagePreprocessor, prepare_images, augmentation
+  preview), `mlp/api/media.py`, colour CNN with global pooling + Tiny ResNet, torch augmentation (half-batch identity),
+  `mlp/core/vision_eval.py`, predict_image / predict_arrays worker ops, vision lessons `convolutions`, `augmentation`
+  (validated with `--torch`), `scripts/smoke_vision.py`, `scripts/smoke_lessons_vision.py`.
+- Vision UI: results tabs (gallery, saliency, filters), image playground with draw pad, home templates.
+
+## Older notes (batch 2, now done)
 - Frontend agents: Prepare (splits/dedupe/Create-features stage), Train (baseline row, Mistakes + Calibration tabs,
   calibrate option, challenge metrics, library datetime inputs), demos for 4 new lessons.
 - New lessons `baselines`, `splits`, `features`, `calibration`: generators + grading in `mlp/lessons/`; still need
   calibration of `splits` goal, catalog content in `mlp/lessons/catalog.py`, end-to-end check, docs table update.
 
 ## Next
-1. Finish batch 2 → validate (`scripts/validate_lessons.py --seeds 7,11,23,31,47`), smoke tests, browser pass.
+0. Finish vision UI (problem picker, image Data/Prepare — agent), 2 vision demos (agent), browser pass, commit + push.
+1. (done) Finish batch 2 → validate (`scripts/validate_lessons.py --seeds 7,11,23,31,47`), smoke tests, browser pass.
 2. GitHub repo **GilCaplan/MLSimulator** (public, PolyForm Noncommercial 1.0.0 license; README, USER_GUIDE,
    TUTORIAL, ARCHITECTURE, CONTRIBUTING, workflow docs) — user approved name/visibility/license.
 3. Capability expansion per `docs/expansion_plan.md`: Phase 0 foundation (task × modality) + Phase 1 vision, then

@@ -7,7 +7,8 @@ export type StageId = "clean" | "features" | "encode" | "outliers" | "split" | "
 
 /** Collapsible glass card for one pipeline stage. */
 export function StageCard({ id, icon, title, why, info, summary, open, onToggle, flash, dim, children }: {
-  id: StageId;
+  /** tabular stage id, or an image stage id (see prepare/image) */
+  id: StageId | (string & {});
   icon: string;
   title: string;
   why: ReactNode;

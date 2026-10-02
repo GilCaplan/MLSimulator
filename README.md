@@ -19,13 +19,14 @@ It runs entirely on your computer. Nothing is uploaded anywhere.
 | **Training you can watch.** Live loss curves, network diagrams whose connections change colour as the weights learn, decision maps, confusion matrices, ROC curves, residuals, feature importance, mistakes, slices, calibration, cross-validation, and an automatic baseline to beat. | ![Live training](docs/images/train-live-dark.jpg) |
 | **Improve.** Automatic hyperparameter search, decision-threshold tuning, and the score history of every run. | ![Decision map](docs/images/decision-map.jpg) |
 | **Model library.** Save models together with their full recipe. Try them live with sliders and what-if curves, predict on new files (and get scores if the file includes the true answers), or export them as .zip. | ![Playground](docs/images/playground.jpg) |
-| **Lessons.** 12 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
+| **Vision.** Image classification and image regression: built-in image sets (shapes, count the dots, line tilt, arrows, handwritten digits) or your own ZIP of images. Augmentation with previews, CNNs and a Tiny ResNet next to "pixels as a table" models, and a look inside the network: saliency maps, learned filters, feature maps and a mistakes gallery. Draw or upload a picture to test a saved model. | ![Decision map](docs/images/decision-map.jpg) |
+| **Lessons.** 14 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
 
 ### Lessons
 
 Baselines · Missing values · Outliers & skewed targets · Data leakage · Feature engineering · Honest splits (groups &
 time) · Feature scaling · Class imbalance · Overfitting · Calibration & error analysis · Spurious shortcuts · Fairness
-& proxy bias.
+& proxy bias · Convolutions · Data augmentation.
 
 ![Your test vs the real world](docs/images/lesson-check.jpg)
 
@@ -60,7 +61,7 @@ Then open <http://localhost:8765>.
 - **[Architecture](docs/ARCHITECTURE.md)**: how the app is built.
 - **[Contributing](CONTRIBUTING.md)**: development setup and the workflow guides in [`docs/workflows/`](docs/workflows/)
   (adding models, datasets and lessons, releases).
-- **[Roadmap](docs/expansion_plan.md)**: vision, NLP, unsupervised learning, recommenders and forecasting are next.
+- **[Roadmap](docs/expansion_plan.md)**: vision has landed; NLP, unsupervised learning, recommenders and forecasting are next.
 
 ## Where things are stored
 Projects, datasets, trained models and logs live in `data/` inside the project folder. Back it up to keep your work;

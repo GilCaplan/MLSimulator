@@ -1,13 +1,16 @@
-import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useState, type ReactNode } from "react";
 import { stagger } from "../../design/motion";
 import { classColor } from "../../lib/colors";
 import { fmt, pct } from "../../lib/format";
 import type { SavedModel } from "../../lib/types";
 import { BarList, ConfusionMatrix, DecisionSurface, LineChart, ResidualPlot, RocChart, type Series } from "../charts";
-import { Glass, InfoTip } from "../glass";
+import { Glass, InfoTip, Segmented } from "../glass";
 import { Calibration } from "../train/Calibration";
 import { ErrorAnalysis } from "../train/Mistakes";
+import { VisionFilters } from "../train/VisionFilters";
+import { VisionGallery } from "../train/VisionGallery";
+import { VisionLooks } from "../train/VisionLooks";
 import { MetricTiles, SectionTitle, rise } from "./shared";
 
 function ChartCard({ title, help, caption, children, wide }: { title: string; help?: string; caption?: ReactNode; children: ReactNode; wide?: boolean }) {
@@ -57,7 +60,7 @@ export function Performance({ model }: { model: SavedModel }) {
           <MetricTiles metrics={test} train={model.metrics?.train} />
           <div className="row wrap tiny faint" style={{ gap: 14 }}>
             {model.fit_time_s != null && <span>⏱ trained in {model.fit_time_s < 1 ? `${Math.round(model.fit_time_s * 1000)} ms` : `${model.fit_time_s.toFixed(1)} s`}</span>}
-            {model.dataset?.n_rows != null && <span>📊 {model.dataset.n_rows.toLocaleString()} rows in the dataset</span>}
+            {model.dataset?.n_rows != null && <span>📊 {model.dataset.n_rows.toLocaleString()} {model.modality === "image" ? "pictures" : "rows"} in the dataset</span>}
             {model.n_params != null && <span>🧮 {model.n_params.toLocaleString()} learnable numbers</span>}
             {d.cv && <span>🔁 cross-validation {d.cv.metric}: {fmt(d.cv.mean)} ± {fmt(d.cv.std)}</span>}
           </div>
@@ -108,6 +111,7 @@ export function Performance({ model }: { model: SavedModel }) {
             )}
           </motion.div>
 
+          {d.vision && <VisionSection model={model} />}
           {isCls && d.calibration && (
             <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} className="col" style={{ gap: 10 }}>
               <div className="divider" />
@@ -125,5 +129,34 @@ export function Performance({ model }: { model: SavedModel }) {
         </div>
       </Glass>
     </motion.section>
+  );
+}
+
+type VTab = "gallery" | "looks" | "filters";
+
+/** Image models: the test-picture gallery, attention maps and (for CNNs) the learned filters. */
+function VisionSection({ model }: { model: SavedModel }) {
+  const v = model.detail!.vision!;
+  const [tab, setTab] = useState<VTab>("gallery");
+  const options: { value: VTab; label: string; disabled?: boolean }[] = [
+    { value: "gallery", label: "🖼️ Gallery" },
+    { value: "looks", label: "👀 What it looks at", disabled: !v.saliency?.length && !v.pixel_importance },
+    ...(v.filters?.length ? [{ value: "filters" as VTab, label: "🔬 Filters" }] : []),
+  ];
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} className="col" style={{ gap: 12 }}>
+      <div className="divider" />
+      <div className="row between wrap" style={{ gap: 10 }}>
+        <h4 className="row" style={{ gap: 6 }}>🖼️ Inside its head<InfoTip text="Real test pictures with the model's answers, where it looks, and the patterns it learned." /></h4>
+        <Segmented size="sm" value={tab} onChange={setTab} options={options} />
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+          {tab === "gallery" && <VisionGallery vision={v} classes={model.classes} task={model.task} />}
+          {tab === "looks" && <VisionLooks vision={v} label={model.label.toLowerCase()} />}
+          {tab === "filters" && <VisionFilters vision={v} />}
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
   );
 }

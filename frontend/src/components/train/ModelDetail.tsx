@@ -8,13 +8,17 @@ import { toast, useProject } from "../../lib/store";
 import type { ModelResult, RunResult } from "../../lib/types";
 import { AnimatedNumber, EmptyState, Glass, InfoTip, Segmented } from "../glass";
 import { BarList, ConfusionMatrix, DecisionSurface, Histogram, LineChart, ResidualPlot, RocChart, type Series } from "../charts";
-import { NetworkDiagram, archToLayers } from "../nn/NetworkDiagram";
+import { NetworkDiagram } from "../nn/NetworkDiagram";
+import { diagramLayers } from "./archLayers";
 import { Calibration } from "./Calibration";
 import { ErrorAnalysis } from "./Mistakes";
 import { SaveModal } from "./SaveModal";
+import { VisionFilters } from "./VisionFilters";
+import { VisionGallery } from "./VisionGallery";
+import { VisionLooks } from "./VisionLooks";
 import { archFor, baselineOf, fmtMetric, isUnit, metricLabel, nFeatures, nOutputs, useSaved, vsBaseline } from "./util";
 
-type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings";
+type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters";
 
 const OVERVIEW: Record<string, string[]> = {
   classification: ["accuracy", "balanced_accuracy", "f1", "precision", "recall", "roc_auc"],
@@ -37,7 +41,19 @@ export function ModelDetail({ result, model }: { result: RunResult; model: Model
   const savedId = useSaved((s) => s.saved[`${result.job_id}:${model.key}`]);
   const isBase = !!model.baseline;
   const cls = result.task === "classification";
-  const tabs: { value: Tab; label: string; disabled?: boolean }[] = isBase ? [{ value: "overview", label: "Overview" }] : [
+  const vision = model.vision;
+  const isImage = !!vision || useProject.getState().project?.modality === "image";
+  const tabs: { value: Tab; label: string; disabled?: boolean }[] = isBase ? [{ value: "overview", label: "Overview" }] : isImage ? [
+    // image models: the tabular views (decision map, feature table, row mistakes, slices) don't apply
+    { value: "overview", label: "Overview" },
+    { value: "gallery", label: "🖼️ Gallery", disabled: !vision?.mistakes?.length && !vision?.correct?.length },
+    { value: "looks", label: "👀 What it looks at", disabled: !vision?.saliency?.length && !vision?.pixel_importance },
+    ...(model.family === "torch" ? [{ value: "filters" as Tab, label: "🔬 Filters", disabled: !vision?.filters?.length }] : []),
+    { value: "errors", label: "Errors", disabled: !model.confusion && !model.residuals },
+    ...(cls ? [{ value: "calibration" as Tab, label: "Calibration", disabled: !model.calibration }] : []),
+    { value: "curve", label: "Learning curve", disabled: !model.curve?.points?.length },
+    { value: "settings", label: "Settings" },
+  ] : [
     { value: "overview", label: "Overview" },
     { value: "surface", label: "Decision map", disabled: !model.surface },
     { value: "errors", label: "Errors", disabled: !model.confusion && !model.residuals },
@@ -94,6 +110,9 @@ export function ModelDetail({ result, model }: { result: RunResult; model: Model
               <DecisionSurface surface={model.surface} classes={result.classes} height={340} />
             </div>
           )}
+          {tab === "gallery" && vision && <VisionGallery vision={vision} classes={result.classes} task={result.task} />}
+          {tab === "looks" && vision && <VisionLooks vision={vision} label={model.label.toLowerCase()} />}
+          {tab === "filters" && vision && <VisionFilters vision={vision} />}
           {tab === "errors" && <Errors result={result} model={model} />}
           {tab === "mistakes" && <ErrorAnalysis mistakes={model.mistakes} slices={model.slices} classes={result.classes} />}
           {tab === "calibration" && model.calibration && (
@@ -157,7 +176,7 @@ function Overview({ result, model }: { result: RunResult; model: ModelResult }) 
               <b style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
                 <AnimatedNumber value={unit ? test * 100 : test} format={(v) => (unit ? `${v.toFixed(1)}%` : v.toFixed(3))} />
               </b>
-              <span className="tiny faint num">training rows: {fmtMetric(m, train)}</span>
+              <span className="tiny faint num">{model.vision ? "training pictures" : "training rows"}: {fmtMetric(m, train)}</span>
               {base && base.metrics.test[m] !== undefined && (() => {
                 const vs = vsBaseline(m, test, base.metrics.test[m]);
                 return (
@@ -290,7 +309,7 @@ function Settings({ model }: { model: ModelResult }) {
     <div className="col" style={{ gap: 16 }}>
       {arch && (
         <div className="inset" style={{ padding: 10 }}>
-          <NetworkDiagram layers={archToLayers(arch, nFeatures(), nOutputs())} height={240} />
+          <NetworkDiagram layers={diagramLayers(arch, nFeatures(), nOutputs(), model.vision?.image_shape ?? useProject.getState().report?.image_shape)} height={240} />
         </div>
       )}
       {entries.length === 0 ? (

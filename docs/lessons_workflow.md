@@ -19,6 +19,8 @@ their trained model is auto-graded on a **hidden test set** that represents the 
 | 10 | `calibration` | Inflated probabilities | ICU after surgery | SMOTE (calibrating on SMOTE rows also fails) | train on the real class mix |
 | 11 | `shortcut` | Spurious correlation | Heart disease screening | model uses `clinic` | ignore `clinic` |
 | 12 | `fairness` | Label bias + proxy | Loans (Prosper) / recidivism | uses gender (+ proxy) | drop gender **and** `shopping_profile` |
+| 13 | `convolutions` | Pixels-as-a-table can't handle position | Shapes anywhere (SDSS-style morphology) | logistic / random forest on pixels | Image CNN (or Tiny ResNet) |
+| 14 | `augmentation` | Training photos too tidy | Centred, upright shapes → real ones anywhere at any angle | CNN without augmentation | rotation + shift augmentation |
 
 ## How the hidden test works
 `mlp/lessons/generators.py` returns `(train_df, hidden_df)` per lesson (deterministic, seed 7 for the shipped data):
@@ -30,6 +32,9 @@ their trained model is auto-graded on a **hidden test set** that represents the 
 - **baselines** — graded on MAE improvement over always predicting the training mean.
 - **splits** — hidden set = brand-new patients; also graded on how close the learner's own test accuracy is to reality.
 - **calibration** — graded on expected calibration error of the positive-class probability + ROC-AUC.
+- **convolutions / augmentation** (image lessons) — hidden photos with shapes anywhere and at any angle; generators
+  return `ImageBundle(images, frame)` and the check runs the `predict_arrays` worker op. These lessons train PyTorch
+  models, so the validator runs them in a separate interpreter (`--torch`, done automatically).
 
 Grading (`mlp/lessons/grading.py`) runs the learner's trained model + its fitted preprocessing on the hidden rows
 (`POST /api/lessons/{id}/check`) and compares goal metrics (accuracy, balanced accuracy, recall/precision of the

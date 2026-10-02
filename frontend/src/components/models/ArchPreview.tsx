@@ -3,20 +3,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { compact } from "../../lib/format";
 import type { ArchSummary, NNArch, Task } from "../../lib/types";
-import { archToLayers, NetworkDiagram, type DiagramLayer } from "../nn/NetworkDiagram";
+import { NetworkDiagram, type DiagramLayer } from "../nn/NetworkDiagram";
+import { previewLayers } from "./archLayers";
 import { AnimatedNumber, InfoTip, Spinner } from "../glass";
 import { useIoShape } from "./meta";
 
 /** Live diagram of the architecture plus a debounced server-side check (parameter count, shapes, errors). */
 export function ArchPreview({ arch, task }: { arch: NNArch; task: Task | null }) {
-  const { nFeatures, nOut, known, imageShape } = useIoShape(task);
+  const { nFeatures, nOut, known, imageShape, image } = useIoShape(task);
   const layers = useMemo(() => {
-    const ls = archToLayers(arch, nFeatures, nOut);
+    const ls = previewLayers(arch, nFeatures, nOut, imageShape);
     // Long labels collide when there are many columns — use compact ones then.
     if (ls.length <= 4) return ls;
     const short: Record<DiagramLayer["kind"], string> = { input: "In", dense: "Dense", conv: "Conv", attention: "Attn", graph: "Graph", output: "Out" };
-    return ls.map((l) => ({ ...l, label: `${short[l.kind]} ${l.units}` }));
-  }, [arch, nFeatures, nOut]);
+    return ls.map((l) => ({ ...l, label: l.short ?? `${short[l.kind]} ${l.units}` }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [arch, nFeatures, nOut, imageShape?.join("x")]);
   const [summary, setSummary] = useState<ArchSummary | null>(null);
   const [checking, setChecking] = useState(false);
   const [netError, setNetError] = useState<string | null>(null);
@@ -34,10 +36,10 @@ export function ArchPreview({ arch, task }: { arch: NNArch; task: Task | null })
     }, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [archKey, nFeatures, nOut, imageShape?.[0], imageShape?.[1]]);
+  }, [archKey, nFeatures, nOut, imageShape?.join("x")]);
 
   const errors = netError ? [netError] : summary && !summary.ok ? summary.errors : [];
-  const needsImage = arch.kind === "cnn2d" && !imageShape;
+  const needsImage = (arch.kind === "cnn2d" || arch.kind === "tiny_resnet") && !imageShape;
 
   return (
     <div className="col" style={{ gap: 12 }}>
@@ -57,13 +59,14 @@ export function ArchPreview({ arch, task }: { arch: NNArch; task: Task | null })
         </div>
         <div className="inset col" style={{ padding: "10px 14px", gap: 2, minWidth: 120 }}>
           <span className="eyebrow">In → out</span>
-          <span className="num" style={{ fontSize: 18, fontWeight: 650 }}>{nFeatures} → {nOut}</span>
+          <span className="num" style={{ fontSize: 18, fontWeight: 650 }}>{image && imageShape ? imageShape.join("×") : nFeatures} → {nOut}</span>
+          {image && <span className="tiny faint num">{nFeatures.toLocaleString()} pixel values</span>}
         </div>
       </div>
 
       {!known && (
         <div className="tiny faint row" style={{ gap: 6 }}>
-          <span>📐</span> Input size is estimated until your data is prepared.
+          <span>📐</span> {image ? "Image size comes from the Prepare step (resolution × colour) — estimated until you run it." : "Input size is estimated until your data is prepared."}
         </div>
       )}
 

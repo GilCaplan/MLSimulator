@@ -4,7 +4,7 @@ import { EmptyState, Glass, Tooltip } from "../components/glass";
 import { LineupTray } from "../components/models/LineupTray";
 import { ModelCard } from "../components/models/ModelCard";
 import { ModelSettingsModal } from "../components/models/ModelSettingsModal";
-import { BEGINNER, configsFor, FAMILIES, lineupLabels } from "../components/models/meta";
+import { BEGINNER, BEGINNER_IMAGE, configsFor, FAMILIES, lineupLabels, modalityOf, specModalities, VISION_IDS } from "../components/models/meta";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { navigate } from "../lib/router";
@@ -23,14 +23,28 @@ export function ModelsStep() {
   }, []);
 
   const task = project?.task ?? null;
+  const modality = modalityOf(project?.modality);
+  const image = modality === "image";
   const models = project?.models ?? [];
-  const available = useMemo(() => registry.filter((s) => task && !s.hidden && s.tasks.includes(task)), [registry, task]);
+  const available = useMemo(
+    () => registry.filter((s) => task && !s.hidden && s.tasks.includes(task) && specModalities(s).includes(modality)),
+    [registry, task, modality],
+  );
   const groups = useMemo(() => {
+    if (image) {
+      // vision networks first; everything else treats the picture as a long row of unrelated numbers
+      const vision = available.filter((s) => VISION_IDS.has(s.id)).sort((a, b) => a.id.localeCompare(b.id));
+      const table = available.filter((s) => !VISION_IDS.has(s.id)).sort((a, b) => Number(!!a.nn) - Number(!!b.nn));
+      return [
+        { id: "Vision", icon: "👁️", blurb: "Built for pictures — they look at neighbouring pixels together, so they spot edges, strokes and shapes wherever they are.", specs: vision },
+        { id: "Pixels as a table", icon: "🔢", blurb: "These see each pixel as an unrelated number — a great baseline to beat.", specs: table },
+      ].filter((g) => g.specs.length);
+    }
     const known = FAMILIES.map((f) => ({ ...f, specs: available.filter((s) => s.family === f.id) }));
     const other = available.filter((s) => !FAMILIES.some((f) => f.id === s.family));
     if (other.length) known.push({ id: "Other", icon: "🧩", blurb: "More algorithms to explore.", specs: other });
     return known.filter((g) => g.specs.length);
-  }, [available]);
+  }, [available, image]);
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const m of models) c[m.model_id] = (c[m.model_id] || 0) + 1;
@@ -57,31 +71,45 @@ export function ModelsStep() {
     update((p) => ({ models: [...p.models, ...configsFor(missing, available)] }));
     toast.success(msg.replace("{n}", String(missing.length)));
   };
+  const starter = (image ? BEGINNER_IMAGE : BEGINNER)[task];
   const picks: { label: string; icon: string; tip: string; run: () => void }[] = [
-    { label: "Beginner trio", icon: "🌱", tip: "Replace the line-up with three easy, reliable starters.", run: () => {
-      update((p) => ({ models: configsFor(BEGINNER[task], available, p.models) }));
-      toast.success("Beginner trio ready — a line, a tree and a forest.");
+    { label: image ? "Vision starter" : "Beginner trio", icon: "🌱", tip: image
+      ? "Replace the line-up with two vision networks and one classic baseline to beat."
+      : "Replace the line-up with three easy, reliable starters.", run: () => {
+      update((p) => ({ models: configsFor(starter, available, p.models) }));
+      toast.success(image ? "Vision starter ready — a CNN, a ResNet and a classic baseline." : "Beginner trio ready — a line, a tree and a forest.");
     } },
-    { label: "All classic models", icon: "📚", tip: "Add every non-neural algorithm. Great for a big bake-off.", run: () =>
+    { label: image ? "All pixel baselines" : "All classic models", icon: "📚", tip: image
+      ? "Add every classic algorithm. They treat pixels as a table — see how far that gets."
+      : "Add every non-neural algorithm. Great for a big bake-off.", run: () =>
       addIds(available.filter((s) => !s.nn).map((s) => s.id), "Added {n} classic models.") },
-    { label: "Neural networks", icon: "🧠", tip: "Add a neural network and a tabular transformer (plus the image CNN if your data is images).", run: () =>
-      addIds(["mlp", "ft_transformer", ...(dataset?.image_shape ? ["cnn2d"] : [])].filter((id) => available.some((s) => s.id === id)), "Added {n} neural networks.") },
+    { label: "Neural networks", icon: "🧠", tip: image
+      ? "Add the image CNN, the Tiny ResNet and a plain neural network (MLP) for comparison."
+      : "Add a neural network and a tabular transformer (plus the image CNN if your data is images).", run: () =>
+      addIds((image ? ["cnn2d", "tiny_resnet", "mlp"] : ["mlp", "ft_transformer", ...(dataset?.image_shape ? ["cnn2d"] : [])]).filter((id) => available.some((s) => s.id === id)), "Added {n} neural networks.") },
     { label: "Clear", icon: "🧹", tip: "Remove everything from the line-up.", run: () => update({ models: [] }) },
   ];
 
   const suggestions: Suggestion[] = [];
   if (models.length === 1) suggestions.push({ id: "one", severity: "info", title: "Add a rival or two", why: "With a single model you can't tell whether its score is good. Two or three contenders make the comparison meaningful." });
-  if (counts.cnn2d && dataset && !dataset.image_shape) suggestions.push({ id: "img", severity: "warn", title: "The image CNN needs pictures", why: "Your dataset isn't image data, so the 2-D CNN won't be able to train. Try the handwritten-digits sample, or remove it." });
+  if (image && models.length && !models.some((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "novision", severity: "warn", title: "Add a vision network", why: "None of your models are built for pictures. Add the Image CNN or Tiny ResNet — they usually beat pixel-by-pixel models by a wide margin.", action: { kind: "add_models", label: "Add CNN + ResNet", model_ids: ["cnn2d", "tiny_resnet"] } });
+  if (image && models.length && models.every((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "baseline", severity: "info", title: "Add a baseline to beat", why: "A classic model on raw pixels (like logistic regression) shows how much the vision networks actually add." });
+  if (!image && counts.cnn2d && dataset && !dataset.image_shape) suggestions.push({ id: "img", severity: "warn", title: "The image CNN needs pictures", why: "Your dataset isn't image data, so the 2-D CNN won't be able to train. Try the handwritten-digits sample, or remove it." });
   if (models.filter((m) => registry.find((s) => s.id === m.model_id)?.nn).length >= 3) suggestions.push({ id: "slow", severity: "info", title: "Neural nets take a while", why: "Several neural networks will train one after another. That's fine — just expect to wait a little longer." });
 
   return (
     <StepLayout
       title="Pick your contenders"
-      subtitle="Choose a few algorithms to race against each other. Tap a card to add it — you can tweak any of them later."
+      subtitle={image
+        ? "Choose a few algorithms to race on your pictures. Vision networks are built for images; the rest are a baseline to beat."
+        : "Choose a few algorithms to race against each other. Tap a card to add it — you can tweak any of them later."}
       coach={
         <CoachPanel
           suggestions={suggestions}
-          intro={<>There's <b>no single best algorithm</b> — which one wins depends on your data. That's why the pros try several and compare.
+          intro={image
+            ? <>Pictures are just grids of numbers — but the <b>arrangement</b> matters. <b>Vision networks</b> slide small filters over the image to find edges, then shapes, then objects.
+              <br /><br />Classic models see the same pixels as an unordered list. Racing both shows <b>why convolutions changed computer vision</b>. Not sure? Hit <b>Vision starter</b>.</>
+            : <>There's <b>no single best algorithm</b> — which one wins depends on your data. That's why the pros try several and compare.
             <br /><br />Not sure? Hit <b>Beginner trio</b>. Feeling curious? Add a 🧠 neural network and design its layers yourself.</>}
         />
       }
@@ -89,6 +117,7 @@ export function ModelsStep() {
         <NextBar
           back="problem"
           next="data"
+          nextLabel={image ? "Images" : undefined}
           nextDisabled={models.length === 0}
           status={models.length === 0 ? "Pick at least one model" : `${models.length} model${models.length === 1 ? "" : "s"} selected`}
         />

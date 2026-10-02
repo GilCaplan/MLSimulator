@@ -306,3 +306,30 @@ def icu(seed: int = 7, n: int = 5000, n_hidden: int = 6000):
 
 
 GENERATORS.update({"baselines": bus_delays, "splits": clinic_visits, "features": taxi_tips, "calibration": icu})
+
+
+# ----------------------------------------------------------------------------- 13–14. vision
+class ImageBundle:
+    """Lesson data for image challenges: uint8 images + a frame with the label column."""
+
+    def __init__(self, images, frame):
+        self.images, self.frame = images, frame
+
+
+def shapes_anywhere(seed: int = 7, n: int = 1600, n_hidden: int = 1200):
+    from ..core.images import gen_shapes
+    a, f = gen_shapes(n, 32, 0.08, seed=seed)
+    b, g = gen_shapes(n_hidden, 32, 0.08, seed=seed + 1000)
+    return ImageBundle(a, f), ImageBundle(b, g)
+
+
+def shapes_shifted(seed: int = 7, n: int = 1600, n_hidden: int = 1200):
+    """Training photos are all centred and upright; the real world isn't."""
+    from ..core.images import gen_shapes
+    a, f = gen_shapes(n, 32, 0.08, seed=seed, rotate=False, region="center")
+    b, g = gen_shapes(n_hidden, 32, 0.08, seed=seed + 1000, rotate=True, region="any")
+    return ImageBundle(a, f), ImageBundle(b, g)
+
+
+GENERATORS.update({"convolutions": shapes_anywhere, "augmentation": shapes_shifted})
+IMAGE_LESSONS = {"convolutions", "augmentation"}

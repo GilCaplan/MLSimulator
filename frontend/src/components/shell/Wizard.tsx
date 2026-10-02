@@ -26,7 +26,9 @@ export function Stepper({ current }: { current: StepId }) {
         />
         <div className="tiny faint" style={{ marginTop: 2, height: 14 }}>{saving ? "Saving…" : "All changes saved"}</div>
       </div>
-      {STEPS.map((s, i) => {
+      {STEPS.map((step, i) => {
+        // image projects call the data step "Images"
+        const s = step.id === "data" && project.modality === "image" ? { ...step, label: "Images", icon: "🖼️", blurb: "Pictures to learn from" } : step;
         const active = s.id === current;
         const done = stepDone(project, s.id);
         const avail = stepAvailable(project, s.id);

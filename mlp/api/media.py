@@ -76,6 +76,8 @@ def image_profile(did: str, target: str | None) -> dict:
         order = np.argsort(df[target].to_numpy())
         out["samples"] = {"lowest": [int(i) for i in order[:12]], "highest": [int(i) for i in order[::-1][:12]],
                           "middle": [int(i) for i in order[len(order) // 2 - 6:len(order) // 2 + 6]]}
+        vals = df[target].to_numpy()
+        out["sample_values"] = {str(i): round(float(vals[i]), 3) for group in out["samples"].values() for i in group}
     idx = np.sort(rng.choice(len(arr), min(len(arr), 600), replace=False))
     small = np.stack([np.asarray(im.Image.fromarray(np.asarray(arr[i])).convert("L").resize((16, 16))) for i in idx]).reshape(len(idx), -1) / 255.0
     from sklearn.decomposition import PCA

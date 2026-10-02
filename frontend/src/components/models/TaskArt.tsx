@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 
 const W = 220;
 const H = 130;
@@ -77,6 +77,94 @@ export function RegressionArt({ active }: { active: boolean }) {
           transition={{ ...t, times: [0, 0.05 + i * 0.014, 0.5, 0.9, 1] }}
           style={{ originX: `${p.x}px`, originY: `${p.y}px` }} />
       ))}
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ vision art */
+
+const PIXEL_ART: { label: string; color: string; rows: string[] }[] = [
+  { label: "star", color: "#FF9F0A", rows: ["...##...", "...##...", "########", ".######.", "..####..", ".##..##.", ".#....#.", "........"] },
+  { label: "heart", color: "#FF375F", rows: ["........", ".##..##.", "########", "########", ".######.", "..####..", "...##...", "........"] },
+  { label: "smiley", color: "#30D158", rows: ["..####..", ".#....#.", "#.#..#.#", "#......#", "#.#..#.#", "#..##..#", ".#....#.", "..####.."] },
+];
+
+/** Cycles through a few pictures: pixels pop in, a scan line sweeps, then a label chip pops out. */
+export function ImageClassifyArt({ active }: { active: boolean }) {
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setK((v) => (v + 1) % PIXEL_ART.length), 3400);
+    return () => clearInterval(t);
+  }, []);
+  const art = PIXEL_ART[k];
+  const S = 10, X0 = 34, Y0 = 25;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      <rect x={X0 - 7} y={Y0 - 7} width={8 * S + 14} height={8 * S + 14} rx={10} fill="var(--glass-strong)" stroke="var(--hairline)" />
+      <AnimatePresence mode="wait">
+        <motion.g key={k} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.25 }}>
+          {art.rows.flatMap((row, r) => [...row].map((ch, c) => (ch === "#" ? (
+            <motion.rect key={`${r}-${c}`} x={X0 + c * S + 0.5} y={Y0 + r * S + 0.5} width={S - 1} height={S - 1} rx={1.6} fill={art.color}
+              initial={{ opacity: 0, scale: 0 }} animate={{ opacity: active ? 1 : 0.85, scale: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 22, delay: (r + c) * 0.025 }} />
+          ) : null)))}
+          <motion.rect x={X0 - 4} width={8 * S + 8} height={3} rx={1.5} fill="var(--accent)"
+            initial={{ y: Y0 - 3, opacity: 0 }} animate={{ y: [Y0 - 3, Y0 + 8 * S], opacity: [0, 0.9, 0.9, 0] }}
+            transition={{ duration: 0.9, delay: 0.6, ease: "easeInOut" }} />
+          <motion.line x1={X0 + 8 * S + 10} y1={Y0 + 4 * S} x2={150} y2={Y0 + 4 * S} stroke="var(--text-3)" strokeWidth={1.6} strokeDasharray="3 3"
+            initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ delay: 1.45, duration: 0.3 }} />
+          <motion.g initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 420, damping: 16, delay: 1.7 }}>
+            <rect x={150} y={Y0 + 4 * S - 15} width={68} height={30} rx={15} fill={art.color} />
+            <text x={184} y={Y0 + 4 * S + 4.5} textAnchor="middle" fontSize={13} fontWeight={700} fill="white">{art.label}</text>
+          </motion.g>
+          <motion.text x={184} y={Y0 + 4 * S + 30} textAnchor="middle" fontSize={10} fill="var(--text-3)" fontWeight={600}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }}>
+            {[96, 91, 88][k]}% sure
+          </motion.text>
+        </motion.g>
+      </AnimatePresence>
+    </svg>
+  );
+}
+
+const DOT_SETS = [
+  [[0.5, 0.5], [0.22, 0.25], [0.78, 0.75]],
+  [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]],
+  [[0.22, 0.2], [0.5, 0.2], [0.78, 0.2], [0.35, 0.5], [0.65, 0.5], [0.22, 0.8], [0.5, 0.8], [0.78, 0.8]],
+];
+
+/** A picture fills with dots, gets scanned, then the model answers with a number. Cycles. */
+export function ImageNumberArt({ active }: { active: boolean }) {
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setK((v) => (v + 1) % DOT_SETS.length), 3400);
+    return () => clearInterval(t);
+  }, []);
+  const dots = DOT_SETS[k];
+  const X0 = 27, Y0 = 18, S = 94;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      <rect x={X0} y={Y0} width={S} height={S} rx={12} fill="var(--glass-strong)" stroke="var(--hairline)" />
+      <AnimatePresence mode="wait">
+        <motion.g key={k} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+          {dots.map(([dx, dy], i) => (
+            <motion.circle key={i} cx={X0 + 8 + dx * (S - 16)} cy={Y0 + 8 + dy * (S - 16)} r={8} fill={active ? "#5E5CE6" : "#7d7be8"}
+              initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 520, damping: 18, delay: 0.1 + i * 0.08 }} />
+          ))}
+          <motion.rect y={Y0 + 3} width={3} height={S - 6} rx={1.5} fill="var(--accent)"
+            initial={{ x: X0, opacity: 0 }} animate={{ x: [X0 + 2, X0 + S - 5], opacity: [0, 0.9, 0.9, 0] }}
+            transition={{ duration: 0.9, delay: 0.85, ease: "easeInOut" }} />
+          <motion.path d={`M ${X0 + S + 10} ${Y0 + S / 2} L 146 ${Y0 + S / 2}`} stroke="var(--text-3)" strokeWidth={1.6} strokeDasharray="3 3"
+            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 1.6, duration: 0.3 }} />
+          <motion.g initial={{ opacity: 0, scale: 0.3 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 420, damping: 15, delay: 1.85 }}>
+            <circle cx={180} cy={Y0 + S / 2} r={25} fill="url(#ina-grad)" />
+            <text x={180} y={Y0 + S / 2 + 8} textAnchor="middle" fontSize={23} fontWeight={800} fill="white">{(dots.length + [0.1, -0.2, 0.3][k]).toFixed(1)}</text>
+          </motion.g>
+        </motion.g>
+      </AnimatePresence>
+      <defs>
+        <linearGradient id="ina-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#5E5CE6" /><stop offset="1" stopColor="#BF5AF2" /></linearGradient>
+      </defs>
     </svg>
   );
 }

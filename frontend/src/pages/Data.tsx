@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ColumnsTable } from "../components/data/ColumnsTable";
 import { CombinePanel } from "../components/data/CombinePanel";
 import { DatasetHeader } from "../components/data/DatasetHeader";
+import { ImageDataStep } from "../components/data/image/ImageDataStep";
 import { defaultDesign, fromSpec, type DesignState } from "../components/data/designer/model";
 import { ProfilePanel } from "../components/data/ProfilePanel";
 import { RowsTable } from "../components/data/RowsTable";
@@ -23,6 +24,11 @@ const INTRO = (
 );
 
 export function DataStep() {
+  const image = useProject((s) => s.project?.modality === "image");
+  return image ? <ImageDataStep /> : <TabularDataStep />;
+}
+
+function TabularDataStep() {
   const project = useProject((s) => s.project)!;
   const dataset = useProject((s) => s.dataset);
   const profile = useProject((s) => s.profile);

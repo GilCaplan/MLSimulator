@@ -56,7 +56,7 @@ export function ProjectCard({ project: p, onDelete, onRename }: { project: Proje
                 {p.task === "classification" ? "Classification" : "Regression"}
               </span>
             ) : <span className="badge">No goal yet</span>}
-            <span className={`badge ${p.dataset_id ? "success" : ""}`}>{p.dataset_id ? "📊 Data" : "No data yet"}</span>
+            <span className={`badge ${p.dataset_id ? "success" : ""}`}>{p.dataset_id ? (p.modality === "image" ? "🖼️ Images" : "📊 Data") : "No data yet"}</span>
           </span>
         </div>
         <span className="row" style={{ gap: 0 }} onClick={(e) => e.stopPropagation()}>

@@ -1,6 +1,41 @@
 /* Shapes mirrored from the Python backend (mlp/). Keep in sync. */
 
 export type Task = "classification" | "regression";
+export type Modality = "tabular" | "image" | "text" | "ratings" | "timeseries";
+
+/** A problem type from GET /api/problems (task × modality), mirrored from mlp/core/problems.py */
+export interface ProblemType {
+  id: string;
+  task: string;
+  modality: Modality;
+  group: string;
+  emoji: string;
+  label: string;
+  question: string;
+  primary_metric: string;
+  lower_is_better: boolean;
+  enabled: boolean;
+  steps: [StepId, string][];
+}
+
+export interface ImageSetInfo { label: string; task: Task; emoji: string; blurb: string; params: Record<string, number> }
+
+/** Per-model vision outputs (image datasets): galleries reference dataset image indices (GET /api/datasets/{dataset_id}/image/{i}) */
+export interface VisionResult {
+  image_shape: [number, number, number];
+  dataset_id: string;
+  mistakes: { i: number; true: string | number; pred: string | number; confidence?: number; error?: number }[];
+  correct: { i: number; true: string | number; pred: string | number; confidence?: number; error?: number }[];
+  /** torch models: |gradient| heat maps (H×W, 0..1) for a few test images */
+  saliency?: { i: number; heat: number[][] }[];
+  /** torch models: first conv layer kernels (k×k, 0..1), rgb when the input has 3 channels */
+  filters?: { gray: number[][]; rgb?: number[][][] }[];
+  /** torch models: first conv layer activations for one image (≤8 maps, 0..1) */
+  feature_maps?: { i: number; maps: number[][][] };
+  /** classic models: where in the picture the model looks (H×W, 0..1) */
+  pixel_importance?: number[][];
+  note?: string;
+}
 export type StepId = "problem" | "models" | "data" | "prepare" | "train" | "improve";
 
 export interface HyperParam {
@@ -20,7 +55,11 @@ export interface DenseLayer { type: "dense"; units: number; activation: string; 
 export interface ConvLayer { type: "conv"; filters: number; kernel: number; activation: string; pool?: number; batchnorm?: boolean }
 export type Layer = DenseLayer | ConvLayer;
 export interface NNArch {
-  kind: "mlp" | "cnn1d" | "cnn2d" | "ft_transformer" | "gcn";
+  kind: "mlp" | "cnn1d" | "cnn2d" | "ft_transformer" | "gcn" | "tiny_resnet";
+  /** cnn2d: average each feature map over the image instead of flattening (position-independent) */
+  global_pool?: boolean;
+  /** tiny_resnet */
+  width?: number; stages?: number; blocks?: number;
   layers?: Layer[];
   // ft_transformer
   d_token?: number; n_blocks?: number; n_heads?: number; ffn_mult?: number; dropout?: number;
@@ -42,6 +81,8 @@ export interface ModelSpec {
   requires?: "image";
   /** reference models (the baseline) that aren't offered in the Models gallery */
   hidden?: boolean;
+  /** data modalities this model supports (default tabular) */
+  modalities?: Modality[];
 }
 
 export interface ModelConfig {
@@ -77,6 +118,10 @@ export interface DatasetSummary {
   columns: ColumnSummary[];
   preview: { columns: string[]; rows: any[][] };
   n_duplicates?: number;
+  modality?: Modality;
+  n_images?: number;
+  image_set?: string;
+  warnings?: string[];
   task_hint?: Task;
   target_hint?: string;
   image_shape?: [number, number];
@@ -111,6 +156,11 @@ export interface DatasetProfile {
   correlation_matrix?: { columns: string[]; matrix: number[][] };
   projection: Point[];
   coach: Suggestion[];
+  modality?: Modality;
+  /** image datasets: dataset image indices per class (or lowest/middle/highest for regression) */
+  samples?: Record<string, number[]>;
+  /** image regression: target value per sample index */
+  sample_values?: Record<string, number>;
 }
 
 export interface Distribution { label: string; params: Record<string, any> }
@@ -192,6 +242,8 @@ export interface PipelineSpec {
     k_neighbors: number;
   };
   target_transform: "none" | "log1p";
+  /** image datasets: training resolution, colour, and on-the-fly augmentation (torch models only) */
+  image?: { size: 16 | 24 | 32 | 48 | 64; grayscale: boolean; augment: { flip_h?: boolean; flip_v?: boolean; rotate?: number; shift?: number; brightness?: number; cutout?: boolean } };
   /** regression: drop rows whose target is outside [min, max] (data-entry errors) before splitting */
   target_filter?: { enabled: boolean; min: number | null; max: number | null };
 }
@@ -230,6 +282,7 @@ export interface PrepareReport {
   class_counts_before: Record<string, number> | null;
   class_counts_after: Record<string, number> | null;
   class_counts_test: Record<string, number> | null;
+  class_counts_val?: Record<string, number> | null;
   added: number;
   removed: number;
   outliers_removed: number;
@@ -241,12 +294,17 @@ export interface PrepareReport {
   numeric_columns: string[];
   categorical_columns: string[];
   warnings: string[];
-  image_shape: [number, number] | null;
+  /** [h, w] for the legacy digits sample, [channels, height, width] for image datasets */
+  image_shape: number[] | null;
   coach: Suggestion[];
   target_hist_train?: { values: number[] };
   duplicates_found?: number;
   features_created?: string[];
   split_info?: SplitInfo;
+  modality?: Modality;
+  /** image datasets: original + augmented variants (data URIs) for a few training images */
+  augment_preview?: { i: number; original: string; variants: string[] }[];
+  sample_images?: number[];
 }
 
 export interface TrainOptions { cv_folds: number; seed: number; cv_scoring?: string; calibrate?: "none" | "sigmoid" | "isotonic" }
@@ -288,6 +346,7 @@ export interface ModelResult {
   slices?: { column: string; metric: string; better: "higher" | "lower"; overall: number; spread: number; groups: { label: string; n: number; value: number }[] }[];
   /** true for the automatic 'always guess' reference row */
   baseline?: boolean;
+  vision?: VisionResult | null;
   fit_time_s: number;
   n_params?: number | null;
 }
@@ -335,6 +394,8 @@ export interface Project {
   last_job_id?: string | null;
   history: RunHistory[];
   emoji?: string;
+  /** data modality; absent = tabular */
+  modality?: Modality;
   /** set when the project was started from a lesson's practice challenge */
   challenge?: { lesson_id: string } | null;
   created_at: number;
@@ -372,9 +433,17 @@ export interface SavedModel {
   fit_time_s?: number;
   n_params?: number | null;
   detail?: Partial<ModelResult>;
+  modality?: Modality;
+  image_shape?: [number, number, number] | null;
 }
 
 export interface PredictResponse { predictions: (string | number)[]; probabilities?: number[][]; classes?: string[] }
+export interface ImagePredictResponse extends PredictResponse {
+  /** what the model actually sees (resized/greyscaled), as a data URI */
+  model_input: string;
+  /** torch models: H×W heat map (0..1) of which pixels drove the answer */
+  saliency?: number[][];
+}
 export interface BatchPredictResponse {
   download_id: string;
   n_rows: number;

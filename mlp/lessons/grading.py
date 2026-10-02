@@ -111,6 +111,23 @@ CHALLENGES.update({
     },
 })
 
+CHALLENGES.update({
+    "convolutions": {
+        "kind": "image", "task": "classification", "target": "label", "modality": "image",
+        "preset_pipeline": {"image": {"size": 32, "grayscale": False, "augment": {}}},
+        "preset_models": ["logistic_regression", "random_forest"],
+        "goals": [{"metric": "accuracy", "op": ">=", "value": 0.70}],
+        "solution": {"models": ["cnn2d"]},
+    },
+    "augmentation": {
+        "kind": "image", "task": "classification", "target": "label", "modality": "image",
+        "preset_pipeline": {"image": {"size": 32, "grayscale": False, "augment": {}}},
+        "preset_models": ["cnn2d"],
+        "goals": [{"metric": "accuracy", "op": ">=", "value": 0.80}],
+        "solution": {"pipeline": {"image": {"size": 32, "grayscale": False, "augment": {"rotate": 180, "shift": 0.3}}}},
+    },
+})
+
 METRIC_LABELS = {
     "accuracy": "Accuracy", "balanced_accuracy": "Balanced accuracy", "recall_pos": "Recall ({pos})",
     "precision_pos": "Precision ({pos})", "f1_pos": "F1 ({pos})", "r2": "R²",

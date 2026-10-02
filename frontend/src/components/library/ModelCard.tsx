@@ -5,6 +5,7 @@ import { pct, timeAgo } from "../../lib/format";
 import { navigate } from "../../lib/router";
 import type { SavedModel } from "../../lib/types";
 import { ProgressRing, Tooltip } from "../glass";
+import { Thumb } from "../train/visionKit";
 import { EditableText, TASK_META, headline } from "./shared";
 
 /** One saved model in the library grid. */
@@ -63,14 +64,24 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
           <ProgressRing value={Math.max(0, v)} size={46} stroke={5} color={tone}>
             <span style={{ fontSize: 10.5 }}>{h.value === null ? "—" : Math.round(Math.max(0, v) * 100)}</span>
           </ProgressRing>
-          <div className="col" style={{ gap: 0 }}>
+          <div className="col grow" style={{ gap: 0 }}>
             <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }} className="num">{h.value === null ? "—" : pct(h.value, 1)}</span>
             <span className="tiny muted">test {h.label.toLowerCase()}</span>
           </div>
+          {model.modality === "image" && model.dataset?.id && (
+            <div className="row" style={{ gap: 0 }}>
+              {[0, 1, 2].map((i) => (
+                <motion.div key={i} animate={{ rotate: hover ? (i - 1) * 9 : (i - 1) * 4, x: hover ? (i - 1) * 6 : 0, y: hover ? -2 : 0 }} transition={spring.gentle} style={{ marginLeft: i ? -12 : 0, zIndex: 3 - i }}>
+                  <Thumb datasetId={model.dataset.id} i={i} size={34} px={64} radius={8} style={{ border: "2px solid var(--glass-strong)" }} />
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="row wrap" style={{ gap: 6 }}>
           <span className={`badge ${task.badge}`}>{task.icon} {task.label}</span>
+          {model.modality === "image" && <span className="badge">🖼️ Images</span>}
           {model.dataset?.name && <span className="badge truncate" style={{ maxWidth: 170 }} title={model.dataset.name}>📊 {model.dataset.name}</span>}
           <span className="grow" />
           <span className="tiny faint">{timeAgo(model.created_at)}</span>

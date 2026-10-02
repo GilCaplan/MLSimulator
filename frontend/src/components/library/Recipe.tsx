@@ -4,7 +4,8 @@ import { stagger } from "../../design/motion";
 import type { FeatureStep, PipelineSpec, SavedModel } from "../../lib/types";
 import { SplitBar } from "../charts";
 import { Glass, InfoTip } from "../glass";
-import { NetworkDiagram, archToLayers } from "../nn/NetworkDiagram";
+import { NetworkDiagram } from "../nn/NetworkDiagram";
+import { diagramLayers, imageDims } from "../train/archLayers";
 import { SectionTitle, rise, specFor, useRegistry } from "./shared";
 
 const OVER: Record<string, string> = { random: "random copies", smote: "SMOTE", borderline_smote: "Borderline-SMOTE", adasyn: "ADASYN", svm_smote: "SVM-SMOTE" };
@@ -157,6 +158,59 @@ function pipelineSteps(p: PipelineSpec, m: SavedModel): Step[] {
   return steps;
 }
 
+type Augment = NonNullable<PipelineSpec["image"]>["augment"];
+
+/** Active augmentations in plain words. */
+export function describeAugment(a: Augment | undefined): { icon: string; text: string }[] {
+  if (!a) return [];
+  const out: { icon: string; text: string }[] = [];
+  if (a.flip_h) out.push({ icon: "↔️", text: "mirrored left–right" });
+  if (a.flip_v) out.push({ icon: "↕️", text: "flipped upside down" });
+  if (a.rotate) out.push({ icon: "🔄", text: `rotated up to ±${a.rotate}°` });
+  if (a.shift) out.push({ icon: "✥", text: `shifted up to ${Math.round(a.shift * 100)}%` });
+  if (a.brightness) out.push({ icon: "☀️", text: `brightness ±${Math.round(a.brightness * 100)}%` });
+  if (a.cutout) out.push({ icon: "⬛", text: "a random square blanked out" });
+  return out;
+}
+
+function imageSteps(p: PipelineSpec, m: SavedModel): Step[] {
+  const img = { size: 32, grayscale: false, augment: {}, ...(p.image ?? {}) } as NonNullable<PipelineSpec["image"]>;
+  const d = imageDims(m.image_shape);
+  const size = d?.w ?? img.size;
+  const grey = d ? d.c === 1 : img.grayscale;
+  const aug = describeAugment(img.augment);
+  const test = p.split?.test_size ?? 0.2, val = p.split?.val_size ?? 0.1;
+  return [
+    { icon: "🎯", title: m.task === "classification" ? "Sort pictures into classes" : `Predict a number from each picture`,
+      text: m.task === "classification" ? <>Each picture belongs to one of {m.classes?.length ?? "several"} classes{m.classes?.length ? <>: {m.classes.join(", ")}</> : null}.</> : <>The model predicts “{m.target}” straight from the pixels.</> },
+    { icon: "🔍", title: `Resize to ${size}×${size} pixels`, text: <>Every picture is centre-cropped to a square and shrunk to {size}×{size}. Smaller trains faster; larger keeps finer detail.</> },
+    { icon: grey ? "◐" : "🎨", title: grey ? "Turned grey" : "Kept in colour", text: grey ? "Colour was dropped: one brightness value per pixel. Good when colour doesn't matter (like the shape of a digit)." : "Each pixel keeps its red, green and blue values — 3 numbers per pixel." },
+    { icon: "🔢", title: "Pixels → numbers between 0 and 1", text: <>So the model sees {(size * size * (grey ? 1 : 3)).toLocaleString()} numbers per picture.</> },
+    { icon: "✂️", title: "Split into train / validation / test",
+      text: <>It learned from {Math.round((1 - test - val) * 100)}% of the pictures and was graded on {Math.round(test * 100)}% it never saw.</>,
+      extra: (
+        <div style={{ marginTop: 8, maxWidth: 420 }}>
+          <SplitBar parts={[
+            { label: "Train", value: Math.round((1 - test - val) * 100), color: "#0A84FF" },
+            ...(val > 0 ? [{ label: "Validation", value: Math.round(val * 100), color: "#BF5AF2" }] : []),
+            { label: "Test", value: Math.round(test * 100), color: "#FF9F0A" },
+          ]} />
+        </div>
+      ) },
+    { icon: "🪄", title: aug.length ? "Augmentation while training" : "No augmentation", off: !aug.length || m.family !== "torch",
+      text: aug.length
+        ? m.family === "torch"
+          ? "Every time it studied a training picture, it saw a slightly changed copy — so it learns the object, not one exact pose. New pictures are never altered."
+          : "Augmentation was switched on, but only neural networks use it — this classic model saw the pictures as they are."
+        : "Training pictures were used exactly as they are.",
+      extra: aug.length ? (
+        <div className="row wrap" style={{ gap: 5, marginTop: 6 }}>
+          {aug.map((a) => <span key={a.text} className="badge">{a.icon} {a.text}</span>)}
+        </div>
+      ) : undefined },
+  ];
+}
+
 /** "Recipe": the model's settings, its network (if any) and the data-prep steps that feed it. */
 export function Recipe({ model }: { model: SavedModel }) {
   const registry = useRegistry();
@@ -165,7 +219,9 @@ export function Recipe({ model }: { model: SavedModel }) {
   const params = spec
     ? spec.params.map((hp) => ({ name: hp.name, label: hp.label, help: hp.help, value: model.params?.[hp.name] ?? hp.default, changed: model.params?.[hp.name] !== undefined && model.params[hp.name] !== hp.default }))
     : Object.entries(model.params ?? {}).map(([k, v]) => ({ name: k, label: k, help: "", value: v, changed: true }));
-  const steps = model.pipeline ? pipelineSteps(model.pipeline, model) : [];
+  const isImage = model.modality === "image";
+  const steps = model.pipeline ? (isImage ? imageSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
+  const dims = imageDims(model.image_shape);
   const nOut = model.task === "classification" ? model.classes?.length ?? 2 : 1;
 
   return (
@@ -228,11 +284,23 @@ export function Recipe({ model }: { model: SavedModel }) {
                 <h3>🧠 Network architecture</h3>
                 {model.n_params != null && <span className="badge accent">{model.n_params.toLocaleString()} parameters</span>}
               </div>
-              <p className="small muted" style={{ marginBottom: 6 }}>Information flows left to right: your inputs, through the hidden layers, to the answer.</p>
-              <NetworkDiagram layers={archToLayers(arch, model.feature_names.length, nOut)} height={240} />
+              <p className="small muted" style={{ marginBottom: 6 }}>{isImage ? "Information flows left to right: the picture, through layers of pattern-detecting filters, to the answer." : "Information flows left to right: your inputs, through the hidden layers, to the answer."}</p>
+              <NetworkDiagram layers={diagramLayers(arch, model.feature_names.length, nOut, model.image_shape)} height={240} />
             </Glass>
           )}
 
+          {isImage ? (
+            <Glass>
+              <h3 style={{ marginBottom: 10 }}>Pictures it expects</h3>
+              <div className="row" style={{ gap: 14 }}>
+                <div style={{ width: 64, height: 64, borderRadius: 12, flexShrink: 0, backgroundImage: "linear-gradient(var(--hairline) 1px, transparent 1px), linear-gradient(90deg, var(--hairline) 1px, transparent 1px)", backgroundSize: "8px 8px", border: "1px solid var(--hairline)" }} />
+                <div className="col" style={{ gap: 4 }}>
+                  <b>{dims ? `${dims.w}×${dims.h} pixels · ${dims.c === 1 ? "grey" : "colour"}` : "Any picture"}</b>
+                  <span className="small muted" style={{ lineHeight: 1.5 }}>Any picture works — PNG, JPG, a drawing. It's cropped to a square and resized automatically.</span>
+                </div>
+              </div>
+            </Glass>
+          ) : (
           <Glass>
             <h3 style={{ marginBottom: 10 }}>Inputs it expects</h3>
             <div className="row wrap" style={{ gap: 6 }}>
@@ -246,6 +314,7 @@ export function Recipe({ model }: { model: SavedModel }) {
               <p className="tiny faint" style={{ marginTop: 10 }}>After preparation these become {model.feature_names.length} numeric columns the model actually sees.</p>
             )}
           </Glass>
+          )}
         </div>
       </div>
     </motion.section>

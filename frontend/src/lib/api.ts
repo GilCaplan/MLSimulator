@@ -1,7 +1,7 @@
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
@@ -79,7 +79,18 @@ export const api = {
     post<PrepareReport>(`/datasets/${id}/prepare`, { pipeline, model_ids }),
 
   // models + training
-  registry: (task?: Task | null) => get<ModelSpec[]>(`/models/registry${task ? `?task=${task}` : ""}`),
+  registry: (task?: Task | null, modality?: Modality | null) =>
+    get<ModelSpec[]>(`/models/registry?${new URLSearchParams({ ...(task ? { task } : {}), ...(modality ? { modality } : {}) })}`),
+  problems: () => get<ProblemType[]>("/problems"),
+  imageSets: () => get<Record<string, ImageSetInfo>>("/datasets/image-sets"),
+  createImageSet: (name: string, params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/image-set", { name, params, seed }),
+  uploadImages: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<DatasetSummary>("POST", "/datasets/upload-images", fd);
+  },
+  /** thumbnail URL for one image of an image dataset (use in <img src>) */
+  imageUrl: (datasetId: string, i: number, size = 64, aug = 0) => `/api/datasets/${datasetId}/image/${i}?size=${size}${aug ? `&aug=${aug}` : ""}`,
   validateArch: (arch: NNArch, n_features: number, n_out: number, image_shape?: number[] | null) =>
     post<ArchSummary>("/nn/validate", { arch, n_features, n_out, image_shape }),
   train: (body: { project_id: string; prepared_id: string; models: ModelConfig[]; options: TrainOptions }) =>
@@ -100,6 +111,7 @@ export const api = {
   deleteModel: (id: string) => req("DELETE", `/library/${id}`),
   warm: (family: "torch" | "classic") => post("/library/warm", { family }),
   predict: (id: string, rows: Record<string, any>[]) => post<PredictResponse>(`/library/${id}/predict`, { rows }),
+  predictImage: (id: string, images: string[]) => post<ImagePredictResponse>(`/library/${id}/predict-image`, { images }),
   sensitivity: (id: string, row: Record<string, any>, class_index?: number | null) =>
     post<{ curves: { name: string; x: number[]; y: number[] }[] }>(`/library/${id}/sensitivity`, { row, class_index }),
   predictFile: (id: string, file: File) => {

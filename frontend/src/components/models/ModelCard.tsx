@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { fadeUp, spring } from "../../design/motion";
+import { useProject } from "../../lib/store";
 import type { ModelSpec } from "../../lib/types";
-import { badgesFor } from "./meta";
+import { badgesFor, modalityOf } from "./meta";
 
 /** Selectable glass card for one algorithm. */
 export function ModelCard({ spec, count, onToggle, onSettings }: { spec: ModelSpec; count: number; onToggle: () => void; onSettings?: () => void }) {
   const selected = count > 0;
+  const modality = useProject((s) => modalityOf(s.project?.modality));
   return (
     <motion.div
       variants={fadeUp}
@@ -43,7 +45,7 @@ export function ModelCard({ spec, count, onToggle, onSettings }: { spec: ModelSp
       <div className="grow" />
       <div className="row between" style={{ gap: 6, minHeight: 22 }}>
         <span className="row wrap" style={{ gap: 5 }}>
-          {badgesFor(spec).map((b) => <span key={b.text} className={`badge ${b.tone}`}>{b.text}</span>)}
+          {badgesFor(spec, modality).map((b) => <span key={b.text} className={`badge ${b.tone}`}>{b.text}</span>)}
         </span>
         <AnimatePresence>
           {selected && onSettings && (

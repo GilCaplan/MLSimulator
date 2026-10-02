@@ -105,7 +105,11 @@ def augment_batch(x, shape, cfg):
         tx, ty = [(torch.rand(B, device=dev) * 2 - 1) * shift * 2 for _ in range(2)]
         theta = torch.stack([torch.stack([a.cos(), -a.sin(), tx], 1), torch.stack([a.sin(), a.cos(), ty], 1)], 1)
         grid = F.affine_grid(theta, list(x.shape), align_corners=False)
-        x = F.grid_sample(x, grid, padding_mode="border", align_corners=False)
+        # half the batch stays untouched: warping smooths pixel texture, so seeing only warped images makes real ones
+        # look systematically different and the network learns the warping instead of the shapes
+        warped = F.grid_sample(x, grid, mode=cfg.get("interp", "bilinear"), padding_mode="border", align_corners=False)
+        keep = (torch.rand(B, device=dev) < float(cfg.get("p_identity", 0.5)))[:, None, None, None]
+        x = torch.where(keep, x, warped)
     b = float(cfg.get("brightness") or 0)
     if b:
         x = (x * (1 + (torch.rand(B, 1, 1, 1, device=dev) * 2 - 1) * b) + (torch.rand(B, 1, 1, 1, device=dev) * 2 - 1) * b * 0.25).clamp(0, 1)

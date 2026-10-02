@@ -4,6 +4,7 @@ import { spring } from "../../design/motion";
 import type { ConvLayer, DenseLayer, Layer, NNArch } from "../../lib/types";
 import { InfoTip, Select, Slider, Toggle } from "../glass";
 import { ACTIVATIONS } from "./meta";
+import { GlobalPoolCard } from "./VisionBuilders";
 
 /** Stable React keys for an array that can be reordered (so layout animations follow the moved item). */
 function useStableIds(count: number) {
@@ -94,6 +95,8 @@ export function LayerBuilder({ arch, onChange }: { arch: NNArch; onChange: (a: N
           addLabel="Add conv layer"
         />
       )}
+
+      {arch.kind === "cnn2d" && <GlobalPoolCard arch={arch} onChange={onChange} />}
 
       <LayerList
         title={isCnn ? "Dense layers" : "Hidden layers"}

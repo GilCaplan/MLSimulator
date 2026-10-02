@@ -64,7 +64,8 @@ def _star(cx, cy, r, rot):
     return pts
 
 
-def gen_shapes(n_images=1500, size=32, noise=0.15, seed=42):
+def gen_shapes(n_images=1500, size=32, noise=0.15, seed=42, rotate=True, region="any"):
+    """`rotate=False` draws every shape upright; `region="center"` keeps shapes near the middle (used by lessons)."""
     rng = np.random.default_rng(seed)
     classes = ["circle", "square", "triangle", "star"]
     imgs, labels = [], []
@@ -75,8 +76,11 @@ def gen_shapes(n_images=1500, size=32, noise=0.15, seed=42):
         d = ImageDraw.Draw(img)
         col = _contrast_colour(bg, rng)
         r = rng.uniform(0.18, 0.32) * S
-        cx, cy = rng.uniform(r, S - r), rng.uniform(r, S - r)
-        rot = rng.uniform(0, 2 * np.pi)
+        if region == "center":
+            cx, cy = S / 2 + rng.uniform(-0.06, 0.06) * S, S / 2 + rng.uniform(-0.06, 0.06) * S
+        else:
+            cx, cy = rng.uniform(r, S - r), rng.uniform(r, S - r)
+        rot = rng.uniform(0, 2 * np.pi) if rotate else -np.pi / 2
         if cls == "circle":
             d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=col)
         elif cls == "square":
@@ -399,7 +403,7 @@ def prepare_images(arr: np.ndarray, df: pd.DataFrame, spec: dict, dataset_id: st
     report = {
         "modality": "image", "task": task, "classes": classes,
         "splits": {"train": int(len(tr)), "train_before_resample": int(len(tr)), "val": int(len(va)), "test": int(len(te))},
-        "class_counts_before": counts(tr), "class_counts_after": counts(tr), "class_counts_test": counts(te),
+        "class_counts_before": counts(tr), "class_counts_after": counts(tr), "class_counts_test": counts(te), "class_counts_val": counts(va) if len(va) else None,
         "added": 0, "removed": 0, "outliers_removed": 0, "before_points": [], "after_points": [],
         "feature_names_out": [], "n_features": int(X.shape[1]), "numeric_columns": [], "categorical_columns": [],
         "warnings": [], "image_shape": pp.image_shape, "duplicates_found": 0, "features_created": [],

@@ -56,7 +56,11 @@ def clean_frame(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def summary(did: str) -> dict:
-    return jsonable(profile.summarize(datasets.get(did), datasets.meta(did)))
+    meta = datasets.meta(did)
+    out = profile.summarize(datasets.get(did), meta)
+    if meta.get("modality") == "image":
+        out["n_duplicates"] = 0  # rows only hold labels; duplicate images aren't detected
+    return jsonable(out)
 
 
 async def _save_upload(file: UploadFile) -> Path:
@@ -208,7 +212,8 @@ def prepare_dataset(did: str, body: dict = Body(...)):
         prepared = prepare(df, spec, did, image_shape=meta.get("image_shape"))
     prepared_store.put(prepared)
     report = dict(prepared.report)
-    report["coach"] = coach.prepare_suggestions(report, prepared.spec, body.get("model_ids") or [], prepared.task)
+    report["coach"] = ([] if getattr(prepared, "modality", "tabular") != "tabular"
+                       else coach.prepare_suggestions(report, prepared.spec, body.get("model_ids") or [], prepared.task))
     report["classes"] = prepared.classes
     report["task"] = prepared.task
     return jsonable(report)

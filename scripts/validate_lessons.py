@@ -9,14 +9,17 @@ import sys
 import warnings
 
 import mlp  # noqa: F401
-try:
-    import lightgbm, xgboost  # noqa: F401,E401  (OpenMP load order; this script never imports torch)
-except Exception:
-    pass
+
+TORCH_MODE = "--torch" in sys.argv  # image lessons: torch only, never xgboost/lightgbm (OpenMP clash)
+if not TORCH_MODE:
+    try:
+        import lightgbm, xgboost  # noqa: F401,E401  (OpenMP load order; the classic mode never imports torch)
+    except Exception:
+        pass
 from mlp.core.pipeline import prepare
 from mlp.core.evaluate import cls_metrics, reg_metrics
 from mlp.core.registry import build_estimator, defaults
-from mlp.lessons.generators import GENERATORS
+from mlp.lessons.generators import GENERATORS, IMAGE_LESSONS
 from mlp.lessons.grading import CHALLENGES, grade
 
 warnings.filterwarnings("ignore")
@@ -29,7 +32,34 @@ def deep_merge(a: dict, b: dict) -> dict:
     return out
 
 
+def run_image(lesson, cfg_name, seed):
+    from mlp.core.images import prepare_images
+    from mlp.core.registry import MODEL_INDEX, is_nn
+    from mlp.core.train_nn import train_nn
+    ch = CHALLENGES[lesson]
+    train, hidden = GENERATORS[lesson](seed=seed)
+    pipe = deep_merge({"target": ch["target"], "task": ch["task"]}, ch["preset_pipeline"])
+    models = list(ch["preset_models"])
+    if cfg_name != "naive":
+        pipe = deep_merge(pipe, ch[cfg_name].get("pipeline", {}))
+        models = ch[cfg_name].get("models", models)
+    prepared = prepare_images(train.images, train.frame, pipe, "validate")
+    pp = prepared.preprocessor
+    out = {}
+    for mid in models:
+        if is_nn(mid):
+            est, _, _ = train_nn(mid, {}, MODEL_INDEX[mid]["default_arch"], prepared, lambda *a: None, None, mid, seed=42)
+        else:
+            est = build_estimator(mid, ch["task"], defaults(mid), n_classes=len(prepared.classes or []), seed=42)
+            est.fit(prepared.X_train, prepared.y_train)
+        pred = pp.decode_y(est.predict(pp.transform(hidden.images)))
+        out[mid] = grade(lesson, hidden.frame, pred)
+    return out
+
+
 def run(lesson, cfg_name, seed):
+    if lesson in IMAGE_LESSONS:
+        return run_image(lesson, cfg_name, seed)
     ch = CHALLENGES[lesson]
     train, hidden = GENERATORS[lesson](seed=seed)
     pipe = deep_merge({"target": ch["target"], "task": ch["task"]}, ch["preset_pipeline"])
@@ -66,11 +96,15 @@ def main():
     ap.add_argument("--seeds", default="7,11,23")
     ap.add_argument("--only", default=None)
     ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--torch", action="store_true", help="validate only the image (PyTorch) lessons")
+    ap.add_argument("--no-torch", action="store_true", help="skip the image lessons")
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",")]
     ok_all = True
     for lesson, ch in CHALLENGES.items():
         if args.only and lesson != args.only:
+            continue
+        if (lesson in IMAGE_LESSONS) != args.torch:
             continue
         for seed in seeds:
             line = [f"{lesson:12s} seed={seed:<3d}"]
@@ -83,7 +117,15 @@ def main():
                 ok_all &= good
                 line.append(f"{'✓' if good else '✗'} {cfg}[{vals}]" if args.verbose else f"{'✓' if good else '✗'} {cfg}")
             print("  ".join(line), flush=True)
-    print("\nALL CHALLENGES VALID" if ok_all else "\nSOME CHALLENGES INVALID")
+    if not args.torch and not args.no_torch and (not args.only or args.only in IMAGE_LESSONS):
+        import subprocess
+        cmd = [sys.executable, "-W", "ignore", __file__, "--torch", "--seeds", args.seeds] + (["--verbose"] if args.verbose else []) + \
+              (["--only", args.only] if args.only else [])
+        ok_all &= subprocess.call(cmd) == 0
+    else:
+        print("\nALL CHALLENGES VALID" if ok_all else "\nSOME CHALLENGES INVALID")
+    if not args.torch and not args.no_torch:
+        print("\nALL CHALLENGES VALID" if ok_all else "\nSOME CHALLENGES INVALID")
     sys.exit(0 if ok_all else 1)
 
 

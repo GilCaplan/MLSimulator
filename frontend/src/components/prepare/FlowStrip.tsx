@@ -60,13 +60,29 @@ function stageActive(id: StageId, spec: PipelineSpec, hasCategorical: boolean) {
   }
 }
 
-/** Horizontal pipeline overview: glass chips joined by flowing connectors. A glow travels along it while running. */
+/** One chip of the strip. */
+export interface FlowItem { id: string; icon: string; name: string; state: string; active: boolean }
+
+/** Horizontal pipeline overview for the tabular stages. */
 export function FlowStrip({ stages, spec, hasCategorical, running, onPick, header }: {
   stages: StageId[];
   spec: PipelineSpec;
   hasCategorical: boolean;
   running: boolean;
   onPick: (id: StageId) => void;
+  header?: ReactNode;
+}) {
+  const items: FlowItem[] = stages.map((id) => ({
+    id, icon: STAGE_ICONS[id], name: STAGE_NAMES[id], state: stageState(id, spec, hasCategorical), active: stageActive(id, spec, hasCategorical),
+  }));
+  return <FlowStripView items={items} running={running} onPick={(id) => onPick(id as StageId)} header={header} />;
+}
+
+/** Glass chips joined by flowing connectors. A glow travels along it while running. */
+export function FlowStripView({ items, running, onPick, header }: {
+  items: FlowItem[];
+  running: boolean;
+  onPick: (id: string) => void;
   header?: ReactNode;
 }) {
   const reduce = useUI((s) => s.reduceMotion);
@@ -80,17 +96,17 @@ export function FlowStrip({ stages, spec, hasCategorical, running, onPick, heade
       {header}
       <div style={{ position: "relative", marginTop: header ? 12 : 0 }}>
         <div className="row" style={{ gap: 0, overflowX: "auto", padding: "4px 2px 6px" }}>
-          {stages.map((id, i) => {
-            const active = stageActive(id, spec, hasCategorical);
+          {items.map((it, i) => {
+            const active = it.active;
             return (
-              <Fragment key={id}>
+              <Fragment key={it.id}>
                 {i > 0 && (
                   <div style={{ flex: "1 0 14px", minWidth: 14, maxWidth: 40, height: 10, position: "relative", display: "flex", alignItems: "center" }}>
                     <div className={`mlp-flowline ${active ? "" : "off"}`} style={{ height: 2, width: "100%", opacity: 0.55, animationPlayState: reduce ? "paused" : "running" }} />
                     <span style={{ position: "absolute", right: -2, top: -1, fontSize: 9, color: active ? "var(--accent)" : "var(--text-3)", opacity: 0.8 }}>▶</span>
                   </div>
                 )}
-                <Chip id={id} label={stageState(id, spec, hasCategorical)} active={active} onClick={() => onPick(id)} index={i} running={running && !reduce} />
+                <Chip item={it} onClick={() => onPick(it.id)} index={i} running={running && !reduce} />
               </Fragment>
             );
           })}
@@ -112,7 +128,8 @@ export function FlowStrip({ stages, spec, hasCategorical, running, onPick, heade
   );
 }
 
-function Chip({ id, label, active, onClick, index, running }: { id: StageId; label: string; active: boolean; onClick: () => void; index: number; running: boolean }) {
+function Chip({ item, onClick, index, running }: { item: FlowItem; onClick: () => void; index: number; running: boolean }) {
+  const { icon, name, state: label, active } = item;
   return (
     <motion.button
       onClick={onClick}
@@ -123,10 +140,10 @@ function Chip({ id, label, active, onClick, index, running }: { id: StageId; lab
       whileTap={{ scale: 0.95 }}
       className="glass thin"
       style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 12px 7px", minWidth: 78, borderRadius: 16, cursor: "pointer", color: "inherit", opacity: active ? 1 : 0.66 }}
-      title={`Jump to ${STAGE_NAMES[id]}`}
+      title={`Jump to ${name}`}
     >
-      <span style={{ fontSize: 18, filter: active ? "none" : "grayscale(0.7)" }}>{STAGE_ICONS[id]}</span>
-      <span style={{ fontSize: 12, fontWeight: 650 }}>{STAGE_NAMES[id]}</span>
+      <span style={{ fontSize: 18, filter: active ? "none" : "grayscale(0.7)" }}>{icon}</span>
+      <span style={{ fontSize: 12, fontWeight: 650 }}>{name}</span>
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={label}
