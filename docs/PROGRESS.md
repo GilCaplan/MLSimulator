@@ -100,7 +100,8 @@ _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
   everywhere via pref-aware primitives; plus whole-site templates (glass / classic / minimal / solid …) and
   background templates. Must be tested across all combinations. Plan: `docs/ui_customization_plan.md` (Fable).
 
-## Phase 5 UI — PAUSED mid-way (session 4)
+## Phase 5 UI — RESUMED (session 4, user order: labs → forecasting → colour sweep); both forecasting agents running again
+## (older pause notes below)
 Agent B (train/library/home/check) — done: `components/train/util.ts` (forecasting ranks by MAE, `isForecast()`, labels,
 lower-is-better MASE/sMAPE/one-step, toast fix), new `components/train/forecast/` (`fcKit.ts`, `ForecastChart.tsx`,
 `ForecastViews.tsx`, `ForecastDetail.tsx`) — complete but NOT wired. Left: route forecasting in
@@ -122,7 +123,7 @@ dataset suggestion); add `real_world` to `ChallengeCheck`.
 **To resume:** resume both agents (or new ones with this list), keep max 2 at a time; then re-enable forecasting
 (`problems.py` enabled True, `no_peeking` in catalog ORDER) and the Labs nav tab (`AppShell.tsx` NAV), verify, push.
 
-## Phase 6 (Labs) — backend DONE, UI queued (session 4)
+## Phase 6 (Labs) — DONE (session 4): gallery + GAN/VAE/transfer (components/labs/*) + bandit/gridworld (components/labs/client/*), Labs tab enabled
 - `mlp/core/labs.py`: `gan` (2-D targets ring8/moons/spiral/circle/grid9, frames with fake points + 25×25 discriminator
   grid, coverage/precision), `vae` (sklearn digits 8×8 → 2-D map, vae|ae mode, decoded grid, reconstructions, model
   saved to `data/labs/<job>/vae.pt`), `transfer` (CNN pre-trained once on synthetic shapes+arrows, cached in
