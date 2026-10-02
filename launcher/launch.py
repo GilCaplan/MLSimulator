@@ -3,8 +3,10 @@
 Reuses a running server (data/run/server.json + a health check) or starts one on a free port in the background, then
 opens the browser. The desktop / Start-menu shortcuts created by the setup scripts run this file.
 
-    python launcher/launch.py            # start (or reopen) the app
-    python launcher/launch.py --stop     # stop the background server
+    python launcher/launch.py               # start (or reopen) the app and open the browser
+    python launcher/launch.py --no-browser  # start (or find) the server only; prints its URL
+    python launcher/launch.py --status      # print the URL if running (exit code 0), else exit code 1
+    python launcher/launch.py --stop        # stop the background server
 """
 from __future__ import annotations
 
@@ -73,6 +75,8 @@ def running_port() -> int | None:
 def free_port() -> int | None:
     for port in PORTS:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if not WINDOWS:  # allow ports in TIME_WAIT (uvicorn does the same); on Windows this would allow stealing
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind(("127.0.0.1", port))
             except OSError:
@@ -97,12 +101,27 @@ def start_server(port: int):
     subprocess.Popen([str(py), "-m", "mlp.main", "--port", str(port)], **kw)
 
 
+def open_app(port: int):
+    url = f"http://localhost:{port}/"
+    print(url, flush=True)
+    if "--no-browser" not in sys.argv:
+        webbrowser.open(url)
+
+
 def main():
+    if "--status" in sys.argv:
+        port = running_port()
+        print(f"running: http://localhost:{port}/" if port else "not running")
+        sys.exit(0 if port else 1)
     if "--stop" in sys.argv:
         port = running_port()
         if port:
             req = urllib.request.Request(f"http://127.0.0.1:{port}/api/system/shutdown", method="POST", data=b"")
             urllib.request.urlopen(req, timeout=3)
+            for _ in range(60):  # wait until it has really gone
+                if not health(port):
+                    break
+                time.sleep(0.25)
             print(f"Stopped the server on port {port}.")
         else:
             print("ML Playground isn't running.")
@@ -110,7 +129,7 @@ def main():
     port = running_port()
     if port:
         log(f"already running on {port}")
-        webbrowser.open(f"http://localhost:{port}/")
+        open_app(port)
         return
     port = free_port()
     if port is None:
@@ -121,7 +140,7 @@ def main():
         h = health(port)
         if h and h.get("ready"):
             log("up")
-            webbrowser.open(f"http://localhost:{port}/")
+            open_app(port)
             return
         time.sleep(0.25)
     fail("The server didn't start within 30 seconds.")

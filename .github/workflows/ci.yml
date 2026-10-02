@@ -24,37 +24,61 @@ jobs:
         run: PYTHONPATH=. python scripts/validate_lessons.py --seeds 7,11 --no-torch   # image lessons need torch; run locally
 
   platforms:
-    name: install + launch (${{ matrix.os }})
+    name: setup + launch (${{ matrix.os }}${{ matrix.private == '1' && ', private tools' || '' }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        private: ["0"]
+        include:
+          - { os: windows-latest, private: "1" }   # no system Python/Node: setup downloads uv + portable Node.js
     runs-on: ${{ matrix.os }}
     defaults: { run: { shell: bash } }
-    env: { BROWSER: "true", PYTHONUTF8: "1" }
+    env: { BROWSER: "true", PYTHONUTF8: "1", MLP_PRIVATE_TOOLS: "${{ matrix.private }}" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+        if: matrix.private != '1'
         with: { python-version: "3.11" }
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
-      - name: Python environment (.venv, as the setup scripts create it)
+        if: matrix.private != '1'
+        with: { node-version: 22 }
+      - name: Install with the setup script (as users do)
         run: |
-          python -m venv .venv
-          if [ "$RUNNER_OS" = "Windows" ]; then PY=.venv/Scripts/python; else PY=.venv/bin/python; fi
-          echo "PY=$PY" >> "$GITHUB_ENV"
-          $PY -m pip install -q --upgrade pip
-          if [ "$RUNNER_OS" = "Linux" ]; then $PY -m pip install -q torch --index-url https://download.pytorch.org/whl/cpu; fi
-          $PY -m pip install -q -r requirements.txt
-      - name: Build the interface
-        run: cd frontend && npm ci && npm run build
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 -NoLaunch
+            echo "PY=.venv/Scripts/python" >> "$GITHUB_ENV"
+          else
+            bash scripts/setup.sh --no-launch
+            echo "PY=.venv/bin/python" >> "$GITHUB_ENV"
+          fi
       - name: The API process never imports torch / xgboost / lightgbm
         run: $PY tests/test_process_isolation.py
       - name: Launch, train classic + PyTorch models, predict, stop
         run: |
-          $PY launcher/launch.py
+          $PY launcher/launch.py --no-browser
+          $PY launcher/launch.py --status
           $PY scripts/smoke_platform.py
           $PY launcher/launch.py --stop
-      - name: Server log
+      - name: Logs
+        if: always()
+        run: cat data/logs/server.log data/logs/launcher.log || true
+
+  fresh-linux:
+    name: setup on a bare Debian (no Python / Node)
+    runs-on: ubuntu-latest
+    container: debian:12-slim
+    env: { BROWSER: "true", MLP_PRIVATE_TOOLS: "1" }
+    steps:
+      - run: apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
+      - uses: actions/checkout@v4
+      - name: Install with the setup script
+        run: bash scripts/setup.sh --no-launch
+      - name: Launch, train, predict, stop
+        run: |
+          .venv/bin/python launcher/launch.py --no-browser
+          .venv/bin/python scripts/smoke_platform.py
+          .venv/bin/python launcher/launch.py --stop
+      - name: Logs
         if: always()
         run: cat data/logs/server.log data/logs/launcher.log || true

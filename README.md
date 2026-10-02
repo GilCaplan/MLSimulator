@@ -35,90 +35,111 @@ time) · Feature scaling · Class imbalance · Overfitting · Calibration & erro
 
 ![Your test vs the real world](docs/images/lesson-check.jpg)
 
-## Quick start
+## Install
 
-ML Playground runs on **macOS, Linux and Windows**. You need:
-- **Python 3.10+** (3.11 recommended): [python.org/downloads](https://www.python.org/downloads/)
-- **Node.js 18+**, only once, to build the interface: [nodejs.org](https://nodejs.org)
-- **Git** to download the project (or use GitHub's *Code → Download ZIP* and unzip it)
-- About 3 GB of disk space (mostly PyTorch). [`uv`](https://github.com/astral-sh/uv) makes setup faster but is optional.
+ML Playground runs on **macOS, Linux and Windows**.
 
-The setup script creates a private Python environment in `.venv`, builds the interface and adds an **ML Playground**
-icon. Double-click the icon: the app starts in the background on a free port (8765 by default) and opens in your
-browser. Opening it again simply reopens the running app.
+### Easiest: one command
 
-### macOS
+**macOS / Linux**: open *Terminal* and paste:
+```sh
+curl -fsSL https://raw.githubusercontent.com/GilCaplan/MLSimulator/main/scripts/install.sh | bash
+```
+
+**Windows**: open *PowerShell* (Start menu → type "PowerShell") and paste:
+```powershell
+irm https://raw.githubusercontent.com/GilCaplan/MLSimulator/main/scripts/install.ps1 | iex
+```
+
+That's all:
+- **No admin rights needed, nothing installed system-wide.** The command downloads ML Playground into `~/MLSimulator`
+  (Windows: `%USERPROFILE%\MLSimulator`). If Python 3.10+ or Node.js 18+ are missing, it puts private copies inside
+  that folder.
+- It builds the app, adds an **ML Playground** icon, and opens the app in your browser.
+- The first install takes about 5–15 minutes, mostly downloading PyTorch, and needs about 3 GB of disk space.
+- From then on, double-click **ML Playground**:
+  - macOS: Desktop or Applications.
+  - Linux: applications menu or Desktop. On GNOME, right-click the Desktop icon → *Allow Launching* once.
+  - Windows: Desktop or Start menu.
+- **To update**, run the same command again. Your projects are kept.
+
+<details>
+<summary>Options: install folder, no icons, no auto-open, GPU</summary>
+
+macOS / Linux: add options after `bash -s --`, e.g.
+`curl -fsSL https://raw.githubusercontent.com/GilCaplan/MLSimulator/main/scripts/install.sh | bash -s -- --dir ~/apps/MLSimulator --no-shortcuts`
+- `--dir PATH`: install folder (default `~/MLSimulator`).
+- `--no-launch`: don't open the app at the end.
+- `--no-shortcuts`: no app icon / desktop entry.
+- `--gpu` (Linux): keep the CUDA build of PyTorch. By default, setup installs the smaller CPU-only build when no
+  NVIDIA GPU is found. With an NVIDIA GPU, big networks train on it automatically. On Apple Silicon Macs, they use the
+  Apple GPU.
+
+Windows: set environment variables first in the same window, e.g.
+`$env:MLP_DIR = "D:\Apps\MLSimulator"; irm https://raw.githubusercontent.com/GilCaplan/MLSimulator/main/scripts/install.ps1 | iex`
+- `MLP_DIR`: install folder.
+- `MLP_NO_LAUNCH=1`: don't open the app at the end.
+- `MLP_NO_SHORTCUTS=1`: no shortcuts.
+</details>
+
+### Let an AI agent install it
+Using Claude Code, Codex, Cursor or another coding agent? Give it this prompt:
+
+> Install ML Playground on this computer by following the instructions in
+> https://github.com/GilCaplan/MLSimulator/blob/main/AGENT_INSTALL.md, verify it, and tell me how to open it.
+
+[`AGENT_INSTALL.md`](AGENT_INSTALL.md) has non-interactive commands for each OS, verification steps, troubleshooting
+and uninstall instructions.
+
+### From a git clone
+Prefer to clone the repository yourself? Run the setup script inside it:
 ```sh
 git clone https://github.com/GilCaplan/MLSimulator.git
 cd MLSimulator
-bash scripts/setup.sh
+bash scripts/setup.sh          # macOS / Linux
+scripts\setup.bat              # Windows (or double-click it in File Explorer)
 ```
-The icon appears on your Desktop, in `~/Applications` and in the project folder. On Apple Silicon, larger networks use
-the Apple GPU (MPS) automatically.
+The setup script takes the same options as above (`--no-launch`, `--no-shortcuts`, `--gpu`; Windows: `-NoLaunch`,
+`-NoShortcuts`).
 
-### Linux
-```sh
-# Debian/Ubuntu prerequisites (other distributions: install python3, python3-venv, nodejs, npm, git)
-sudo apt install python3 python3-venv python3-tk nodejs npm git
+<details>
+<summary>Fully manual setup (no scripts)</summary>
 
-git clone https://github.com/GilCaplan/MLSimulator.git
-cd MLSimulator
-bash scripts/setup.sh
-```
-This adds **ML Playground** to your applications menu and Desktop (on GNOME you may need to right-click the Desktop
-icon → *Allow Launching* once). Without an NVIDIA GPU, setup installs the smaller CPU-only build of PyTorch. With
-an NVIDIA GPU and drivers it keeps the CUDA build, and big networks train on the GPU. Use `bash scripts/setup.sh --gpu`
-to force the CUDA build.
-
-### Windows
-1. Install [Python](https://www.python.org/downloads/) (tick **"Add python.exe to PATH"**), [Node.js](https://nodejs.org)
-   and [Git](https://git-scm.com/download/win).
-2. In PowerShell or Command Prompt:
-   ```bat
-   git clone https://github.com/GilCaplan/MLSimulator.git
-   cd MLSimulator
-   scripts\setup.bat
-   ```
-   (or double-click `scripts\setup.bat` in File Explorer).
-3. Double-click **ML Playground** on your Desktop or in the Start menu.
-
-If Windows Defender SmartScreen or the firewall asks, allow Python to accept **local** connections. The app only
-listens on `127.0.0.1`, so it isn't reachable from other computers.
-
-### Without the icon (any OS)
-```sh
-# macOS / Linux
-.venv/bin/python launcher/launch.py           # start or reopen the app
-.venv/bin/python launcher/launch.py --stop    # stop the background server
-
-# Windows
-.venv\Scripts\python launcher\launch.py
-.venv\Scripts\python launcher\launch.py --stop
-```
-Or run the server in the foreground on a port of your choice: `.venv/bin/python -m mlp.main --port 8765`
-(Windows: `.venv\Scripts\python -m mlp.main --port 8765`), then open <http://localhost:8765>.
-
-### Manual setup (if the script doesn't suit you)
+Requires Python 3.10+ and Node.js 18+.
 ```sh
 python3 -m venv .venv                                  # Windows: py -3 -m venv .venv
 .venv/bin/pip install -r requirements.txt              # Windows: .venv\Scripts\pip install -r requirements.txt
 cd frontend && npm install && npm run build && cd ..
 .venv/bin/python launcher/launch.py                    # Windows: .venv\Scripts\python launcher\launch.py
 ```
+On Linux without an NVIDIA GPU, run `.venv/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu`
+first for a much smaller download.
+</details>
 
-### Updating and uninstalling
-- **Update:** `git pull`, then run the setup script again. It reuses the Python environment and rebuilds the interface.
-- **Stop:** *Settings → Quit*, or `launch.py --stop`.
-- **Uninstall:** delete the project folder and the shortcut(s). On macOS also delete `~/Applications/ML Playground.app`;
-  on Linux `~/.local/share/applications/ml-playground.desktop`; on Windows the Start-menu entry. Your projects live in
-  `data/` inside the project folder, so back it up first if you want to keep them.
+### Starting and stopping without the icon
+```sh
+.venv/bin/python launcher/launch.py              # start or reopen the app (Windows: .venv\Scripts\python launcher\launch.py)
+.venv/bin/python launcher/launch.py --status     # is it running? prints the URL
+.venv/bin/python launcher/launch.py --stop       # stop the background server
+```
+Or stop it from the app: *Settings → Quit*. The server only listens on `127.0.0.1` (this computer). If Windows asks
+about the firewall, allowing private networks is fine.
+
+### Uninstalling
+Delete the install folder and the ML Playground icon(s):
+- macOS: also delete `~/Applications/ML Playground.app`.
+- Linux: also delete `~/.local/share/applications/ml-playground.desktop`.
+- Windows: also delete the Start-menu entry.
+
+Your projects live in `data/` inside the install folder, so back it up first if you want to keep them.
 
 ### Troubleshooting
-- **Nothing opens:** look at `data/logs/launcher.log` and `data/logs/server.log`.
-- **"Python 3.10+ is required":** install a newer Python and run the setup script again (delete `.venv` first).
-- **Linux: "Couldn't create a virtual environment":** `sudo apt install python3-venv`.
-- **Port already in use:** the launcher picks the next free port between 8765 and 8800. *Settings → Server & port*
-  can move a running app.
+- **Nothing opens:** look at `data/logs/launcher.log` and `data/logs/server.log` in the install folder.
+- **Something broke during install:** run the install command again. It resumes and repairs. For a clean
+  reinstall, delete `.venv` and `.tools` in the install folder first (your `data/` is kept).
+- **Behind a proxy:** set `HTTPS_PROXY` before running the install command.
+- **Port already in use:** the app picks the next free port between 8765 and 8800. *Settings → Server & port* can move
+  a running app.
 
 ## Documentation
 - **[User guide](docs/USER_GUIDE.md)**: every screen and setting explained.
