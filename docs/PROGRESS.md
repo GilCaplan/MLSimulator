@@ -29,7 +29,12 @@ _Last updated: 2026-10-02 (session 2). If a session ends mid-task, start here._
   calibration of `splits` goal, catalog content in `mlp/lessons/catalog.py`, end-to-end check, docs table update.
 
 ## Next
-0. Finish vision UI (problem picker, image Data/Prepare — agent), 2 vision demos (agent), browser pass, commit + push.
+- Vision UI is complete (problem picker, image Data/Prepare, results tabs, playground, 14 lessons incl. 2 vision demos);
+  pushed to GitHub, CI green (CI validates tabular lessons; image lessons need `validate_lessons.py --torch` locally).
+- Remaining expansion phases from `docs/expansion_plan.md`: 2 Unsupervised (clustering/reduction/anomaly),
+  3 NLP (text classification), 4 Recommenders, 5 Forecasting, 6 extras (transfer learning, VAE, GAN, RL demos).
+  Problem tiles for these already appear as "coming soon" (`enabled: False` in `mlp/core/problems.py`).
+0. (done) Finish vision UI, demos, browser pass, commit + push.
 1. (done) Finish batch 2 → validate (`scripts/validate_lessons.py --seeds 7,11,23,31,47`), smoke tests, browser pass.
 2. GitHub repo **GilCaplan/MLSimulator** (public, PolyForm Noncommercial 1.0.0 license; README, USER_GUIDE,
    TUTORIAL, ARCHITECTURE, CONTRIBUTING, workflow docs) — user approved name/visibility/license.
