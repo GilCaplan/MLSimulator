@@ -47,7 +47,7 @@ export function InputControl({ item, value, onChange, curve, domain, color, form
           <span className="tiny faint">{cats.length} options</span>
         </div>
         {cats.length <= 4 ? (
-          <Segmented size="sm" full value={String(value)} onChange={onChange} options={cats.map((c) => ({ value: c, label: c }))} />
+          <Segmented kind="form" size="sm" full value={String(value)} onChange={onChange} options={cats.map((c) => ({ value: c, label: c }))} />
         ) : (
           <Select value={String(value)} onChange={onChange} options={cats.map((c) => ({ value: c, label: c }))} style={{ width: "100%" }} />
         )}
@@ -65,7 +65,7 @@ export function InputControl({ item, value, onChange, curve, domain, color, form
         {label}
         <span className="row" style={{ gap: 8 }}>
           <span className="small muted" style={{ width: 26, textAlign: "right" }}>{on ? "Yes" : "No"}</span>
-          <Toggle checked={on} onChange={(v) => onChange(v ? hi : lo)} />
+          <Toggle fixedRenderer="switch" checked={on} onChange={(v) => onChange(v ? hi : lo)} />
         </span>
       </div>
     );
@@ -88,7 +88,7 @@ export function InputControl({ item, value, onChange, curve, domain, color, form
         </span>
         <NumberField value={num} onChange={(v) => onChange(item.integer ? Math.round(v) : v)} step={stepFor(item)} width={92} style={{ height: 28, fontSize: 12.5 }} />
       </div>
-      <Slider value={num} min={lo} max={hi} step={stepFor(item)} integer={item.integer} onChange={onChange} format={(v) => shortVal(v, item.integer)} />
+      <Slider fixedRenderer="slider" valueBox={false} value={num} min={lo} max={hi} step={stepFor(item)} integer={item.integer} onChange={onChange} format={(v) => shortVal(v, item.integer)} />
       {curve && (
         <div style={{ paddingRight: 64, marginTop: -2 }}>
           <WhatIfCurve xs={curve.x} ys={curve.y} value={num} domain={domain} color={color} format={formatY} />

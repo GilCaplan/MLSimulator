@@ -9,7 +9,8 @@ export type Route =
   | { name: "lessons" }
   | { name: "lesson"; lessonId: string }
   | { name: "labs" }
-  | { name: "lab"; labId: string };
+  | { name: "lab"; labId: string }
+  | { name: "gallery" };
 
 export function parse(path: string): Route {
   const parts = path.replace(/^\/+|\/+$/g, "").split("/");
@@ -21,6 +22,7 @@ export function parse(path: string): Route {
   if (parts[0] === "lessons") return { name: "lessons" };
   if (parts[0] === "labs" && parts[1]) return { name: "lab", labId: parts[1] };
   if (parts[0] === "labs") return { name: "labs" };
+  if (parts[0] === "dev" && parts[1] === "gallery") return { name: "gallery" };
   return { name: "home" };
 }
 

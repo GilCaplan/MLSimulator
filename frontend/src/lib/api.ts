@@ -1,3 +1,4 @@
+import type { UIPrefs } from "../design/prefs";
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
@@ -121,6 +122,10 @@ export const api = {
   cancelJob: (id: string) => post(`/jobs/${id}/cancel`),
   result: (id: string) => get<RunResult>(`/jobs/${id}/result`),
   tuneResult: (id: string) => get<TuneResult>(`/jobs/${id}/result`),
+
+  // appearance prefs (shared across ports — localStorage is per port)
+  getPrefs: () => get<{ prefs: UIPrefs | null }>("/system/prefs"),
+  putPrefs: (prefs: UIPrefs) => req<{ ok: boolean }>("PUT", "/system/prefs", { prefs }),
 
   // labs
   labs: () => get<LabsCatalog>("/labs"),

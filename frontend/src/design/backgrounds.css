@@ -1,0 +1,64 @@
+/* Background templates: [data-background="…"] — the fixed layer drawn by <Background/> and the Settings swatches.
+ * body always paints var(--bg). Each [data-background] element defines --bg-layer-image/--bg-layer-size (resolved with its
+ * own template + theme colours) and every consumer reads them by inheritance, so the nearest data-background wins:
+ *   .bg-layer   the page layer (<div data-bg-layer class="bg-layer">), transparent over body's --bg
+ *   .bg-swatch  a scoped element (picker swatch, template preview, sandbox) that paints --bg + the same layer itself */
+
+[data-background] {
+  --bg-layer-image: none;
+  --bg-layer-size: auto;
+  --bg-layer-position: 0 0;
+  /* swatches only: what the aurora blobs look like, frozen */
+  --bg-aurora-image:
+    radial-gradient(ellipse 60% 70% at 18% 22%, color-mix(in srgb, var(--bg-blob-1) 75%, transparent), transparent 70%),
+    radial-gradient(ellipse 55% 65% at 82% 12%, color-mix(in srgb, var(--bg-blob-2) 75%, transparent), transparent 70%),
+    radial-gradient(ellipse 55% 60% at 78% 88%, color-mix(in srgb, var(--bg-blob-3) 70%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 60% at 10% 90%, color-mix(in srgb, var(--bg-blob-4) 70%, transparent), transparent 70%);
+}
+[data-background="gradient"] {
+  --bg-layer-image: linear-gradient(160deg, var(--bg-grad-a), var(--bg-grad-b));
+  --bg-layer-size: 100% 100%;
+}
+[data-background="dots"] {
+  --bg-layer-image: radial-gradient(var(--bg-pattern-ink) 1px, transparent 1.3px);
+  --bg-layer-size: var(--bg-pattern-size) var(--bg-pattern-size);
+}
+[data-background="grid"] {
+  --bg-layer-image:
+    linear-gradient(var(--bg-pattern-ink) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-pattern-ink) 1px, transparent 1px);
+  --bg-layer-size: 28px 28px;
+  --bg-layer-position: -1px -1px;
+}
+/* none: the plain page colour (beats the template blocks, which are [data-template][data-theme] = 0,2,0) */
+[data-background="none"][data-template],
+[data-background="none"][data-template][data-theme] { --bg: var(--bg-plain); }
+
+/* ---------- the page layer ---------- */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--bg-layer-image);
+  background-size: var(--bg-layer-size);
+  background-position: var(--bg-layer-position);
+  background-repeat: repeat;
+}
+[data-background="gradient"] .bg-layer { background-repeat: no-repeat; }
+[data-background="solid"] .bg-layer,
+[data-background="none"] .bg-layer { display: none; }
+
+/* aurora blobs drift only with full motion (the Background component stops its framer animation; this catches CSS ones) */
+[data-motion]:not([data-motion="full"]) [data-bg-layer] * { animation: none !important; }
+
+/* ---------- swatches & scoped previews ---------- */
+.bg-swatch {
+  background-color: var(--bg);
+  background-image: var(--bg-layer-image);
+  background-size: var(--bg-layer-size);
+  background-position: var(--bg-layer-position);
+}
+.bg-swatch[data-background="gradient"] { background-repeat: no-repeat; }
+.bg-swatch[data-background="aurora"] { background-image: var(--bg-aurora-image); background-size: 100% 100%; background-repeat: no-repeat; }
+.bg-swatch[data-background="none"] { --bg: var(--bg-plain); }

@@ -1,0 +1,239 @@
+/* Classes for the pref-aware control renderers (components/glass/controls/*). Owned by the primitives builder.
+ * Only CSS variables here, so templates.css / modifiers.css can restyle every renderer. Under the default prefs (glass)
+ * these reproduce the original inline styles exactly.
+ *
+ * Class map:
+ *   segmented  .seg(.sm|.full|.stacked) > .seg-btn(.active)[aria-pressed] > .seg-pill + .seg-label
+ *   chips      .chips(.sm|.full|.vertical) > .chip(.active)[aria-pressed]
+ *   radio      .radio-group(.vertical|.full|.sm) > label.radio(.checked|.disabled) > input.sr-only + .radio-dot + .radio-label
+ *   cards      .choice-cards(.vertical) > .choice-card(.active) > .choice-card-dot + .choice-card-label
+ *   dropdown   .choice-select-wrap(.full) > select.select.choice-select(.sm) · numeric: select.select.num-select
+ *   switch     button.switch(.on) > .switch-thumb
+ *   checkbox   label.check(.disabled) > input.sr-only + .check-box + .check-label
+ *   yes/no     .yesno > .seg.sm
+ *   stepper    .stepper(.disabled) > .stepper-btn + .stepper-value[role=spinbutton] + .stepper-btn
+ *   slider     .slider-row > input.slider + (.slider-readout | .slider-box > input.input)
+ *   misc       .field-label, .toggle-label, .infotip, .sr-only, .resolved-badge
+ */
+
+/* New variables (defaults; re-declared per scope so var() references resolve inside scoped previews). */
+:root, [data-theme] {
+  --check-border: var(--text-3);
+}
+/* tokens.css declares these derived variables only in the light block; a dark *scoped* preview inside a light page would
+ * otherwise inherit values computed from the light colours. Same values as tokens.css → no-op on a normal page. */
+[data-theme="dark"] {
+  --r-control: var(--r-sm);
+  --btn-bg: var(--glass-strong);
+  --btn-border: var(--glass-border);
+  --input-bg: var(--glass-strong);
+  --input-border: var(--hairline);
+  --seg-bg: var(--fill);
+  --seg-pill-bg: var(--glass-strong);
+  --seg-pill-text: var(--text);
+  --switch-on: var(--success);
+  --switch-off: var(--fill-2);
+  --focus-ring: 3px solid var(--accent-soft);
+}
+
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.field-label, .toggle-label { font-weight: 560; font-size: 13px; }
+.infotip {
+  display: inline-flex; width: 16px; height: 16px; border-radius: 8px; flex-shrink: 0;
+  background: var(--fill-2); color: var(--text-2); font-size: 10.5px; font-weight: 700;
+  align-items: center; justify-content: center; cursor: help;
+}
+
+/* ---------- segmented ---------- */
+.seg {
+  display: inline-flex; position: relative; vertical-align: middle;
+  padding: 3px; gap: 2px;
+  height: calc(var(--control-h) + 6px);
+  max-width: 100%; min-width: 0;
+  border-radius: calc(var(--r-control) + 1px);
+  background: var(--seg-bg);
+  border: 1px solid var(--hairline);
+}
+.seg.full { display: flex; }
+.seg.full > .seg-btn { flex: 1; }
+.seg-btn {
+  position: relative;
+  height: var(--control-h); padding: 0 var(--control-pad-x);
+  border: none; background: transparent; color: inherit; cursor: pointer;
+  font-size: 13px; font-weight: 500; white-space: nowrap;
+  border-radius: max(0px, calc(var(--r-control) - 2px));
+}
+.seg-btn.active { font-weight: 600; color: var(--seg-pill-text); }
+.seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.seg-btn:focus-visible { outline-offset: -2px; }
+.seg-pill {
+  position: absolute; inset: 0; border-radius: inherit;
+  background: var(--seg-pill-bg);
+  box-shadow: var(--seg-pill-shadow);
+}
+.seg-label { position: relative; }
+.seg.sm { height: calc(var(--control-h-sm) + 6px); }
+.seg.sm .seg-btn { height: var(--control-h-sm); padding: 0 calc(var(--control-pad-x) - 4px); font-size: 12px; }
+/* stacked = vertical segmented (sidebar style) */
+.seg.stacked { flex-direction: column; align-items: stretch; height: auto; }
+.seg.stacked .seg-btn {
+  height: auto; min-height: var(--control-h); padding-top: 6px; padding-bottom: 6px;
+  white-space: normal; text-align: left; line-height: 1.3;
+}
+
+/* ---------- chips ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; max-width: 100%; }
+.chips.vertical { flex-direction: column; align-items: stretch; }
+.chips.full > .chip { flex: 1 1 auto; }
+.chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: calc(var(--control-h) - 4px); padding: 4px calc(var(--control-pad-x) - 2px);
+  max-width: 100%; line-height: 1.25; text-align: center;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: var(--fill);
+  color: inherit; cursor: pointer;
+  font-size: 13px; font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.chip:hover:not(:disabled) { background: var(--fill-2); }
+.chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.chip:disabled { opacity: 0.4; cursor: not-allowed; }
+.chips.vertical .chip { justify-content: flex-start; text-align: left; }
+.chips.sm .chip { min-height: var(--control-h-sm); padding: 3px calc(var(--control-pad-x) - 4px); font-size: 12px; }
+
+/* ---------- radio ---------- */
+.radio-group { display: flex; flex-wrap: wrap; gap: 8px 18px; min-width: 0; max-width: 100%; }
+.radio-group.vertical { flex-direction: column; gap: 8px; }
+.radio-group.full > .radio { flex: 1 1 auto; }
+.radio {
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  min-height: 24px; cursor: pointer; font-size: 13px; line-height: 1.3;
+}
+.radio-group.sm .radio { font-size: 12px; }
+.radio.disabled { opacity: 0.45; cursor: not-allowed; }
+.radio-dot {
+  width: 18px; height: 18px; flex-shrink: 0; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1.5px solid var(--check-border);
+  background: var(--input-bg);
+  transition: background 0.15s, border-color 0.15s;
+}
+.radio-dot::after {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent-contrast);
+  transform: scale(0); transition: transform 0.15s var(--ease);
+}
+.radio.checked .radio-dot { background: var(--accent); border-color: var(--accent); }
+.radio.checked .radio-dot::after { transform: scale(1); }
+.radio.checked .radio-label { font-weight: 600; }
+.radio input:focus-visible + .radio-dot { outline: var(--focus-ring); outline-offset: 2px; }
+
+/* ---------- cards ---------- */
+.choice-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; width: 100%; }
+.choice-cards.vertical { grid-template-columns: 1fr; }
+.choice-card {
+  position: relative; display: flex; align-items: flex-start; gap: 10px;
+  min-height: 52px; padding: 12px 14px; text-align: left; line-height: 1.3;
+  border-radius: var(--r-md);
+  border: var(--surface-border-w) solid var(--hairline);
+  background: var(--fill);
+  color: inherit; cursor: pointer; font-size: 13px; font-weight: 560;
+  transition: background 0.15s, border-color 0.15s, transform 0.18s var(--ease);
+}
+.choice-card:hover:not(:disabled) { background: var(--fill-2); }
+.choice-card.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.choice-card:disabled { opacity: 0.4; cursor: not-allowed; }
+.choice-card-dot {
+  width: 16px; height: 16px; margin-top: 1px; flex-shrink: 0; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1.5px solid var(--check-border); background: var(--input-bg);
+}
+.choice-card-dot::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-contrast); transform: scale(0); }
+.choice-card.active .choice-card-dot { background: var(--accent); border-color: var(--accent); }
+.choice-card.active .choice-card-dot::after { transform: scale(1); }
+.choice-card-label { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- dropdowns ---------- */
+.choice-select-wrap { display: inline-flex; max-width: 100%; min-width: 0; vertical-align: middle; }
+.choice-select-wrap.full { display: flex; }
+.choice-select-wrap.full > .select { flex: 1; }
+.choice-select { min-width: 120px; max-width: 100%; font-size: 13px; }
+.choice-select.sm { height: var(--control-h-sm); padding-left: 10px; font-size: 12px; min-width: 96px; }
+.num-select { min-width: 120px; max-width: 100%; font-size: 13px; align-self: flex-start; }
+
+/* ---------- switch ---------- */
+.switch {
+  width: 46px; height: 28px; padding: 2px; flex-shrink: 0;
+  display: flex; justify-content: flex-start;
+  border: none; border-radius: var(--r-pill);
+  background: var(--switch-off);
+  cursor: pointer; transition: background 0.2s;
+}
+.switch.on { background: var(--switch-on); justify-content: flex-end; }
+.switch:disabled { cursor: not-allowed; opacity: 0.5; }
+.switch-thumb {
+  width: 24px; height: 24px;
+  border-radius: max(0px, calc(var(--r-pill) - 2px));
+  background: var(--thumb);
+  box-shadow: var(--thumb-shadow);
+}
+
+/* ---------- checkbox ---------- */
+.check { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: 560; line-height: 1.3; }
+.check.disabled { opacity: 0.45; cursor: not-allowed; }
+.check-box {
+  width: 18px; height: 18px; flex-shrink: 0;
+  display: grid; place-items: center;
+  border-radius: min(5px, var(--r-control));
+  border: 1.5px solid var(--check-border);
+  background: var(--input-bg);
+  color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.check input:checked + .check-box { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.check input:focus-visible + .check-box { outline: var(--focus-ring); outline-offset: 2px; }
+
+.yesno { display: inline-flex; flex-shrink: 0; }
+
+/* ---------- stepper ---------- */
+.stepper {
+  display: inline-flex; align-items: stretch; max-width: 100%; align-self: flex-start;
+  height: var(--control-h);
+  border: 1px solid var(--input-border);
+  border-radius: var(--r-control);
+  background: var(--input-bg);
+  box-shadow: var(--input-shadow);
+  overflow: hidden;
+}
+.stepper.disabled { opacity: 0.5; }
+.stepper-btn {
+  width: var(--control-h); flex-shrink: 0;
+  display: grid; place-items: center;
+  border: none; background: transparent; color: var(--text-2);
+  font-size: 17px; font-weight: 500; line-height: 1;
+  cursor: pointer; user-select: none; touch-action: manipulation;
+  transition: background 0.12s, color 0.12s;
+}
+.stepper-btn:hover:not(:disabled) { background: var(--fill); color: var(--text); }
+.stepper-btn:active:not(:disabled) { background: var(--fill-2); }
+.stepper-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.stepper-value {
+  min-width: 76px; padding: 0 10px;
+  display: grid; place-items: center;
+  border-left: 1px solid var(--hairline); border-right: 1px solid var(--hairline);
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  outline-offset: -3px;
+}
+
+/* ---------- slider extras ---------- */
+.slider-readout { min-width: 54px; text-align: right; font-size: 12.5px; color: var(--text-2); }
+.slider-box { flex-shrink: 0; }
+.slider-box .input { height: var(--control-h-sm); padding: 0 8px; font-size: 12.5px; text-align: right; }
+
+/* the very first frame of a choice control is hidden while it measures (see Choice.tsx) */
+[data-choice][style*="hidden"] { pointer-events: none; }

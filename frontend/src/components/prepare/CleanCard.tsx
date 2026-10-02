@@ -98,7 +98,7 @@ export function CleanCard({ ctx, open, onToggle, flash, onJump }: CardProps) {
       <div className="row wrap" style={{ gap: 18, alignItems: "flex-start" }}>
         <div className="col" style={{ gap: 8 }}>
           <SubHead info="Median is robust to extreme values; mean is the average; ‘most common’ uses the mode; zero fills with 0; drop removes any row with a blank (you lose data).">Fill blank numbers with</SubHead>
-          <Segmented<PipelineSpec["impute"]["numeric"]>
+          <Segmented<PipelineSpec["impute"]["numeric"]> kind="form"
             size="sm"
             value={spec.impute.numeric}
             onChange={(v) => patchPipeline("impute", { numeric: v })}
@@ -113,7 +113,7 @@ export function CleanCard({ ctx, open, onToggle, flash, onJump }: CardProps) {
         </div>
         <div className="col" style={{ gap: 8 }}>
           <SubHead info="‘Most common’ fills with the category seen most often. ‘Missing’ keeps blanks as their own category — useful when a blank itself means something.">Fill blank categories with</SubHead>
-          <Segmented<PipelineSpec["impute"]["categorical"]>
+          <Segmented<PipelineSpec["impute"]["categorical"]> kind="form"
             size="sm"
             value={spec.impute.categorical}
             onChange={(v) => patchPipeline("impute", { categorical: v })}

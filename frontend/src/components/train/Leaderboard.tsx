@@ -72,7 +72,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
   let passedBase = false;
 
   return (
-    <Glass animate_in>
+    <Glass animate_in className="lb">
       <div className="row between wrap" style={{ marginBottom: 14, gap: 10 }}>
         <div className="col" style={{ gap: 2 }}>
           <h3>🏆 Leaderboard</h3>
@@ -128,10 +128,10 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
 
       <div className="row tiny faint" style={{ padding: "0 12px 6px", gap: 12 }}>
         <span style={{ width: 30 }} />
-        <span style={{ flex: "0 0 180px" }}>Model</span>
+        <span className="lb-model" style={{ flex: "0 0 180px" }}>Model</span>
         <span className="grow">{unsup ? metricLabel(metric) : `Test ${metricLabel(metric)}`}{lower ? " · lower is better" : ""}</span>
-        <span style={{ width: 120, textAlign: "right" }}>{unsup ? (rec ? "Catalogue shown" : task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
-        <span style={{ width: 64, textAlign: "right" }}>Fit time</span>
+        <span className="lb-side" style={{ width: 120, textAlign: "right" }}>{unsup ? (rec ? "Catalogue shown" : task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
+        <span className="lb-fit" style={{ width: 64, textAlign: "right" }}>Fit time</span>
       </div>
 
       <div className="col" style={{ gap: 6 }}>
@@ -171,7 +171,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                   style={{ width: 30, textAlign: "center", fontSize: ri < 3 && r.score !== null && !below ? 24 : 13, fontWeight: 700, color: ri < 3 && r.score !== null && !below ? "var(--text)" : "var(--text-3)", display: "inline-block" }}>
                   {r.score === null ? "–" : below ? ri + 1 : MEDAL[ri] ?? ri + 1}
                 </motion.span>
-                <span className="row" style={{ flex: "0 0 180px", gap: 8, minWidth: 0 }}>
+                <span className="row lb-model" style={{ flex: "0 0 180px", gap: 8, minWidth: 0 }}>
                   <span style={{ fontSize: 17 }}>{spec(r.model_id)?.emoji ?? "🤖"}</span>
                   <span className="col" style={{ gap: 1, minWidth: 0 }}>
                     <b className="truncate" style={{ fontSize: 13.5 }}>{r.label}</b>
@@ -195,16 +195,16 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                         title="Baseline" style={{ position: "absolute", top: -2, bottom: -2, width: 0, borderLeft: "2px dashed var(--text-2)", marginLeft: -1 }} />
                     )}
                   </span>
-                  <b className="num" style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
+                  <b className="num" title={unsup ? undefined : `Train ${fmtMetric(metric, r.train)} → test ${fmtMetric(metric, r.score)}`} style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
                 </span>
                 {unsup ? (() => {
                   const f = sideFact(task, r.model);
                   return (
                     <Tooltip content={f.tip} width={220}>
-                      <span className="num small muted" style={{ width: 120, textAlign: "right", display: "inline-block" }}>{f.text}</span>
+                      <span className="num small muted lb-side" style={{ width: 120, textAlign: "right", display: "inline-block" }}>{f.text}</span>
                     </Tooltip>
                   );
-                })() : <span className="row num small muted" style={{ width: 120, justifyContent: "flex-end", gap: 4 }}>
+                })() : <span className="row num small muted lb-side" style={{ width: 120, justifyContent: "flex-end", gap: 4 }}>
                   {fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}
                   {overfit && (
                     <Tooltip content={`It scores ${fmtMetric(metric, gap)} better on rows it practised on than on new ones — a sign of memorising (overfitting).`}>
@@ -212,7 +212,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                     </Tooltip>
                   )}
                 </span>}
-                <span className="num small faint" style={{ width: 64, textAlign: "right" }}>{secs(r.fit)}</span>
+                <span className="num small faint lb-fit" style={{ width: 64, textAlign: "right" }}>{secs(r.fit)}</span>
               </motion.button>
             );
           })}
@@ -250,7 +250,7 @@ function BaselineRow({ r, i, metric, sel, onSelect, bar }: { r: BoardRow; i: num
     >
       <motion.span key={`${metric}-b`} initial={{ scale: 0.3, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} transition={spring.pop}
         style={{ width: 30, textAlign: "center", fontSize: 20, display: "inline-block" }}>🎯</motion.span>
-      <span className="col" style={{ flex: "0 0 180px", gap: 0, minWidth: 0 }}>
+      <span className="col lb-model" style={{ flex: "0 0 180px", gap: 0, minWidth: 0 }}>
         <b className="truncate" style={{ fontSize: 13, color: "var(--text-2)" }}>Baseline</b>
         <span className="tiny faint" style={{ lineHeight: 1.3 }}>what you'd get by always guessing</span>
         <span className="tiny truncate" style={{ color: "var(--text-2)", fontWeight: 600 }} title={r.label}>{r.label.replace(/^Baseline\s*·\s*/, "")}</span>
@@ -262,8 +262,8 @@ function BaselineRow({ r, i, metric, sel, onSelect, bar }: { r: BoardRow; i: num
         </span>
         <b className="num muted" style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
       </span>
-      <span className="row num small faint" style={{ width: 120, justifyContent: "flex-end" }}>{fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}</span>
-      <span className="small faint" style={{ width: 64, textAlign: "right" }}>reference</span>
+      <span className="row num small faint lb-side" style={{ width: 120, justifyContent: "flex-end" }}>{fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}</span>
+      <span className="small faint lb-fit" style={{ width: 64, textAlign: "right" }}>reference</span>
     </motion.button>
   );
 }

@@ -18,7 +18,7 @@ export function HyperparamForm({ params, values, onChange, columns = 1 }: {
           return (
             <Field key={hp.name} label={hp.label} help={hp.help}>
               {opts.length <= 3 ? (
-                <Segmented size="sm" value={String(v)} onChange={(x) => onChange(hp.name, x)} options={opts.map((o) => ({ value: o, label: o }))} />
+                <Segmented kind="form" size="sm" value={String(v)} onChange={(x) => onChange(hp.name, x)} options={opts.map((o) => ({ value: o, label: o }))} />
               ) : (
                 <Select value={String(v)} onChange={(x) => onChange(hp.name, x)} options={opts.map((o) => ({ value: o, label: o }))} />
               )}

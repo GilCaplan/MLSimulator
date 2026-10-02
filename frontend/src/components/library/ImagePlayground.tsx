@@ -158,7 +158,7 @@ export function ImagePlayground({ model }: { model: SavedModel }) {
                     options={[{ value: "plain", label: "Plain" }, { value: "heat", label: heatIsFixed ? "Pixels it uses" : "Where it looked" }]} />
                   {view === "heat" && (
                     <>
-                      <Slider value={strength} min={0} max={1} step={0.05} onChange={setStrength} format={(v) => `${Math.round(v * 100)}%`} />
+                      <Slider fixedRenderer="slider" value={strength} min={0} max={1} step={0.05} onChange={setStrength} format={(v) => `${Math.round(v * 100)}%`} />
                       <HeatLegend width={90} low="ignored" high={heatIsFixed ? "relied on" : "decisive"} />
                       <span className="tiny faint" style={{ lineHeight: 1.45 }}>
                         {heatIsFixed

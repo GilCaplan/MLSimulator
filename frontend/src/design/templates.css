@@ -1,0 +1,305 @@
+/* Site templates: [data-template="…"] (light) and [data-template="…"][data-theme="dark"] blocks override tokens.css variables.
+ * Radii / fonts / spacing in the light block only (modifiers.css must be able to override them).
+ * Never anchor to :root — a scoped preview (<div data-template="paper" data-theme="dark" …>) must render with the same CSS.
+ * Template-specific touches are expressed as variables (consumed by the generic rules at the bottom), so the nearest
+ * [data-template] ancestor always wins, even for a glass preview inside a classic page. */
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * 0. Scope reset (zero specificity). tokens.css re-declares every variable on [data-theme="light"], but its dark block
+ *    only re-declares colours, so a dark scoped preview would otherwise inherit composites (var(--glass-strong)…)
+ *    already resolved on <html>, and light-only values set by the page's template. This re-declares them on every
+ *    [data-template] element with the glass values. Keep in sync with the light block of tokens.css.
+ *    Also the defaults of the variables introduced here (--btn-primary-*, --table-head-bg, --tile-hover-shadow…).
+ * --------------------------------------------------------------------------------------------------------------- */
+:where([data-template]) {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Monaco, monospace;
+  --glass-blur: blur(28px) saturate(180%);
+  --on-accent: #fff;
+  --success: #30d158;
+  --warning: #ff9f0a;
+  --danger: #ff453a;
+  --grad: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 50%, var(--accent-2)) 50%, var(--accent-2) 100%);
+  --r-sm: 10px; --r-md: 14px; --r-lg: 22px; --r-xl: 30px; --r-pill: 999px; --r-control: var(--r-sm);
+  --surface-border-w: 1px;
+  --scrim: rgba(0, 0, 0, 0.18);
+  --scrim-blur: blur(6px);
+  --table-head-blur: blur(12px);
+  --control-h: 34px; --control-h-sm: 28px; --control-pad-x: 14px; --btn-h: 36px; --btn-h-sm: 28px;
+  --btn-bg: var(--glass-strong);
+  --btn-border: var(--glass-border);
+  --btn-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 2px 8px rgba(0, 0, 0, 0.06);
+  --btn-hover-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 6px 18px rgba(0, 0, 0, 0.1);
+  --input-bg: var(--glass-strong);
+  --input-border: var(--hairline);
+  --input-shadow: 0 0 0 transparent;
+  --seg-bg: var(--fill);
+  --seg-pill-bg: var(--glass-strong);
+  --seg-pill-text: var(--text);
+  --seg-pill-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 2px 8px rgba(0, 0, 0, 0.12);
+  --switch-on: var(--success);
+  --switch-off: var(--fill-2);
+  --thumb: #fff;
+  --thumb-shadow: 0 2px 8px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  --track-h: 6px;
+  --focus-ring: 3px solid var(--accent-soft);
+  --pad-card: 20px; --pad-card-lg: 28px; --gap-row: 10px; --font-size: 14px;
+  --font-display: var(--font);
+  --h1-weight: 700;
+  --letter: -0.005em;
+  --bg-pattern-size: 18px;
+
+  /* introduced by templates.css (glass defaults = today's hard-coded values in tokens.css) */
+  --btn-primary-bg: var(--accent);
+  --btn-primary-border: rgba(255, 255, 255, 0.25);
+  --btn-primary-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 6px 18px rgba(var(--accent-rgb), 0.35);
+  --btn-gradient-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset, 0 8px 22px rgba(var(--accent-rgb), 0.3);
+  --btn-hover-lift: translateY(-1px);
+  --btn-press: scale(0.97);
+  --btn-weight: 560;
+  --table-head-bg: var(--glass-strong);
+  --tile-hover-shadow: var(--glass-shadow), 0 16px 40px rgba(40, 50, 90, 0.14);
+  --seg-border: 1px solid var(--hairline);
+  --seg-gap: 2px;
+  --seg-pad: 3px;
+  --seg-h: calc(var(--control-h) + 6px);
+  --seg-h-sm: calc(var(--control-h-sm) + 6px);
+  --seg-face: var(--seg-bg);
+  --seg-divider: 0 solid transparent;
+  --heading-letter: -0.022em;
+  --btn-primary-text: var(--accent-contrast);
+  --input-border-w: 1px;
+  --input-focus-border: var(--accent);
+  --input-focus-shadow: 0 0 0 4px var(--accent-soft);
+  --badge-weight: 600;
+}
+
+/* A scoped preview element renders its own text (body's font/colour are resolved on <html>). */
+[data-template]:not(:root) {
+  font-family: var(--font);
+  font-size: var(--font-size);
+  letter-spacing: var(--letter);
+  line-height: 1.45;
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * glass — the base look (tokens.css). Only the "flat background" tweak: less blur when there's nothing to refract.
+ * --------------------------------------------------------------------------------------------------------------- */
+[data-template="glass"][data-background="none"],
+[data-template="glass"][data-background="solid"] { --glass-blur: blur(12px) saturate(160%); }
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * classic — old-style desktop: bevels, system fonts, no blur, joined "pressed" segmented buttons
+ * --------------------------------------------------------------------------------------------------------------- */
+[data-template="classic"] {
+  --font: "Lucida Grande", "Segoe UI", Tahoma, Verdana, sans-serif; --font-display: var(--font); --letter: 0; --h1-weight: 600;
+  --heading-letter: -0.005em;
+  --bg: #e8e8e8; --bg-plain: #fff; --bg-grad-a: #f2f2f2; --bg-grad-b: #dcdcdc; --bg-pattern-ink: rgba(0, 0, 0, 0.07);
+  --glass: #f4f4f4; --glass-strong: #fff; --glass-thin: #efefef; --glass-border: #b4b4b4; --glass-edge: #8a8a8a;
+  --glass-blur: none; --glass-shine: none;
+  --glass-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #cfcfcf, 0 1px 2px rgba(0, 0, 0, 0.18);
+  --fill: #e4e4e4; --fill-2: #d2d2d2; --hairline: #bdbdbd; --text: #111; --text-2: #3c3c3c; --text-3: #6d6d6d;
+  --r-sm: 3px; --r-md: 4px; --r-lg: 6px; --r-xl: 8px; --r-pill: 4px; --r-control: 3px;
+  --btn-bg: linear-gradient(#fdfdfd, #e2e2e2); --btn-border: #8f8f8f;
+  --btn-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(0, 0, 0, 0.2); --btn-hover-shadow: var(--btn-shadow);
+  --input-bg: #fff; --input-border: #9a9a9a; --input-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+  --seg-bg: transparent; --seg-pill-bg: linear-gradient(#d9d9d9, #ececec); --seg-pill-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  --switch-on: var(--accent); --thumb: linear-gradient(#fff, #e6e6e6); --track-h: 4px;
+  --scrim: rgba(0, 0, 0, 0.35); --scrim-blur: none; --table-head-blur: none;
+  --grad: linear-gradient(var(--accent-light), var(--accent)); --focus-ring: 2px solid var(--accent);
+
+  --btn-primary-bg: linear-gradient(var(--accent-light), var(--accent));
+  --btn-primary-border: color-mix(in srgb, var(--accent) 70%, #000);
+  --btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 1px rgba(0, 0, 0, 0.25);
+  --btn-gradient-shadow: var(--btn-primary-shadow);
+  --btn-hover-lift: none;
+  --btn-press: translateY(1px);
+  --btn-weight: 500;
+  --table-head-bg: linear-gradient(#fbfbfb, #e4e4e4);
+  --tile-hover-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #cfcfcf, 0 2px 6px rgba(0, 0, 0, 0.22);
+  --seg-border: 1px solid var(--btn-border);
+  --seg-gap: 0px;
+  --seg-pad: 0px;
+  --seg-h: calc(var(--control-h) + 2px);
+  --seg-h-sm: calc(var(--control-h-sm) + 2px);
+  --seg-face: var(--btn-bg);
+  --seg-divider: 1px solid var(--btn-border);
+  --input-focus-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.45), inset 1px 1px 2px rgba(0, 0, 0, 0.18);
+  --badge-weight: 700;
+}
+[data-template="classic"][data-theme="dark"] {
+  --bg: #2b2b2b; --bg-plain: #000; --glass: #3a3a3a; --glass-strong: #444; --glass-thin: #333; --glass-border: #1b1b1b;
+  --glass-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.5);
+  --fill: #4a4a4a; --fill-2: #585858; --hairline: #1f1f1f; --text: #f0f0f0; --text-2: #c8c8c8; --text-3: #9a9a9a;
+  --btn-bg: linear-gradient(#5a5a5a, #404040); --btn-border: #202020; --input-bg: #262626; --input-border: #151515;
+  --seg-pill-bg: linear-gradient(#2e2e2e, #3a3a3a);
+  --bg-grad-a: #333; --bg-grad-b: #1f1f1f; --bg-pattern-ink: rgba(255, 255, 255, 0.07);
+  --btn-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 1px rgba(0, 0, 0, 0.4);
+  --input-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.5);
+  --seg-pill-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  --thumb: linear-gradient(#f2f2f2, #cfcfcf);
+  --btn-primary-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 1px rgba(0, 0, 0, 0.5);
+  --table-head-bg: linear-gradient(#4a4a4a, #3a3a3a);
+  --tile-hover-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * minimal — flat, monochrome, hairlines; the active segment is ink with inverted text
+ * --------------------------------------------------------------------------------------------------------------- */
+[data-template="minimal"] {
+  --bg: #fafafa; --bg-plain: #fff; --bg-grad-a: #fff; --bg-grad-b: #f1f1f1; --bg-pattern-ink: rgba(0, 0, 0, 0.06);
+  --glass: #fff; --glass-strong: #fff; --glass-thin: #fff; --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-blur: none; --glass-shine: none; --glass-shadow: 0 0 0 transparent;
+  --fill: rgba(0, 0, 0, 0.035); --fill-2: rgba(0, 0, 0, 0.08); --hairline: rgba(0, 0, 0, 0.1);
+  --text: #111; --text-2: #555; --text-3: #8a8a8a;
+  --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-control: var(--r-sm); --pad-card: 24px; --pad-card-lg: 32px;
+  --h1-weight: 600; --letter: -0.01em;
+  --btn-bg: transparent; --btn-border: rgba(0, 0, 0, 0.18); --btn-shadow: 0 0 0 transparent; --btn-hover-shadow: 0 0 0 transparent;
+  --input-bg: transparent; --input-border: rgba(0, 0, 0, 0.18); --input-shadow: 0 0 0 transparent;
+  --seg-bg: transparent; --seg-pill-bg: var(--text); --seg-pill-text: var(--bg); --seg-pill-shadow: 0 0 0 transparent;
+  --switch-on: var(--text); --grad: var(--accent); --accent-soft: rgba(var(--accent-rgb), 0.1);
+  --scrim: rgba(0, 0, 0, 0.3); --scrim-blur: none; --table-head-blur: none; --focus-ring: 2px solid var(--text);
+  --thumb-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.12);
+
+  --btn-primary-bg: var(--text);
+  --btn-primary-text: var(--bg-plain); /* ink button: page colour on ink */
+  --btn-primary-border: transparent;
+  --btn-primary-shadow: 0 0 0 transparent;
+  --btn-gradient-shadow: 0 0 0 transparent;
+  --btn-hover-lift: none;
+  --btn-press: scale(0.98);
+  --btn-weight: 500;
+  --table-head-bg: var(--glass);
+  --tile-hover-shadow: 0 0 0 1px var(--text-3);
+  --seg-border: 1px solid var(--hairline);
+  --input-focus-border: var(--text);
+  --input-focus-shadow: 0 0 0 1px var(--text);
+}
+[data-template="minimal"][data-theme="dark"] {
+  --bg: #0f0f0f; --bg-plain: #000; --glass: #161616; --glass-strong: #161616; --glass-thin: #161616;
+  --glass-border: rgba(255, 255, 255, 0.1); --fill: rgba(255, 255, 255, 0.05); --fill-2: rgba(255, 255, 255, 0.1);
+  --hairline: rgba(255, 255, 255, 0.1); --text: #ededed; --text-2: #b0b0b0; --text-3: #7a7a7a;
+  --btn-border: rgba(255, 255, 255, 0.18); --input-border: rgba(255, 255, 255, 0.18);
+  --bg-grad-a: #141414; --bg-grad-b: #070707; --bg-pattern-ink: rgba(255, 255, 255, 0.07);
+  --thumb-shadow: 0 0 0 2px rgba(0, 0, 0, 0.85);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * solid — bold, opaque, no gradients: 2px ink borders, offset "sticker" shadows, accent-filled active segment
+ * --------------------------------------------------------------------------------------------------------------- */
+[data-template="solid"] {
+  --bg: #f2f4f8; --bg-plain: #fff; --bg-grad-a: #eef1f7; --bg-grad-b: #dfe5f0;
+  --glass: #fff; --glass-strong: #fff; --glass-thin: #f7f8fb; --glass-border: rgba(20, 24, 40, 0.16);
+  --glass-blur: none; --glass-shine: none; --glass-shadow: 4px 4px 0 rgba(20, 24, 40, 0.12);
+  --fill: #eceff5; --fill-2: #dde2ec; --hairline: rgba(20, 24, 40, 0.14); --text: #14182a; --text-2: #3b4258; --text-3: #6b7288;
+  --r-sm: 8px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-control: var(--r-sm); --h1-weight: 800;
+  --btn-bg: #fff; --btn-border: var(--text); --btn-shadow: 2px 2px 0 var(--text); --btn-hover-shadow: 3px 3px 0 var(--text);
+  --input-bg: #fff; --input-border: var(--text); --input-shadow: 0 0 0 transparent;
+  --seg-bg: #fff; --seg-pill-bg: var(--accent); --seg-pill-text: var(--accent-contrast); --seg-pill-shadow: 0 0 0 transparent;
+  --switch-on: var(--accent); --track-h: 8px; --grad: var(--accent); --accent-soft: rgba(var(--accent-rgb), 0.18);
+  --scrim: rgba(20, 24, 40, 0.4); --scrim-blur: none; --table-head-blur: none; --focus-ring: 3px solid var(--accent);
+  --surface-border-w: 2px;
+  --thumb-shadow: 0 0 0 2px var(--text);
+
+  --btn-primary-bg: var(--accent);
+  --btn-primary-border: var(--text);
+  --btn-primary-shadow: 2px 2px 0 var(--text);
+  --btn-gradient-shadow: 2px 2px 0 var(--text);
+  --btn-hover-lift: translate(-1px, -1px);
+  --btn-press: translate(2px, 2px);
+  --btn-weight: 700;
+  --table-head-bg: var(--fill);
+  --tile-hover-shadow: 6px 6px 0 rgba(20, 24, 40, 0.18);
+  --seg-border: 2px solid var(--text);
+  --seg-h: calc(var(--control-h) + 10px);
+  --seg-h-sm: calc(var(--control-h-sm) + 10px);
+  --input-border-w: 2px;
+  --input-focus-shadow: 3px 3px 0 var(--accent);
+  --badge-weight: 700;
+}
+[data-template="solid"][data-theme="dark"] {
+  --bg: #111318; --bg-plain: #000; --glass: #1c1f26; --glass-strong: #22262f; --glass-thin: #181b22;
+  --glass-border: rgba(255, 255, 255, 0.18); --glass-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5); --fill: #262a34; --fill-2: #30353f;
+  --text: #f3f4f8; --text-2: #c3c7d4; --text-3: #8b90a0;
+  --btn-bg: #1c1f26; --btn-border: #f3f4f8; --input-border: #f3f4f8; --btn-shadow: 2px 2px 0 rgba(255, 255, 255, 0.7);
+  --hairline: rgba(255, 255, 255, 0.14); --input-bg: #1c1f26; --seg-bg: #1c1f26;
+  --bg-grad-a: #161922; --bg-grad-b: #0b0d12; --bg-pattern-ink: rgba(255, 255, 255, 0.08);
+  --btn-hover-shadow: 3px 3px 0 rgba(255, 255, 255, 0.7);
+  --btn-primary-shadow: 2px 2px 0 rgba(255, 255, 255, 0.7);
+  --btn-gradient-shadow: 2px 2px 0 rgba(255, 255, 255, 0.7);
+  --tile-hover-shadow: 6px 6px 0 rgba(0, 0, 0, 0.6);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * paper — warm cream, serif display headings, soft paper shadows
+ * --------------------------------------------------------------------------------------------------------------- */
+[data-template="paper"] {
+  --font-display: "New York", "Iowan Old Style", Georgia, serif;
+  --heading-letter: -0.01em;
+  --bg: #f6f1e7; --bg-plain: #fffdf8; --bg-grad-a: #f9f5ee; --bg-grad-b: #eee5d3; --bg-pattern-ink: rgba(90, 70, 40, 0.12);
+  --glass: #fffdf8; --glass-strong: #fff; --glass-thin: #fbf7ef; --glass-border: rgba(80, 60, 30, 0.18);
+  --glass-blur: none; --glass-shine: none; --glass-shadow: 0 1px 2px rgba(60, 40, 10, 0.12), 0 6px 18px rgba(60, 40, 10, 0.06);
+  --fill: rgba(90, 70, 40, 0.07); --fill-2: rgba(90, 70, 40, 0.14); --hairline: rgba(80, 60, 30, 0.16);
+  --text: #2b2520; --text-2: #5a5047; --text-3: #8a7f73;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px; --r-control: var(--r-sm); --letter: 0;
+  --btn-bg: #fff; --btn-border: rgba(80, 60, 30, 0.25); --btn-shadow: 0 1px 1px rgba(60, 40, 10, 0.12); --input-bg: #fff;
+  --btn-hover-shadow: 0 1px 2px rgba(60, 40, 10, 0.14), 0 4px 12px rgba(60, 40, 10, 0.08);
+  --input-border: rgba(80, 60, 30, 0.22);
+  --seg-bg: rgba(90, 70, 40, 0.07); --seg-pill-bg: #fff; --seg-pill-shadow: 0 1px 2px rgba(60, 40, 10, 0.15);
+  --grad: var(--accent); --scrim: rgba(43, 37, 32, 0.35); --scrim-blur: none; --table-head-blur: none; --focus-ring: 2px solid var(--accent);
+  --thumb-shadow: 0 1px 3px rgba(60, 40, 10, 0.3), 0 0 0 0.5px rgba(60, 40, 10, 0.2);
+
+  --btn-primary-border: transparent;
+  --btn-primary-shadow: 0 1px 2px rgba(60, 40, 10, 0.2);
+  --btn-gradient-shadow: 0 1px 2px rgba(60, 40, 10, 0.2);
+  --table-head-bg: #fbf7ef;
+  --tile-hover-shadow: 0 2px 4px rgba(60, 40, 10, 0.12), 0 12px 28px rgba(60, 40, 10, 0.1);
+  --seg-border: 1px solid var(--hairline);
+}
+[data-template="paper"][data-theme="dark"] {
+  --bg: #1d1a16; --bg-plain: #000; --glass: #262219; --glass-strong: #2d281f; --glass-thin: #221e16;
+  --glass-border: rgba(255, 240, 210, 0.12); --fill: rgba(255, 240, 210, 0.06); --fill-2: rgba(255, 240, 210, 0.12);
+  --hairline: rgba(255, 240, 210, 0.12); --text: #f2eadc; --text-2: #c9bfae; --text-3: #8f8678;
+  --btn-bg: #2d281f; --input-bg: #1a1713;
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.25);
+  --btn-border: rgba(255, 240, 210, 0.18); --input-border: rgba(255, 240, 210, 0.18);
+  --btn-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); --btn-hover-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --seg-bg: rgba(255, 240, 210, 0.06); --seg-pill-bg: #3a3328; --seg-pill-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --bg-grad-a: #221e19; --bg-grad-b: #15130f; --bg-pattern-ink: rgba(255, 240, 210, 0.1);
+  --table-head-bg: #2d281f;
+  --tile-hover-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Generic rules that consume the variables above (identical for every template).
+ * --------------------------------------------------------------------------------------------------------------- */
+[data-template] h1, [data-template] h2, [data-template] h3, [data-template] h4 { letter-spacing: var(--heading-letter); }
+
+[data-template] .btn { font-weight: var(--btn-weight); }
+[data-template] .btn.primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-border);
+  box-shadow: var(--btn-primary-shadow);
+}
+[data-template] .btn.gradient { border-color: var(--btn-primary-border); box-shadow: var(--btn-gradient-shadow); }
+[data-template] .btn:hover:not(:disabled) { transform: var(--btn-hover-lift); }
+[data-template] .btn:active:not(:disabled) { transform: var(--btn-press); }
+
+[data-template] .input, [data-template] .select { border-width: var(--input-border-w); }
+[data-template] .input:focus, [data-template] .select:focus { border-color: var(--input-focus-border); box-shadow: var(--input-focus-shadow); }
+
+/* segmented: joined buttons in classic (no padding, dividers, button face), thick outline in solid */
+[data-template] .seg {
+  padding: var(--seg-pad); gap: var(--seg-gap); border: var(--seg-border);
+  height: var(--seg-h); background: var(--seg-face);
+}
+[data-template] .seg.sm { height: var(--seg-h-sm); }
+[data-template] .seg.stacked { height: auto; }
+[data-template] .seg:not(.stacked) > .seg-btn + .seg-btn { border-left: var(--seg-divider); }
+[data-template] .seg.stacked > .seg-btn + .seg-btn { border-top: var(--seg-divider); }
+
+[data-template] .table th { background: var(--table-head-bg); }
+[data-template] .tile:hover:not(.selected) { box-shadow: var(--tile-hover-shadow); }
+[data-template] .badge { font-weight: var(--badge-weight); }

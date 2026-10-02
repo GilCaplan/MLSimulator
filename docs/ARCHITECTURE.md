@@ -61,6 +61,17 @@ heavy training, lets **Stop** terminate a stuck fit, and keeps a crash in one mo
 | `components/shell/` | App shell, wizard stepper, step layout, coach panel |
 | `components/<area>/` + `pages/` | One folder per screen: home, models, data, prepare, train, improve, library, settings, lessons |
 
+## Appearance system
+- `design/prefs.ts`: the `UIPrefs` model. It is stored in localStorage (`mlp.ui.v1`) and on the backend
+  (`/api/system/prefs`), because the app can move ports.
+- `design/apply.ts`: writes `data-template/theme/background/shape/density/font/motion` attributes and accent/palette
+  variables onto `<html>`. Scoped previews use the same attributes on a `<div>`.
+- CSS layers: `tokens.css` (base variables) → `controls.css` → `templates.css` → `backgrounds.css` → `modifiers.css`.
+- The primitives in `components/glass/controls/*` read the control prefs and resolve a renderer per control
+  (`resolve.ts`), with automatic fallbacks. Call sites can pin one with `fixedRenderer`. `/dev/gallery` (dev builds only)
+  shows every primitive × renderer.
+- The full plan is in `docs/ui_customization_plan.md`.
+
 ## Key flows
 1. **Prepare:** `POST /api/datasets/{id}/prepare` builds a `Prepared` object and stores it. The response holds the
    report used by the animations.

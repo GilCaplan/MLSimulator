@@ -102,7 +102,7 @@ export function BalanceCard({ ctx, open, onToggle, flash }: CardProps) {
                       <b className="small truncate">{l}</b>
                     </span>
                     <div className="grow">
-                      <Slider value={target} min={1} max={Math.max(3 * maxCount, 10)} integer format={fmtInt}
+                      <Slider fixedRenderer="slider" value={target} min={1} max={Math.max(3 * maxCount, 10)} integer format={fmtInt}
                         onChange={(v) => patchPipeline("resample", { target_counts: { ...customFull, [l]: v } })} />
                     </div>
                     <span className="tiny num" style={{ width: 92, textAlign: "right", color: diff > 0 ? "var(--success)" : diff < 0 ? "var(--danger)" : "var(--text-3)", fontWeight: 650 }}>

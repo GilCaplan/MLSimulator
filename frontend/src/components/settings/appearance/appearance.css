@@ -1,0 +1,126 @@
+/* Settings → Appearance. Everything is drawn with template variables so the panel itself looks right under every
+ * template (and inside scoped previews). */
+
+.ap-sec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.ap-sec-icon {
+  width: 36px; height: 36px; border-radius: var(--r-md); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  background: var(--accent-soft);
+}
+.ap-sub { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 18px 0 10px; flex-wrap: wrap; }
+.ap-sub:first-child { margin-top: 0; }
+.ap-sub-title { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); }
+.ap-reset {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px;
+  border: none; background: transparent; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  border-radius: var(--r-pill);
+}
+.ap-reset:hover { background: var(--accent-soft); }
+.ap-reset:disabled { color: var(--text-3); background: transparent; cursor: default; }
+
+/* selectable option card */
+.ap-card {
+  position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; user-select: none;
+  padding: 12px; text-align: left; cursor: pointer; color: inherit; font: inherit;
+  background: var(--glass-thin);
+  border: var(--surface-border-w) solid var(--hairline);
+  border-radius: var(--r-md);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s, transform 0.18s var(--ease);
+}
+.ap-card:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--hairline)); }
+.ap-card:active { transform: scale(0.985); }
+.ap-card.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--glass-strong));
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ap-card .ap-check {
+  position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800;
+  background: var(--accent); color: var(--accent-contrast); box-shadow: 0 0 0 2px var(--glass-strong);
+  z-index: 2;
+}
+.ap-card-title { font-weight: 650; font-size: 13.5px; }
+.ap-card-desc { font-size: 12px; color: var(--text-2); line-height: 1.4; }
+
+.ap-grid { display: grid; gap: 12px; }
+.ap-grid.cols-auto-150 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.ap-grid.cols-auto-170 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
+.ap-grid.cols-auto-280 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.ap-grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+
+/* template gallery */
+.ap-gallery { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr)); }
+.ap-mini {
+  position: relative; width: 100%; aspect-ratio: 340 / 215; overflow: hidden;
+  border-radius: calc(var(--r-md) - 3px); border: 1px solid var(--hairline);
+  pointer-events: none;
+}
+.ap-mini-leaf { position: absolute; top: 0; left: 0; width: 340px; height: 215px; transform-origin: 0 0; padding: 14px; }
+.ap-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.ap-tag { font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: var(--r-pill); background: var(--fill-2); color: var(--text-2); }
+
+/* background swatches */
+.ap-bg-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr)); }
+.ap-bg-card { padding: 8px; gap: 6px; align-items: stretch; }
+.ap-bg-swatch {
+  position: relative; height: 64px; border-radius: calc(var(--r-md) - 4px); overflow: hidden;
+  border: 1px solid var(--hairline); display: flex; align-items: center; justify-content: center;
+}
+.ap-bg-swatch .glass { width: 46px; height: 26px; border-radius: var(--r-sm); }
+
+/* accent swatches */
+.ap-accents { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ap-accent {
+  width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; padding: 0; position: relative;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s var(--ease), box-shadow 0.15s;
+}
+.ap-accent:hover { transform: scale(1.1); }
+.ap-accent.selected { box-shadow: 0 0 0 2px var(--glass-strong), 0 0 0 4px var(--accent); }
+.ap-accent.selected::after {
+  content: ""; position: absolute; inset: 9px; border-radius: 50%; background: currentColor;
+}
+.ap-accent-custom {
+  background: conic-gradient(from 0deg, #ff375f, #ff9f0a, #ffd60a, #30d158, #64d2ff, #0a84ff, #bf5af2, #ff375f);
+  display: inline-flex; overflow: hidden;
+}
+.ap-accent-custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
+
+/* palette rows */
+.ap-pal { flex-direction: row; align-items: center; gap: 12px; padding: 9px 12px; }
+.ap-pal-dots { display: flex; gap: 5px; flex-wrap: wrap; }
+.ap-pal-dot { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+
+/* shape / font samples */
+.ap-sample { border-radius: calc(var(--r-md) - 4px); padding: 10px; height: 74px; position: relative; overflow: hidden; background: var(--glass-strong); border: 1px solid var(--hairline); }
+.ap-shape-box { position: absolute; left: 10px; top: 12px; width: 48px; height: 48px; border: 2.5px solid var(--accent); border-radius: var(--r-lg); background: var(--accent-soft); }
+.ap-shape-pill { position: absolute; right: 10px; top: 14px; height: 18px; width: 48px; border-radius: var(--r-pill); background: var(--accent); }
+.ap-shape-ctl { position: absolute; right: 10px; bottom: 12px; height: 20px; width: 64px; border-radius: var(--r-control); border: 1.5px solid var(--input-border); background: var(--input-bg); }
+.ap-font-aa { font-family: var(--font-display); font-size: 30px; font-weight: 600; line-height: 1; color: var(--text); }
+.ap-font-num { font-family: var(--font); font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+/* controls panel */
+.ap-group { padding: 16px; border-radius: var(--r-lg); background: var(--fill); border: 1px solid var(--hairline); }
+.ap-group + .ap-group { margin-top: 14px; }
+.ap-glyph { width: 100%; height: 34px; display: flex; align-items: center; justify-content: flex-start; color: var(--text-2); }
+.ap-glyph svg { overflow: visible; }
+.ap-preview-cell {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px;
+  background: var(--glass-strong); border: 1px solid var(--hairline); border-radius: var(--r-md);
+}
+.ap-preview-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ap-why { font-size: 11px; color: var(--text-3); line-height: 1.35; }
+
+/* motion demo */
+@keyframes ap-bounce { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(46px); } }
+.ap-motion-track { position: relative; height: 22px; width: 70px; border-radius: var(--r-pill); background: var(--fill-2); }
+.ap-motion-dot { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); animation: ap-bounce 1.6s var(--ease) infinite; }
+
+/* sandbox */
+.ap-sandbox { display: flex; gap: 12px; align-items: flex-start; }
+.ap-pane { position: relative; overflow: hidden; border-radius: var(--r-lg); border: 1px solid var(--hairline); flex: 1; min-width: 0; }
+.ap-pane-leaf { position: absolute; top: 0; left: 0; transform-origin: 0 0; padding: 18px; }
+.ap-pane-label { position: absolute; right: 10px; top: 8px; z-index: 3; }
+/* the reduced-motion modifier shortens durations; stop the infinite demo at its first frame instead of flickering */
+[data-motion="reduced"] .ap-motion-dot { animation-iteration-count: 1; }

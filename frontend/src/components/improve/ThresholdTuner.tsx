@@ -63,7 +63,7 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
           </div>
         )}
         <div className="grow" style={{ minWidth: 240 }}>
-          <Slider label={<>Threshold <span className="faint small">— flag as “{pos}” when probability ≥</span></>} value={t} min={0.05} max={0.95} step={0.05} onChange={setT} format={(v) => v.toFixed(2)} />
+          <Slider fixedRenderer="slider" label={<>Threshold <span className="faint small">— flag as “{pos}” when probability ≥</span></>} value={t} min={0.05} max={0.95} step={0.05} onChange={setT} format={(v) => v.toFixed(2)} />
         </div>
         <div className="col" style={{ gap: 6, alignItems: "flex-start" }}>
           <span className="tiny faint">

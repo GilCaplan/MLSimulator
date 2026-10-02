@@ -5,6 +5,22 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ML Playground</title>
+    <script>
+      /* Apply the saved look before the first paint (no flash of the default template). Mirrors design/apply.ts prefAttrs. */
+      (function () {
+        try {
+          var p = JSON.parse(localStorage.getItem("mlp.ui.v1") || "null");
+          if (!p || p.v !== 1) return;
+          var el = document.documentElement;
+          var dark = p.theme === "dark" || (p.theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          el.setAttribute("data-theme", dark ? "dark" : "light");
+          var set = { "data-template": p.template, "data-background": p.background, "data-density": p.density, "data-motion": p.motion, "data-accent": p.accent };
+          for (var k in set) if (typeof set[k] === "string") el.setAttribute(k, set[k]);
+          if (p.shape && p.shape !== "auto") el.setAttribute("data-shape", p.shape);
+          if (p.font && p.font !== "auto") el.setAttribute("data-font", p.font);
+        } catch (e) { /* storage unavailable */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

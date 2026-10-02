@@ -42,7 +42,7 @@ export function TargetCard({ target, features, task, functions, error, onChange 
       </div>
 
       <Field label="How is the answer decided?" help="This is the hidden rule your models will try to discover from the data.">
-        <Segmented<RuleKind>
+        <Segmented<RuleKind> kind="form"
           value={target.rule}
           full
           size="sm"
@@ -198,7 +198,7 @@ function ClassesPanel({ target, onChange }: { target: DesignTarget; onChange: (t
   return (
     <div className="col" style={{ gap: 14 }}>
       <Field label="Number of classes" help="How many different answers are possible (2 = yes/no).">
-        <Segmented<string> value={String(target.n_classes)} size="sm" onChange={(v) => onChange(resizeClasses(target, Number(v)))}
+        <Segmented<string> kind="form" value={String(target.n_classes)} size="sm" onChange={(v) => onChange(resizeClasses(target, Number(v)))}
           options={[2, 3, 4, 5, 6].map((k) => ({ value: String(k), label: String(k) }))} />
       </Field>
       <Field label="Class balance" help={

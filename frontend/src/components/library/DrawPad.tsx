@@ -130,7 +130,7 @@ export const DrawPad = forwardRef<DrawPadHandle, { onChange: (uri: string) => vo
         <Segmented size="sm" value={tool} onChange={setTool} options={[{ value: "brush", label: "🖌️ Brush" }, { value: "eraser", label: "🧽 Eraser" }]} />
         <motion.button whileTap={{ scale: 0.9, rotate: -10 }} transition={spring.pop} className="btn sm" onClick={() => { fill(back); setHint(true); emit(true); }}>🗑️ Clear</motion.button>
       </div>
-      <Slider value={brush} min={4} max={48} integer onChange={setBrush} format={(v) => `${Math.round(v)} px`} />
+      <Slider fixedRenderer="slider" value={brush} min={4} max={48} integer onChange={setBrush} format={(v) => `${Math.round(v)} px`} />
       <div className="row between" style={{ gap: 8 }}>
         <span className="tiny faint">Ink</span>
         <div className="row" style={{ gap: 5 }}>

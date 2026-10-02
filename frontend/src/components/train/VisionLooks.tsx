@@ -32,7 +32,7 @@ function Saliency({ vision }: { vision: VisionResult }) {
         </p>
         <div className="col" style={{ gap: 8, minWidth: 220 }}>
           <Segmented size="sm" value={view} onChange={setView} options={[{ value: "overlay", label: "Overlay" }, { value: "side", label: "Side by side" }]} />
-          {view === "overlay" && <Slider label="Heat strength" value={strength} min={0} max={1} step={0.05} onChange={setStrength} format={(v) => `${Math.round(v * 100)}%`} />}
+          {view === "overlay" && <Slider fixedRenderer="slider" label="Heat strength" value={strength} min={0} max={1} step={0.05} onChange={setStrength} format={(v) => `${Math.round(v * 100)}%`} />}
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${view === "side" ? 250 : 150}px, 1fr))`, gap: 14 }}>
@@ -108,7 +108,7 @@ function PixelImportance({ vision, label }: { vision: VisionResult; label: strin
           <span className="tiny faint">Same map on every picture — the shape moves, the attention doesn't</span>
         </div>
         <div className="col" style={{ gap: 10, minWidth: 200, flex: "1 1 200px" }}>
-          <Slider label="Overlay strength" value={strength} min={0} max={1} step={0.05} onChange={setStrength} format={(v) => `${Math.round(v * 100)}%`} />
+          <Slider fixedRenderer="slider" label="Overlay strength" value={strength} min={0} max={1} step={0.05} onChange={setStrength} format={(v) => `${Math.round(v * 100)}%`} />
           <HeatLegend low="ignored" high="relied on" width={120} />
           <div className="row wrap" style={{ gap: 6, marginTop: 4 }}>
             {pics.map((p, j) => (

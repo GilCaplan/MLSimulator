@@ -1,0 +1,43 @@
+/* User modifiers on top of any template: shape, density, font, motion, print.
+ * Loaded last so they win over templates.css. Attribute selectors only (no :root) so scoped previews work. */
+
+/* ---------- shape (corner radii) ---------- */
+[data-shape="sharp"] { --r-sm: 2px; --r-md: 3px; --r-lg: 4px; --r-xl: 6px; --r-pill: 4px; --r-control: 2px; }
+[data-shape="soft"] { --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-xl: 16px; --r-pill: 12px; --r-control: 6px; }
+[data-shape="round"] { --r-sm: 10px; --r-md: 14px; --r-lg: 22px; --r-xl: 30px; --r-pill: 999px; --r-control: 10px; }
+[data-shape="pill"] { --r-sm: 12px; --r-md: 18px; --r-lg: 28px; --r-xl: 36px; --r-pill: 999px; --r-control: 999px; }
+
+/* ---------- density ---------- */
+[data-density="compact"] {
+  --control-h: 30px; --control-h-sm: 24px; --control-pad-x: 10px; --btn-h: 32px; --btn-h-sm: 24px;
+  --pad-card: 14px; --pad-card-lg: 20px; --gap-row: 8px; --font-size: 13px;
+}
+[data-density="spacious"] {
+  --control-h: 38px; --control-h-sm: 32px; --control-pad-x: 18px; --btn-h: 40px; --btn-h-sm: 32px;
+  --pad-card: 26px; --pad-card-lg: 36px; --gap-row: 14px; --font-size: 15px;
+}
+
+/* ---------- font ---------- */
+[data-font="system"] { --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; --font-display: var(--font); }
+[data-font="humanist"] { --font: "Avenir Next", "Avenir", "Segoe UI", "Trebuchet MS", sans-serif; --font-display: var(--font); }
+[data-font="serif"] { --font: "New York", "Iowan Old Style", "Palatino Linotype", Georgia, serif; --font-display: var(--font); --letter: 0; }
+[data-font="mono"] { --font: "SF Mono", ui-monospace, Menlo, Consolas, monospace; --font-display: var(--font); --letter: 0; }
+
+/* ---------- motion ---------- */
+[data-motion="reduced"] *, [data-motion="reduced"] *::before, [data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important;
+}
+[data-motion="off"] *, [data-motion="off"] *::before, [data-motion="off"] *::after {
+  animation: none !important; transition: none !important;
+}
+
+/* ---------- print ---------- */
+@media print {
+  html, body, #root { height: auto !important; overflow: visible !important; }
+  body { background: #fff !important; color: #000; }
+  header, [data-portal="footer"], [data-bg-layer], .toasts { display: none !important; }
+  .glass, .btn, .table th { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .glass { background: #fff !important; box-shadow: none !important; border: 1px solid #bbb !important; }
+  .glass::before { display: none; }
+  :root { --text: #000; --text-2: #333; --text-3: #555; }
+}

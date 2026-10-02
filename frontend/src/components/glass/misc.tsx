@@ -1,6 +1,7 @@
 import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { spring } from "../../design/motion";
+import { useUI } from "../../lib/store";
 
 export function Spinner({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
   return (
@@ -84,21 +85,34 @@ export function Dropzone({ onFile, accept, children, busy }: { onFile: (f: File)
   );
 }
 
+/** The page background chosen in Settings: drifting aurora blobs (only with full motion), a static CSS layer
+ * (gradient / dots / grid — styled by design/backgrounds.css via `.bg-layer` + `[data-background]`), or nothing. */
+export function Background() {
+  const background = useUI((s) => s.prefs.background);
+  const motionLevel = useUI((s) => s.prefs.motion);
+  if (background === "aurora") return <Aurora drift={motionLevel === "full"} />;
+  if (background === "gradient" || background === "dots" || background === "grid") return <div data-bg-layer aria-hidden className="bg-layer" />;
+  return null;
+}
+/** @deprecated use Background */
+export const MeshBackground = Background;
+
+const BLOBS = [
+  { c: "var(--bg-blob-1)", x: "8%", y: "10%", s: 46, d: 26 },
+  { c: "var(--bg-blob-2)", x: "62%", y: "4%", s: 42, d: 31 },
+  { c: "var(--bg-blob-3)", x: "70%", y: "62%", s: 40, d: 35 },
+  { c: "var(--bg-blob-4)", x: "4%", y: "64%", s: 36, d: 29 },
+];
+
 /** Slow-drifting colour blobs behind the glass so blur has something to refract. */
-export function MeshBackground() {
-  const blobs = [
-    { c: "var(--bg-blob-1)", x: "8%", y: "10%", s: 46, d: 26 },
-    { c: "var(--bg-blob-2)", x: "62%", y: "4%", s: 42, d: 31 },
-    { c: "var(--bg-blob-3)", x: "70%", y: "62%", s: 40, d: 35 },
-    { c: "var(--bg-blob-4)", x: "4%", y: "64%", s: 36, d: 29 },
-  ];
+function Aurora({ drift }: { drift: boolean }) {
   return (
-    <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
-      {blobs.map((b, i) => (
+    <div data-bg-layer aria-hidden style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
+      {BLOBS.map((b, i) => (
         <motion.div
           key={i}
-          animate={{ x: [0, 60, -40, 0], y: [0, -50, 40, 0], scale: [1, 1.12, 0.94, 1] }}
-          transition={{ repeat: Infinity, duration: b.d, ease: "easeInOut" }}
+          animate={drift ? { x: [0, 60, -40, 0], y: [0, -50, 40, 0], scale: [1, 1.12, 0.94, 1] } : { x: 0, y: 0, scale: 1 }}
+          transition={drift ? { repeat: Infinity, duration: b.d, ease: "easeInOut" } : { duration: 0 }}
           style={{ position: "absolute", left: b.x, top: b.y, width: `${b.s}vmax`, height: `${b.s}vmax`, borderRadius: "50%", background: b.c, filter: "blur(80px)", opacity: 0.55 }}
         />
       ))}

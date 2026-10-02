@@ -1,4 +1,8 @@
 import { create } from "zustand";
+import {
+  DEFAULT_PREFS, PREFS_KEY, TEMPLATE_PRESETS, mergePrefs, migratePrefs, validatePrefs,
+  type ControlPrefs, type DeepPartial, type TemplateId, type UIPrefs,
+} from "../design/prefs";
 import { api } from "./api";
 import { navigate } from "./router";
 import type {
@@ -120,25 +124,119 @@ export const toast = {
 
 /* ------------------------------------------------------------------ UI prefs */
 
-type Theme = "auto" | "light" | "dark";
-interface UIState { theme: Theme; reduceMotion: boolean; setTheme: (t: Theme) => void; setReduceMotion: (v: boolean) => void }
-const readPref = <T,>(k: string, d: T): T => {
+type Theme = UIPrefs["theme"];
+type PrefsSection = "template" | "colours" | "controls" | "density" | "all";
+interface UIState {
+  prefs: UIPrefs;
+  /** compat mirrors: theme = prefs.theme, reduceMotion = prefs.motion !== "full" */
+  theme: Theme;
+  reduceMotion: boolean;
+  setTheme: (t: Theme) => void;
+  setReduceMotion: (v: boolean) => void;
+  patchPrefs: (p: DeepPartial<UIPrefs>) => void;
+  setControl: <K extends keyof ControlPrefs>(k: K, v: ControlPrefs[K]) => void;
+  applyTemplate: (id: TemplateId) => void;
+  resetPrefs: (section?: PrefsSection) => void;
+  exportPrefs: () => string;
+  importPrefs: (json: string) => { ok: boolean; changed: string[]; error?: string };
+  syncFromServer: () => Promise<void>;
+}
+const readLS = (k: string): unknown => {
   try {
     const v = localStorage.getItem(k);
-    return v ? (JSON.parse(v) as T) : d;
+    return v ? JSON.parse(v) : undefined;
   } catch {
-    return d;
+    return undefined;
   }
 };
-const writePref = (k: string, v: unknown) => {
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ }
+const loadPrefs = (): UIPrefs => {
+  const stored = readLS(PREFS_KEY);
+  const prefs = migratePrefs(stored, { theme: readLS("mlp.theme"), reduceMotion: readLS("mlp.reduceMotion") });
+  if (stored === undefined) {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+      localStorage.removeItem("mlp.theme");
+      localStorage.removeItem("mlp.reduceMotion");
+    } catch { /* storage unavailable */ }
+  }
+  return prefs;
 };
-export const useUI = create<UIState>((set) => ({
-  theme: readPref<Theme>("mlp.theme", "auto"),
-  reduceMotion: readPref("mlp.reduceMotion", false),
-  setTheme: (theme) => { writePref("mlp.theme", theme); set({ theme }); },
-  setReduceMotion: (reduceMotion) => { writePref("mlp.reduceMotion", reduceMotion); set({ reduceMotion }); },
-}));
+let pushTimer: ReturnType<typeof setTimeout> | undefined;
+const persist = (prefs: UIPrefs) => {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* storage unavailable */ }
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { api.putPrefs(prefs).catch(() => {}); }, 800);
+};
+const flatDiff = (a: UIPrefs, b: UIPrefs) => {
+  const out: string[] = [];
+  for (const k of Object.keys(b) as (keyof UIPrefs)[]) {
+    if (k === "updatedAt" || k === "v") continue;
+    if (k === "controls") {
+      for (const c of Object.keys(b.controls) as (keyof ControlPrefs)[]) if (a.controls[c] !== b.controls[c]) out.push(`controls.${c}`);
+    } else if (a[k] !== b[k]) out.push(k);
+  }
+  return out;
+};
+const SECTION_KEYS: Record<Exclude<PrefsSection, "all">, (keyof UIPrefs)[]> = {
+  template: ["template", "background"],
+  colours: ["accent", "accentCustom", "shape", "font", "chartPalette"],
+  controls: ["controls"],
+  density: ["density", "motion"],
+};
+const withMirrors = (prefs: UIPrefs) => ({ prefs, theme: prefs.theme, reduceMotion: prefs.motion !== "full" });
+
+export const useUI = create<UIState>((set, get) => {
+  const commit = (next: UIPrefs) => {
+    const stamped = { ...next, updatedAt: Date.now() };
+    persist(stamped);
+    set(withMirrors(stamped));
+  };
+  return {
+    ...withMirrors(loadPrefs()),
+    setTheme: (theme) => commit(mergePrefs(get().prefs, { theme })),
+    setReduceMotion: (v) => commit(mergePrefs(get().prefs, { motion: v ? "reduced" : "full" })),
+    patchPrefs: (p) => commit(mergePrefs(get().prefs, p)),
+    setControl: (k, v) => commit(mergePrefs(get().prefs, { controls: { [k]: v } as DeepPartial<ControlPrefs> })),
+    applyTemplate: (id) => commit(mergePrefs(get().prefs, { template: id, ...TEMPLATE_PRESETS[id] })),
+    resetPrefs: (section = "all") => {
+      const cur = get().prefs;
+      if (section === "all") return commit({ ...DEFAULT_PREFS, theme: cur.theme });
+      const patch: Record<string, unknown> = {};
+      for (const k of SECTION_KEYS[section]) patch[k] = DEFAULT_PREFS[k];
+      commit(mergePrefs(cur, patch as DeepPartial<UIPrefs>));
+    },
+    exportPrefs: () => JSON.stringify({ app: "ml-playground", kind: "ui-prefs", v: 1, exportedAt: new Date().toISOString(), prefs: get().prefs }, null, 2),
+    importPrefs: (json) => {
+      try {
+        const raw = JSON.parse(json);
+        const body = raw && typeof raw === "object" && raw.kind === "ui-prefs" ? raw.prefs : raw;
+        if (!body || typeof body !== "object") return { ok: false, changed: [], error: "That file doesn't contain appearance settings." };
+        const next = validatePrefs({ ...body, v: 1 });
+        const changed = flatDiff(get().prefs, next);
+        commit(next);
+        return { ok: true, changed };
+      } catch {
+        return { ok: false, changed: [], error: "That isn't valid JSON." };
+      }
+    },
+    syncFromServer: async () => {
+      try {
+        const { prefs } = await api.getPrefs();
+        if (!prefs) {
+          if (get().prefs.updatedAt) api.putPrefs(get().prefs).catch(() => {});
+          return;
+        }
+        const server = validatePrefs(prefs);
+        if (server.updatedAt > get().prefs.updatedAt) {
+          try { localStorage.setItem(PREFS_KEY, JSON.stringify(server)); } catch { /* storage unavailable */ }
+          set(withMirrors(server));
+        } else if (get().prefs.updatedAt > server.updatedAt) {
+          api.putPrefs(get().prefs).catch(() => {});
+        }
+      } catch { /* offline / older backend: local prefs only */ }
+    },
+  };
+});
 
 /* ------------------------------------------------------------------ project + caches */
 

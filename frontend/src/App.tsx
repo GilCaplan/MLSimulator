@@ -21,6 +21,13 @@ import { LessonsPage } from "./pages/Lessons";
 import { LabPage, LabsPage } from "./pages/Labs";
 import { LessonPage } from "./pages/Lesson";
 
+/** Dev-only component gallery (every control × renderer), loaded lazily so it never ships in production builds. */
+function DevGalleryLoader() {
+  const [Page, setPage] = useState<ComponentType | null>(null);
+  useEffect(() => { import("./pages/DevGallery").then((m) => setPage(() => m.DevGallery)); }, []);
+  return Page ? <Page /> : <div className="row center" style={{ padding: 40 }}><Spinner /></div>;
+}
+
 const STEP_PAGES: Record<StepId, ComponentType> = {
   problem: ProblemStep,
   models: ModelsStep,
@@ -54,6 +61,7 @@ function Wizard({ projectId, step }: { projectId: string; step: string }) {
 export function App() {
   const route = useRouter((s) => s.route);
   const reduceMotion = useUI((s) => s.reduceMotion);
+  const motionLevel = useUI((s) => s.prefs.motion);
   let page;
   switch (route.name) {
     case "wizard": page = <Wizard projectId={route.projectId} step={route.step} />; break;
@@ -64,10 +72,11 @@ export function App() {
     case "lesson": page = <LessonPage lessonId={route.lessonId} />; break;
     case "labs": page = <LabsPage />; break;
     case "lab": page = <LabPage labId={route.labId} />; break;
+    case "gallery": page = import.meta.env.DEV ? <DevGalleryLoader /> : <HomePage />; break;
     default: page = <HomePage />;
   }
   return (
-    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
+    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"} transition={motionLevel === "off" ? { duration: 0 } : undefined}>
       <AppShell>{page}</AppShell>
     </MotionConfig>
   );

@@ -122,11 +122,11 @@ export function Tuner({ result }: { result: RunResult }) {
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 18, alignItems: "start" }}>
         <Field label="Search style" help="Random tries settings picked at random from your ranges — usually finds good ones fastest. Grid tries evenly spaced combinations.">
-          <div><Segmented size="sm" value={search} onChange={setSearch} options={[{ value: "random", label: "🎲 Random" }, { value: "grid", label: "▦ Grid" }]} /></div>
+          <div><Segmented kind="form" size="sm" value={search} onChange={setSearch} options={[{ value: "random", label: "🎲 Random" }, { value: "grid", label: "▦ Grid" }]} /></div>
         </Field>
         <Slider label="Trials" help="How many combinations to try. More = better chance, but slower." value={nIter} min={5} max={60} integer onChange={setNIter} />
         <Field label="CV folds" help="Each trial is scored with cross-validation on the training rows, so the test rows stay untouched.">
-          <div><Segmented size="sm" value={cv} onChange={setCv} options={[{ value: "3", label: "3 folds" }, { value: "5", label: "5 folds" }]} /></div>
+          <div><Segmented kind="form" size="sm" value={cv} onChange={setCv} options={[{ value: "3", label: "3 folds" }, { value: "5", label: "5 folds" }]} /></div>
         </Field>
         <Field label="Optimise for">
           <Select value={scoring} onChange={setScoring} options={CV_SCORING[task]} />

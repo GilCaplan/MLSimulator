@@ -79,7 +79,22 @@ _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
   settings form filters by task); grading metrics `mae`, `within_tol`.
 - UI: ThresholdTuner "Use 0.85 for this model" (patches model config; retrain applies). Demos: agent building.
 
-## QUEUED NEXT (user request, session 4): UI customization + site templates
+## DONE (session 4): UI customization + site templates — plan `docs/ui_customization_plan.md`
+- Foundation DONE (main session): `design/prefs.ts` (UIPrefs, enums, accents, validate/migrate), `design/apply.ts`
+  (prefAttrs/prefVars/applyPrefsToDocument/useApplyPrefs), `useUI` prefs (localStorage `mlp.ui.v1` + backend
+  `GET/PUT /api/system/prefs` → `data/ui_prefs.json`), tokens.css variable refactor (visual no-op, verified by
+  screenshots), `modifiers.css` (shape/density/font/motion/print), CSS import order, pre-paint script in index.html,
+  chart palettes (`lib/colors.ts` PALETTES/setPalette), opt-out props + call-site `fixedRenderer`s, `/dev/gallery` route,
+  contract stub `components/glass/controls/resolve.ts`.
+- Builders done: A = pref-aware primitives + resolve rules + dev gallery; B = templates.css/backgrounds.css,
+  Settings → Appearance panel.
+- Test matrix: scratchpad `ui/ui_matrix.mjs <base> [--quick|--controls]` (seeds a project via API; audits overflow,
+  clipped text, text overlap, console errors). Found + fixed: leaderboard columns overlapping in narrow panels
+  (container queries `.lb`); choice 'cards' render loop (flip stabiliser in `Choice.tsx`). Final: 300 template renders +
+  120 control-combo renders, 0 issues. Later sweep: hard-coded light-only gradients/whites listed in session-4 Builder B
+  report (Hero, lessons glow gradients, Problem tints, prepare bars, charts white text).
+
+## (was queued) UI customization + site templates
 - Settings → Appearance: per-control renderers (numeric: slider/stepper/number/dropdown; choices:
   segmented/dropdown/radio/chips; on-off: switch/checkbox/yes-no), colours, shape, direction, density, applied
   everywhere via pref-aware primitives; plus whole-site templates (glass / classic / minimal / solid …) and

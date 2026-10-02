@@ -74,7 +74,7 @@ export function Stepper({ current }: { current: StepId }) {
             onClick={() => navigate(`/p/${project.id}/${s.id}`)}
             style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, padding: "10px 10px", borderRadius: 14, border: "none", background: "transparent", cursor: avail ? "pointer" : "not-allowed", opacity: avail ? 1 : 0.42, textAlign: "left" }}
           >
-            {active && <motion.span layoutId="step-pill" transition={spring.snappy} style={{ position: "absolute", inset: 0, borderRadius: 14, background: "var(--glass-strong)", boxShadow: "0 1px 0 rgba(255,255,255,.6) inset, 0 4px 14px rgba(0,0,0,.08)" }} />}
+            {active && <motion.span layoutId="step-pill" transition={spring.snappy} style={{ position: "absolute", inset: 0, borderRadius: 14, background: "var(--glass-strong)", boxShadow: "var(--seg-pill-shadow)", outline: "1px solid var(--hairline)", outlineOffset: -1 }} />}
             <span style={{ position: "relative", width: 34, height: 34, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, background: done ? "rgba(48,209,88,.16)" : active ? "var(--accent-soft)" : "var(--fill)", flexShrink: 0 }}>
               {s.id === "train" && jobRunning ? <Spinner size={16} color="var(--accent)" /> : done && !active ? "✓" : s.icon}
             </span>
@@ -165,7 +165,7 @@ export function StepLayout({ title, subtitle, children, coach, footer, wide }: {
       </div>
       {coach && <div style={{ position: "sticky", top: 0 }}>{coach}</div>}
       {footer && createPortal(
-        <div style={{ position: "fixed", bottom: 18, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 20, pointerEvents: "none" }}>
+        <div data-portal="footer" style={{ position: "fixed", bottom: 18, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 20, pointerEvents: "none" }}>
           <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ ...spring.gentle, delay: 0.2 }}
             className="glass strong row" style={{ padding: "8px 8px 8px 18px", borderRadius: 999, gap: 14, pointerEvents: "auto", marginLeft: 250 }}>
             {footer}

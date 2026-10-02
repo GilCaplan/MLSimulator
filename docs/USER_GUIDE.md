@@ -144,7 +144,23 @@ few labels), **slot machines** (explore vs exploit) and a **robot in a maze** th
 ## Settings
 - **Server & port**: see which ports are free and move the running app to another. The page follows automatically,
   and the desktop icon always finds the running app.
-- **Appearance**: light, dark or auto; reduce motion.
+- **Appearance · Look & feel** (applies instantly, everywhere, and is remembered on every port):
+  - **Template**: the whole-site look. *Liquid Glass* (frosted panels), *Classic* (bevelled buttons, system fonts),
+    *Minimal* (flat, hairlines), *Solid* (bold outlines, no gradients) or *Paper* (warm, serif headings).
+    Each template has a light and a dark version.
+  - **Background**: aurora, solid, gradient, dots, grid or none.
+  - **Colours & shape**: accent colour (or your own), corner shape (sharp → pill), font, and the chart colour palette
+    (including a colour-blind-safe one).
+  - **Controls**: how every control in the app is displayed.
+    - Numbers can be a slider, a − / + stepper, a number box or a dropdown.
+    - Choices can be segmented buttons, a dropdown, radio buttons, chips or cards.
+    - On/off settings can be a switch, a checkbox or Yes / No.
+    - You can also set the layout direction.
+    - When a style doesn't suit a particular control (say, a dropdown with 20,000 values), the app picks the closest
+      sensible one automatically, and the preview badges explain why.
+  - **Density & motion**: compact, comfortable or spacious; full, reduced or no animation.
+  - A live **preview** at phone, laptop and desktop widths, per-section **Reset**, and **Export / Import** of your
+    settings as a file.
 - **System**: versions, GPU availability (Apple MPS or NVIDIA CUDA), data folder (*Show in Finder* / Explorer / *Open folder*) and log file.
 - **Quit** stops the background server.
 

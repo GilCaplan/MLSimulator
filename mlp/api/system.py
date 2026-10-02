@@ -4,7 +4,7 @@ import os
 import platform
 import subprocess
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request
 from pydantic import BaseModel
 
 from ..config import DATA_DIR, PORT_RANGE, SERVER_LOG, VERSION
@@ -75,6 +75,35 @@ def goodbye():
 @router.post("/system/shutdown")
 def shutdown(request: Request):
     request.app.state.server.should_exit = True
+    return {"ok": True}
+
+
+PREFS_FILE = DATA_DIR / "ui_prefs.json"
+_prefs_lock = __import__("threading").Lock()
+
+
+@router.get("/system/prefs")
+def get_prefs():
+    """Appearance prefs shared by every port the app runs on (browser storage is per port)."""
+    import json
+    try:
+        return {"prefs": json.loads(PREFS_FILE.read_text())}
+    except (OSError, ValueError):
+        return {"prefs": None}
+
+
+@router.put("/system/prefs")
+def put_prefs(body: dict = Body(...)):
+    import json
+    prefs = body.get("prefs")
+    if not isinstance(prefs, dict) or len(json.dumps(prefs)) > 20000:
+        raise HTTPException(400, "Invalid appearance settings.")
+    import tempfile
+    with _prefs_lock:
+        fd, tmp = tempfile.mkstemp(dir=PREFS_FILE.parent, prefix="ui_prefs.", suffix=".tmp")
+        with os.fdopen(fd, "w") as f:
+            f.write(json.dumps(prefs))
+        os.replace(tmp, PREFS_FILE)
     return {"ok": True}
 
 
