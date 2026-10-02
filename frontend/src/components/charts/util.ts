@@ -49,7 +49,9 @@ export const extent = (vals: number[]): [number, number] => {
 
 export const tickFmt = (v: number) => {
   const a = Math.abs(v);
-  if (a >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (a >= 1e12) return v.toExponential(1);
+  if (a >= 1e9) return `${Number((v / 1e9).toPrecision(3))}B`;
+  if (a >= 1e6) return `${Number((v / 1e6).toPrecision(3))}M`;
   if (a >= 1e3) return `${(v / 1e3).toFixed(a >= 1e4 ? 0 : 1)}k`;
   if (a > 0 && a < 0.01) return v.toExponential(0);
   return String(Number(v.toPrecision(3)));

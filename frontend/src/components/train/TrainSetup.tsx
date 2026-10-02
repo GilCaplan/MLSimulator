@@ -5,7 +5,8 @@ import { navigate } from "../../lib/router";
 import { DEFAULT_OPTIONS, isUnsupervised, useJob, useProject } from "../../lib/store";
 import type { Task, TrainOptions } from "../../lib/types";
 import { Field, Glass, InfoTip, NumberField, Segmented, Select, Spinner } from "../glass";
-import { CV_SCORING, isForecast, isRecsys, keySettings, primaryMetric, startTraining } from "./util";
+import { CLS_METRICS, CV_SCORING, REG_METRICS, isForecast, isRecsys, keySettings, lowerBetter, metricLabel, metricUsable, primaryMetric, rankMetrics, setRankMetric, startTraining } from "./util";
+import { ManageMetrics, MetricBuilderHost, RankBySelect, customsFor, supportsCustom, useMetricBuilder } from "../metrics";
 import { lastSeason, stepsText } from "./forecast/fcKit";
 
 /** The "before training" panel: the line-up, training options and the big start button. */
@@ -71,6 +72,8 @@ export function TrainSetup({ onCancel }: { onCancel?: () => void }) {
           })}
         </motion.div>
       </Glass>
+
+      {supportsCustom(project.task) && <RankingPanel />}
 
       <Glass animate_in>
         <h3 style={{ marginBottom: 14 }}>Training options</h3>
@@ -164,5 +167,36 @@ export function TrainSetup({ onCancel }: { onCancel?: () => void }) {
         {jobBusy && <span className="small muted row" style={{ gap: 6 }}><InfoTip text="Only one job runs at a time." />Another job is running…</span>}
       </motion.div>
     </motion.div>
+  );
+}
+
+/** How the winner is picked: the ranking metric (saved on the project) and the learner's own metrics. */
+function RankingPanel() {
+  const project = useProject((s) => s.project)!;
+  const result = useProject((s) => s.result);
+  const openNew = useMetricBuilder((s) => s.openNew);
+  const task = project.task as Task;
+  const run = result && result.task === task ? result : null;
+  const builtins = run ? rankMetrics(run) : task === "regression" ? REG_METRICS : CLS_METRICS;
+  const customs = customsFor(project, task);
+  const choice = project.rank_metric;
+  const value = choice && (run ? metricUsable(run, choice) : builtins.includes(choice) || customs.some((c) => `custom:${c.id}` === choice)) ? choice : primaryMetric(task);
+  return (
+    <Glass animate_in>
+      <div className="row between wrap" style={{ gap: 12, marginBottom: 10 }}>
+        <div className="col" style={{ gap: 2 }}>
+          <h3 className="row" style={{ gap: 8 }}>📐 How the winner is picked
+            <InfoTip text="Every leaderboard, progress chart and “best model” on this project ranks by this score. Pick a built-in one or make your own — e.g. when missing a fraud costs far more than a false alarm." />
+          </h3>
+          <span className="small muted">Your choice is saved with the project and used everywhere models are compared.</span>
+        </div>
+        <span className="row" style={{ gap: 8 }}>
+          <span className="small muted">Rank by</span>
+          <RankBySelect value={value} builtins={builtins} customs={customs} label={metricLabel} lower={lowerBetter} onChange={setRankMetric} onMake={() => openNew("formula")} style={{ maxWidth: 240 }} />
+        </span>
+      </div>
+      <ManageMetrics />
+      <MetricBuilderHost />
+    </Glass>
   );
 }

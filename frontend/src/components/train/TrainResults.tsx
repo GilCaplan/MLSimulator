@@ -8,18 +8,18 @@ import { Glass, Spinner } from "../glass";
 import { Leaderboard } from "./Leaderboard";
 import { ChallengeCheck } from "../lessons/ChallengeCheck";
 import { ModelDetail } from "./ModelDetail";
-import { boardRows, defaultMetric, realModels, startTraining } from "./util";
+import { boardRows, defaultMetric, realModels, setRankMetric, startTraining, useRankMetric } from "./util";
 
 /** Results view: dirty-banner, header actions, leaderboard and detail for the selected model. */
 export function TrainResults({ result, onOptions }: { result: RunResult; onOptions: () => void }) {
   const dirty = useProject((s) => s.dirtySinceTrain);
   const history = useProject((s) => s.project?.history ?? []);
   const busy = useJob((s) => s.status === "running");
-  const [metric, setMetric] = useState(() => defaultMetric(result));
+  // the ranking metric lives on the project (rank_metric), so it survives reloads, new runs and leaving the page
+  const metric = useRankMetric(result);
   const [selected, setSelected] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   useEffect(() => {
-    setMetric(defaultMetric(result));
     setSelected(boardRows(result, defaultMetric(result)).find((r) => !r.baseline)?.key ?? null);
   }, [result]);
   const model = selected ? result.models[selected] : undefined;
@@ -65,7 +65,7 @@ export function TrainResults({ result, onOptions }: { result: RunResult; onOptio
 
       <ChallengeCheck />
 
-      <Leaderboard result={result} metric={metric} onMetric={setMetric} selected={selected} onSelect={setSelected} />
+      <Leaderboard result={result} metric={metric} onMetric={setRankMetric} selected={selected} onSelect={setSelected} />
       {model && <ModelDetail result={result} model={model} />}
     </div>
   );

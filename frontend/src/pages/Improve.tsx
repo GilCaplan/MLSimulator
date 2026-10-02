@@ -15,6 +15,8 @@ import { useSavedSync } from "../components/train/save/savedSync";
 import { navigate } from "../lib/router";
 import { isUnsupervised, useProject } from "../lib/store";
 import type { Project, RunResult } from "../lib/types";
+import { MetricsPanel } from "../components/metrics";
+import { useRankedCoach } from "../components/train/util";
 
 function Section({ icon, title, help, sub, children, sectionRef }: { icon: string; title: string; help?: ReactNode; sub?: ReactNode; children: ReactNode; sectionRef?: React.Ref<HTMLDivElement> }) {
   return (
@@ -213,6 +215,7 @@ function SupervisedImprove() {
     if (tuneKey && result) setTimeout(scrollToTuner, 350);
   }, [tuneKey, result]);
 
+  const rankedCoach = useRankedCoach(result);
   const binary = result?.task === "classification" && result.classes?.length === 2 && Object.values(result.models).some((m) => !m.baseline && m.thresholds?.length);
 
   return (
@@ -222,7 +225,7 @@ function SupervisedImprove() {
       coach={
         <CoachPanel
           intro={<>Improving a model is a loop: <b>change one thing</b>, train again, and compare. The chart on this page keeps score across your runs so you can see what actually helped.</>}
-          suggestions={result?.coach ?? []}
+          suggestions={rankedCoach}
         />
       }
       footer={<ImproveFooter result={result} />}
@@ -236,6 +239,10 @@ function SupervisedImprove() {
         <>
           <Section icon="📈" title="Progress over runs" sub="The best test score from each time you trained.">
             <ProgressOverRuns project={project} />
+          </Section>
+
+          <Section icon="📐" title="Your metrics" sub="Scores you defined — every chart here ranks by the chosen one.">
+            <MetricsPanel />
           </Section>
 
           <Section icon="🎛️" title="Automatic tuning" sectionRef={tuneRef}

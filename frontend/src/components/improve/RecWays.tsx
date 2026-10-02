@@ -4,6 +4,7 @@ import { navigate } from "../../lib/router";
 import { useProject } from "../../lib/store";
 import type { RunResult, StepId, SuggestionAction } from "../../lib/types";
 import { AnimatedNumber } from "../glass";
+import { boardRows, lowerBetter, metricLabel, useRankMetric } from "../train/util";
 
 interface Idea { icon: string; title: string; text: string; cta: string; go?: StepId; action?: SuggestionAction }
 
@@ -62,12 +63,17 @@ export function RecWays({ projectId }: { projectId: string }) {
 
 /** This run's models against the popularity baseline: ranking score bars with the baseline as a dashed line, plus catalogue coverage. */
 export function BaselineRace({ result }: { result: RunResult }) {
-  const rows = result.leaderboard.filter((r) => r.score !== null && r.score !== undefined);
+  // the project's ranking metric when it's a "higher is better" list score; otherwise the run's default (NDCG@10)
+  const chosen = useRankMetric(result);
+  const useChosen = !!chosen && !lowerBetter(chosen) && chosen !== result.leaderboard[0]?.metric;
+  const rows = (useChosen
+    ? boardRows(result, chosen).map((r) => ({ key: r.key, label: r.label, model_id: r.model_id, score: r.score as number }))
+    : result.leaderboard).filter((r) => r.score !== null && r.score !== undefined);
   if (!rows.length) return null;
-  const metric = rows[0].metric;
+  const metric = useChosen ? chosen : result.leaderboard[0].metric;
   const base = rows.find((r) => r.model_id === "popularity");
   const max = Math.max(1e-9, ...rows.map((r) => r.score));
-  const label = metric === "ndcg_at_10" ? "NDCG@10" : metric;
+  const label = metricLabel(metric);
   return (
     <div className="col" style={{ gap: 10 }}>
       <div className="col" style={{ gap: 8, position: "relative" }}>
@@ -95,7 +101,7 @@ export function BaselineRace({ result }: { result: RunResult }) {
         })}
       </div>
       <span className="tiny muted" style={{ lineHeight: 1.5 }}>
-        Bars show <b>{label}</b> on the hidden ratings (higher = liked items sit nearer the top of each top-10 list). The dashed line is <b>Most popular</b> — the bar to clear.
+        Bars show <b>{label}</b> on the hidden ratings ({metric === "ndcg_at_10" ? "higher = liked items sit nearer the top of each top-10 list" : "higher is better"}). The dashed line is <b>Most popular</b> — the bar to clear.
         <b> Covers</b> is how much of the catalogue ever gets recommended: popularity shows everyone the same few hits.
         {!base && " Add Most popular to your line-up to see the baseline."}
       </span>

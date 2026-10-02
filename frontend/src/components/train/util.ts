@@ -1,13 +1,27 @@
 import { create } from "zustand";
+import { useMemo } from "react";
 import { api } from "../../lib/api";
 import { LOWER_IS_BETTER, METRIC_HELP, METRIC_LABELS, fmt, pct } from "../../lib/format";
 import { isUnsupervised, toast, useJob, useProject } from "../../lib/store";
-import type { ModelConfig, ModelResult, NNArch, RunResult, Task, UnsupervisedTask } from "../../lib/types";
+import type { ModelConfig, ModelResult, NNArch, RunResult, Suggestion, Task, UnsupervisedTask } from "../../lib/types";
+import { appliesTo, customsFor, describeCustom, evalCustom, findCustom, fmtCustom, isCustomKey } from "../metrics/custom";
 
 /* ------------------------------------------------------------------ metrics */
 
-export const CLS_METRICS = ["accuracy", "balanced_accuracy", "f1", "roc_auc", "precision", "recall"];
-export const REG_METRICS = ["r2", "rmse", "mae"];
+export const CLS_METRICS = ["accuracy", "balanced_accuracy", "f1", "roc_auc", "precision", "recall", "f1_weighted", "mcc", "log_loss", "avg_precision"];
+export const REG_METRICS = ["r2", "rmse", "mae", "mse", "median_ae", "max_error", "mape", "explained_variance"];
+
+/** Labels / help for metrics the shared tables don't cover yet. */
+const EXTRA_LABELS: Record<string, string> = { mse: "MSE", median_ae: "Median miss", max_error: "Worst miss", fit_time: "Fit time", n_params: "Parameters" };
+const EXTRA_HELP: Record<string, string> = {
+  mse: "Average squared miss — RMSE before the square root. Huge misses dominate it (lower is better).",
+  median_ae: "The typical miss: half the guesses are closer than this, half further away. A few wild rows can't move it (lower is better).",
+  max_error: "The single biggest miss on the test rows — for when one disaster matters more than the average (lower is better).",
+  explained_variance: "Like R², but ignores a constant offset in the guesses (1 = perfect).",
+  f1_weighted: "F1 where common classes count more than rare ones.",
+  avg_precision: "How clean the most confident “yes” answers are (yes/no problems).",
+};
+const EXTRA_LOWER = new Set(["mse", "median_ae", "max_error", "fit_time", "n_params"]);
 
 /** Ranking metric per task (mirrors mlp/core/problems.py primary_metric). */
 export const primaryMetric = (task: string | null | undefined) =>
@@ -118,19 +132,28 @@ const UNSUP_LOWER = new Set(["davies_bouldin", "inertia", "bic", "kl_divergence"
 /** Unsupervised metrics shown as plain decimals rather than percentages. */
 const DECIMAL = new Set(["bias", "ndcg_at_10", "users_evaluated", "silhouette", "davies_bouldin", "calinski_harabasz", "ari", "nmi", "inertia", "bic", "n_clusters", "threshold", "n_components", "kl_divergence"]);
 
-export const lowerBetter = (metric: string) => LOWER_IS_BETTER.has(metric) || UNSUP_LOWER.has(metric);
+/** Is lower better? Works for built-in keys and the project's own metrics ("custom:<id>"). */
+export const lowerBetter = (metric: string) =>
+  isCustomKey(metric) ? findCustom(metric)?.better === "lower" : LOWER_IS_BETTER.has(metric) || UNSUP_LOWER.has(metric) || EXTRA_LOWER.has(metric);
 
 /** Metrics that live in 0…1 are shown as percentages; error metrics in target units. */
-export const isUnit = (metric: string) => !lowerBetter(metric) && metric !== "r2" && metric !== "mcc" && !DECIMAL.has(metric);
+export const isUnit = (metric: string) => !isCustomKey(metric) && !lowerBetter(metric) && metric !== "r2" && metric !== "mcc" && metric !== "explained_variance" && !DECIMAL.has(metric);
 
 export const fmtMetric = (metric: string, v: number | null | undefined) =>
-  v === null || v === undefined ? "—" : metric === "smape" ? pct(v, 1) : metric === "mase" ? v.toFixed(2) : metric === "n_clusters" || metric === "n_components" || metric === "users_evaluated" ? String(Math.round(v)) : isUnit(metric) ? pct(v, 1) : fmt(v, 3);
+  v === null || v === undefined ? "—" : isCustomKey(metric) ? fmtCustom(v) : metric === "smape" ? pct(v, 1) : metric === "mase" ? v.toFixed(2) : metric === "n_clusters" || metric === "n_components" || metric === "users_evaluated" ? String(Math.round(v)) : isUnit(metric) ? pct(v, 1) : fmt(v, 3);
 
-export const metricLabel = (m: string) => METRIC_LABELS[m] ?? UNSUP_LABELS[m] ?? m;
+export const metricLabel = (m: string) => (isCustomKey(m) ? findCustom(m)?.name ?? "Your score" : METRIC_LABELS[m] ?? UNSUP_LABELS[m] ?? EXTRA_LABELS[m] ?? m);
 
-/** Plain-language help for a metric (anomaly metrics are phrased for flagged rows). */
-export const metricHelp = (m: string, task?: string | null): string | undefined =>
-  (task === "anomaly" ? ANOMALY_HELP[m] : task === "recommendation" ? RECSYS_HELP[m] : task === "forecasting" ? FORECAST_HELP[m] : undefined) ?? UNSUP_HELP[m] ?? METRIC_HELP[m];
+/** Plain-language help for a metric (anomaly metrics are phrased for flagged rows; custom metrics show their recipe). */
+export const metricHelp = (m: string, task?: string | null): string | undefined => {
+  if (isCustomKey(m)) {
+    const cm = findCustom(m);
+    if (!cm) return undefined;
+    const recipe = describeCustom(cm, task, useProject.getState().result?.classes);
+    return `Your own score${cm.kind === "formula" ? `: ${recipe}` : ` — ${recipe}`}. ${cm.better === "lower" ? "Lower" : "Higher"} is better.${cm.description ? ` ${cm.description}` : ""}`;
+  }
+  return (task === "anomaly" ? ANOMALY_HELP[m] : task === "recommendation" ? RECSYS_HELP[m] : task === "forecasting" ? FORECAST_HELP[m] : undefined) ?? UNSUP_HELP[m] ?? METRIC_HELP[m] ?? EXTRA_HELP[m];
+};
 
 /** Is `a` a better score than `b` for this metric? */
 export const better = (metric: string, a: number, b: number) => (lowerBetter(metric) ? a < b : a > b);
@@ -142,11 +165,73 @@ export function rankMetrics(result: RunResult): string[] {
   return pool.filter((m) => Object.values(result.models).some((r) => !r.baseline && r.metrics.test?.[m] !== undefined && r.metrics.test?.[m] !== null));
 }
 
-/** Default ranking metric for a run: the problem's primary metric, or the first one available (e.g. anomaly without truth). */
+/** Is a ranking choice (built-in key or "custom:<id>") usable for this run? */
+export function metricUsable(result: RunResult, metric: string | null | undefined): metric is string {
+  if (!metric) return false;
+  if (isCustomKey(metric)) {
+    const cm = findCustom(metric);
+    return !!cm && appliesTo(cm, result.task);
+  }
+  return rankMetrics(result).includes(metric);
+}
+
+/**
+ * Ranking metric for a run: the learner's choice saved on the project (`rank_metric`, built-in or custom) when this run
+ * can be scored with it; otherwise the problem's primary metric, or the first one available (e.g. anomaly without truth).
+ */
 export function defaultMetric(result: RunResult): string {
+  const choice = useProject.getState().project?.rank_metric;
+  if (metricUsable(result, choice)) return choice;
   const p = primaryMetric(result.task);
   const avail = rankMetrics(result);
   return avail.includes(p) || !avail.length ? p : avail[0];
+}
+
+/** React hook: the ranking metric for a run, re-computed when the project's choice or its custom metrics change. */
+export function useRankMetric(result: RunResult | null | undefined): string {
+  const choice = useProject((s) => s.project?.rank_metric);
+  const customs = useProject((s) => s.project?.custom_metrics);
+  return useMemo(() => (result ? defaultMetric(result) : ""), [result, choice, customs]);
+}
+
+/** Remember the learner's ranking metric on the project (used everywhere models are ranked or compared). */
+export function setRankMetric(metric: string | null) {
+  useProject.getState().update(() => ({ rank_metric: metric }));
+}
+
+/** The project's custom metrics that can rank this run. */
+export const customRankMetrics = (result: RunResult) => customsFor(useProject.getState().project, result.task);
+
+/** Built-in metric → the matching cross-validation scorer (what automatic tuning can optimise). */
+export function cvScoringFor(metric: string, task: Task): string {
+  if (task === "regression") {
+    return metric === "r2" || metric === "explained_variance" ? "r2" : metric === "mae" || metric === "median_ae" || metric === "mape" ? "neg_mae" : metric === "rmse" || metric === "mse" || metric === "max_error" ? "neg_rmse" : "r2";
+  }
+  return metric === "f1" || metric === "f1_weighted" || metric === "precision" || metric === "recall" ? "f1" : metric === "balanced_accuracy" || metric === "mcc" ? "balanced_accuracy" : metric === "roc_auc" || metric === "avg_precision" || metric === "log_loss" ? "roc_auc" : "accuracy";
+}
+
+/**
+ * The run's coach tips with "fine-tune the best model" pointed at the best model under the learner's ranking metric
+ * (the server's coach ranks by the problem's default metric).
+ */
+export function rankedCoach(result: RunResult | null | undefined): Suggestion[] {
+  if (!result) return [];
+  const coach = result.coach ?? [];
+  const metric = defaultMetric(result);
+  if (metric === primaryMetric(result.task) || !coach.some((s) => s.id === "tune_best")) return coach;
+  const best = boardRows(result, metric).find((r) => !r.baseline && r.score !== null);
+  if (!best) return coach;
+  return coach.flatMap((s): Suggestion[] => {
+    if (s.id !== "tune_best" || s.action?.kind !== "tune") return [s];
+    if (best.model.family !== "classic" || useProject.getState().spec(best.model_id)?.nn) return [];
+    return [{ ...s, title: `Fine-tune ${best.label}`, why: `${best.label} leads on ${metricLabel(metric)}. ${s.why}`, action: { ...s.action, key: best.key } }];
+  });
+}
+
+/** React hook version of `rankedCoach` (re-renders when the ranking metric changes). */
+export function useRankedCoach(result: RunResult | null | undefined): Suggestion[] {
+  const metric = useRankMetric(result);
+  return useMemo(() => rankedCoach(result), [result, metric]);
 }
 
 export const CV_SCORING: Record<Task, { value: string; label: string }[]> = {
@@ -232,10 +317,14 @@ export function attachTrainJob(job_id: string, projectId: string, models: { key:
         if (cur.project?.id !== projectId) return;
         cur.setResult(result);
         cur.update((p) => ({ last_job_id: job_id, history: [...(p.history || []), { job_id, at: Date.now() / 1000, leaderboard: result.leaderboard }] }));
-        const best = result.leaderboard.find((r) => !r.baseline);
-        const base = result.leaderboard.find((r) => r.baseline);
-        const beat = best && base && best.score !== null && base.score !== null ? better(best.metric || primaryMetric(result.task), best.score, base.score) : true;
-        toast.success(best ? (beat ? `Training done — ${best.label} came out on top!` : `Training done — but none of the models beat the baseline. Take a look!`) : "Training finished.");
+        // rank by the learner's chosen metric (built-in or their own), not just the server's default
+        const metric = defaultMetric(result);
+        const rows = boardRows(result, metric);
+        const best = rows.find((r) => !r.baseline && r.score !== null) ?? rows.find((r) => !r.baseline);
+        const base = rows.find((r) => r.baseline);
+        const beat = best && base && best.score !== null && base.score !== null ? better(metric, best.score, base.score) : true;
+        const by = metric !== primaryMetric(result.task) ? ` on ${metricLabel(metric)}` : "";
+        toast.success(best ? (beat ? `Training done — ${best.label} came out on top${by}!` : `Training done — but none of the models beat the baseline${by}. Take a look!`) : "Training finished.");
       } catch (e) {
         toast.error(e);
       }
@@ -300,7 +389,11 @@ export const useSaved = create<SavedState>((set, get) => ({
 
 /* ------------------------------------------------------------------ leaderboard */
 
-export interface BoardRow { key: string; label: string; model_id: string; score: number | null; train: number | null; fit: number; model: ModelResult; baseline: boolean }
+export interface BoardRow {
+  key: string; label: string; model_id: string; score: number | null; train: number | null; fit: number; model: ModelResult; baseline: boolean;
+  /** custom metrics: why the score is missing, and how it was measured */
+  why?: string; note?: string;
+}
 
 /** The 'always guess' reference row is not a real model: keep it out of headlines, pickers and tuners. */
 export const isBaseline = (m: { baseline?: boolean; key?: string } | null | undefined) => !!m?.baseline;
@@ -317,6 +410,16 @@ export const baselineOf = (result: RunResult) => Object.values(result.models).fi
  */
 export function vsBaseline(metric: string, score: number | null | undefined, base: number | null | undefined): { delta: number; text: string } | null {
   if (score === null || score === undefined || base === null || base === undefined) return null;
+  if (isCustomKey(metric)) {
+    // the learner's own score: relative when both are positive amounts, else a plain difference
+    const lower = lowerBetter(metric);
+    if (score >= 0 && base > 0) {
+      const rel = lower ? (base - score) / base : (score - base) / base;
+      return { delta: rel, text: `${Math.round(Math.abs(rel) * 100)}% ${lower ? (rel >= 0 ? "lower" : "higher") : rel >= 0 ? "higher" : "lower"}` };
+    }
+    const d = lower ? base - score : score - base;
+    return { delta: d, text: `${fmtCustom(Math.abs(d))} ${d >= 0 ? "better" : "worse"}` };
+  }
   if (lowerBetter(metric)) {
     if (!base) return null;
     const rel = (base - score) / Math.abs(base);
@@ -328,10 +431,16 @@ export function vsBaseline(metric: string, score: number | null | undefined, bas
 }
 
 export function boardRows(result: RunResult, metric: string): BoardRow[] {
-  const rows = Object.values(result.models).map((m) => ({
-    key: m.key, label: m.label, model_id: m.model_id, model: m, fit: m.fit_time_s, baseline: !!m.baseline,
-    score: m.metrics.test?.[metric] ?? null, train: m.metrics.train?.[metric] ?? null,
-  }));
+  const cm = isCustomKey(metric) ? findCustom(metric) : undefined;
+  const rows: BoardRow[] = Object.values(result.models).map((m) => {
+    const row = { key: m.key, label: m.label, model_id: m.model_id, model: m, fit: m.fit_time_s, baseline: !!m.baseline };
+    if (isCustomKey(metric)) {
+      if (!cm) return { ...row, score: null, train: null, why: "This metric was deleted." };
+      const t = evalCustom(cm, m, result.task);
+      return { ...row, score: t.value, train: cm.kind === "formula" ? evalCustom(cm, m, result.task, "train").value : null, why: t.why, note: t.note };
+    }
+    return { ...row, score: m.metrics.test?.[metric] ?? null, train: m.metrics.train?.[metric] ?? null };
+  });
   const lower = lowerBetter(metric);
   return rows.sort((a, b) => {
     if (a.score === null) return 1;

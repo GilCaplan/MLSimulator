@@ -1,9 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
 import { spring } from "../../design/motion";
 import { secs } from "../../lib/format";
 import { isUnsupervised, useProject } from "../../lib/store";
 import type { ModelResult, RunResult } from "../../lib/types";
-import { Glass, InfoTip, Select, Tooltip } from "../glass";
+import { Glass, InfoTip, Tooltip } from "../glass";
+import { ManageMetricsModal, MetricBuilderHost, RankBySelect, customsFor, findCustom, isCustomKey, supportsCustom, useMetricBuilder } from "../metrics";
 import { BASELINE_ID, lastSeason, masePhrase } from "./forecast/fcKit";
 import { type BoardRow, boardRows, fmtMetric, isForecast, isRecsys, isUnit, lowerBetter, metricHelp, metricLabel, rankMetrics, useSaved, vsBaseline } from "./util";
 
@@ -55,12 +57,29 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
   const rows = boardRows(result, metric);
   const lower = lowerBetter(metric);
   const help = metricHelp(metric, task);
+  const custom = isCustomKey(metric);
+  const customMetric = custom ? findCustom(metric, project) : undefined;
+  const allowCustom = supportsCustom(task);
+  const customs = allowCustom ? customsFor(project, task) : [];
+  const openNew = useMetricBuilder((s) => s.openNew);
+  const openEdit = useMetricBuilder((s) => s.openEdit);
+  const [manage, setManage] = useState(false);
+  const measureNote = custom ? rows.find((r) => r.note)?.note : undefined;
   const noTruth = unsup && !rec && !fc && task !== "reduction" && !Object.values(result.models).some((r) => r.metrics.test?.[task === "anomaly" ? "roc_auc" : "ari"] !== undefined);
   const scores = rows.map((r) => r.score).filter((s): s is number => s !== null);
   const best = scores.length ? (lower ? Math.min(...scores) : Math.max(...scores)) : 0;
   const worst = scores.length ? (lower ? Math.max(...scores) : Math.min(...scores)) : 0;
+  const sLo = scores.length ? Math.min(...scores) : 0;
+  const sHi = scores.length ? Math.max(...scores) : 1;
   const barOf = (v: number | null) => {
     if (v === null) return 0;
+    if (custom) {
+      // the learner's own score can be any size or sign: ratio bars for positive amounts, else spread between worst and best
+      if (lower && sLo > 0) return Math.max(0.04, sLo / v);
+      if (!lower && sLo >= 0 && sHi > 0) return Math.max(0.04, v / sHi);
+      const t = sHi === sLo ? 1 : lower ? (sHi - v) / (sHi - sLo) : (v - sLo) / (sHi - sLo);
+      return 0.1 + 0.9 * t;
+    }
     if (lower) return v > 0 ? Math.max(0.04, best / v) : 1;
     if (isUnit(metric)) return Math.max(0.02, Math.min(1, v));
     // r² can be negative: scale between min(0, worst) and 1
@@ -98,10 +117,27 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         </div>
         <div className="row" style={{ gap: 8 }}>
           <span className="small muted">Rank by</span>
-          <Select value={metric} onChange={onMetric} options={(available.length ? available : [metric]).map((m) => ({ value: m, label: metricLabel(m) + (lowerBetter(m) ? " ↓" : "") }))} />
+          <RankBySelect value={metric} builtins={available.length ? available : custom ? [] : [metric]} customs={customs} allowCustom={allowCustom}
+            label={metricLabel} lower={lowerBetter} onChange={onMetric} onMake={() => openNew("formula")} onManage={() => setManage(true)} style={{ maxWidth: 220 }} />
           {help && <InfoTip text={help} />}
+          {customMetric && (
+            <Tooltip content="Edit this score" width={110}>
+              <button type="button" className="btn sm icon ghost" aria-label={`Edit ${customMetric.name}`} onClick={() => openEdit(customMetric)}>✏️</button>
+            </Tooltip>
+          )}
         </div>
       </div>
+      {allowCustom && <MetricBuilderHost />}
+      {allowCustom && <ManageMetricsModal open={manage} onClose={() => setManage(false)} />}
+
+      {customMetric && (
+        <motion.div key={metric} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={spring.gentle}
+          className="row wrap tiny muted" style={{ gap: 6, margin: "-6px 0 10px", padding: "0 2px" }}>
+          <span>{customMetric.kind === "formula" ? "🧮" : "💸"} Ranked by <b style={{ color: "var(--text)" }}>your own score</b>{customMetric.kind === "formula" ? <> · <span className="mono">{customMetric.formula}</span></> : null}</span>
+          <span>· {customMetric.better === "lower" ? "lower is better" : "higher is better"}</span>
+          {measureNote && <span>· {measureNote}</span>}
+        </motion.div>
+      )}
 
       {fcRandom && (
         <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={spring.pop}
@@ -158,7 +194,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
       <div className="row tiny faint" style={{ padding: "0 12px 6px", gap: 12 }}>
         <span style={{ width: 30 }} />
         <span className="lb-model" style={{ flex: "0 0 180px" }}>Model</span>
-        <span className="grow">{unsup ? metricLabel(metric) : `Test ${metricLabel(metric)}`}{lower ? " · lower is better" : ""}</span>
+        <span className="grow">{unsup || custom ? metricLabel(metric) : `Test ${metricLabel(metric)}`}{lower ? " · lower is better" : ""}</span>
         <span className="lb-side" style={{ width: 120, textAlign: "right" }}>{unsup ? (fc ? `vs ${lastSeason(fcUnit).replace("same as ", "")}` : rec ? "Catalogue shown" : task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
         <span className="lb-fit" style={{ width: 64, textAlign: "right" }}>Fit time</span>
       </div>
@@ -175,7 +211,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
             const isPop = r === popRow;
             if (isPop) passedBase = true;
             const ri = realRank[r.key] ?? i;
-            const gap = r.train !== null && r.score !== null && !lower ? r.train - r.score : 0;
+            const gap = r.train !== null && r.score !== null && !lower && !custom ? r.train - r.score : 0;
             const overfit = gap > 0.08;
             const sel = selected === r.key;
             const isSaved = !!saved[`${result.job_id}:${r.key}`];
@@ -225,7 +261,13 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                         title="Baseline" style={{ position: "absolute", top: -2, bottom: -2, width: 0, borderLeft: "2px dashed var(--text-2)", marginLeft: -1 }} />
                     )}
                   </span>
-                  <b className="num" title={unsup ? undefined : `Train ${fmtMetric(metric, r.train)} → test ${fmtMetric(metric, r.score)}`} style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
+                  {r.score === null && r.why ? (
+                    <Tooltip content={r.why} width={230}>
+                      <b className="num muted" style={{ width: 62, textAlign: "right", fontSize: 14, cursor: "help", display: "inline-block" }}>—</b>
+                    </Tooltip>
+                  ) : (
+                    <b className="num" title={unsup ? undefined : r.note ? `Measured ${r.note}` : `Train ${fmtMetric(metric, r.train)} → test ${fmtMetric(metric, r.score)}`} style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
+                  )}
                 </span>
                 {unsup ? (() => {
                   const f = sideFact(task, r.model);
@@ -234,7 +276,9 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                       <span className="num small muted lb-side" style={{ width: 120, textAlign: "right", display: "inline-block" }}>{f.text}</span>
                     </Tooltip>
                   );
-                })() : <span className="row num small muted lb-side" style={{ width: 120, justifyContent: "flex-end", gap: 4 }}>
+                })() : custom && r.train === null ? (
+                  <span className="small faint lb-side" style={{ width: 120, textAlign: "right" }} title="Costs of mistakes are counted on the test rows only">test rows only</span>
+                ) : <span className="row num small muted lb-side" style={{ width: 120, justifyContent: "flex-end", gap: 4 }}>
                   {fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}
                   {overfit && (
                     <Tooltip content={`It scores ${fmtMetric(metric, gap)} better on rows it practised on than on new ones — a sign of memorising (overfitting).`}>
@@ -290,9 +334,9 @@ function BaselineRow({ r, i, metric, sel, onSelect, bar, side, note }: { r: Boar
           <motion.span style={{ display: "block", height: "100%", borderRadius: 6, background: "repeating-linear-gradient(135deg, var(--text-3) 0 5px, transparent 5px 9px)", opacity: 0.7 }}
             initial={{ width: 0 }} animate={{ width: `${bar * 100}%` }} transition={{ ...spring.gentle, delay: 0.1 + i * 0.05 }} />
         </span>
-        <b className="num muted" style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
+        <b className="num muted" title={r.why} style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
       </span>
-      <span className="row num small faint lb-side" style={{ width: 120, justifyContent: "flex-end" }} title={side?.tip}>{side ? side.text : <>{fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}</>}</span>
+      <span className="row num small faint lb-side" style={{ width: 120, justifyContent: "flex-end" }} title={side?.tip}>{side ? side.text : r.train === null && r.note ? "test rows only" : <>{fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}</>}</span>
       <span className="small faint lb-fit" style={{ width: 64, textAlign: "right" }}>reference</span>
     </motion.button>
   );

@@ -640,6 +640,10 @@ export interface Project {
   truth?: string | null;
   /** set when the project was started from a lesson's practice challenge */
   challenge?: { lesson_id: string } | null;
+  /** the learner's chosen ranking metric: a built-in key (e.g. "mae") or "custom:<id>"; null = the problem's default */
+  rank_metric?: string | null;
+  /** learner-defined metrics (formulas over built-in metrics, or a cost of mistakes) */
+  custom_metrics?: CustomMetric[];
   created_at: number;
   updated_at: number;
 }
@@ -829,3 +833,17 @@ export interface TryExample extends TryResult {
   input: { image?: string; text?: string; row?: Record<string, any> };
 }
 export interface TryInputs { modality: Modality; task: Task; classes: string[] | null; input_schema: InputSchemaItem[]; image_shape: number[] | null }
+
+/* ---- Learner-defined metrics (evaluated in the browser from each model's built-in metrics / confusion matrix) */
+export interface CustomMetric {
+  id: string;
+  name: string;
+  /** formula: an expression over metric names, e.g. "2*mae + mse"; costs: price of each kind of mistake */
+  kind: "formula" | "costs";
+  formula?: string;
+  /** classification: cost[true][predicted] per prediction (diagonal usually 0); regression: cost per unit of under/over-prediction */
+  costs?: { matrix?: number[][]; under?: number; over?: number };
+  better: "lower" | "higher";
+  description?: string;
+  created_at?: number;
+}

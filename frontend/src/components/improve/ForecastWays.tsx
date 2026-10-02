@@ -5,6 +5,10 @@ import { useProject } from "../../lib/store";
 import type { PipelineSpec, RunResult, StepId, SuggestionAction } from "../../lib/types";
 import { AnimatedNumber, Tooltip } from "../glass";
 import { BASELINE_ID, fmtV, lastSeason, masePhrase, seasonalRef, stepsText } from "../train/forecast/fcKit";
+import { fmtMetric, metricLabel, useRankMetric } from "../train/util";
+
+/** Forecast metrics the race can show (all "lower is better" error measures). */
+const RACE_METRICS = new Set(["mae", "rmse", "mase", "smape", "one_step_mae"]);
 
 interface Idea { icon: string; title: string; text: string; cta: string; go?: StepId; action?: SuggestionAction; hot?: boolean }
 
@@ -103,22 +107,27 @@ export function ForecastWays({ projectId }: { projectId: string }) {
   );
 }
 
-/** This run's forecasters against "same as last season": MAE bars (shorter = better) with the baseline as a dashed line. */
+/** This run's forecasters against "same as last season": error bars (shorter = better) with the baseline as a dashed line.
+ * Uses the project's ranking metric when it's a forecast error measure (MAE by default). */
 export function ForecastRace({ result }: { result: RunResult }) {
+  const chosen = useRankMetric(result);
+  const metric = RACE_METRICS.has(chosen) ? chosen : "mae";
+  const inUnits = metric === "mae" || metric === "rmse" || metric === "one_step_mae";
+  const show = (v: number) => (inUnits ? fmtV(v) : fmtMetric(metric, v));
   const ref = seasonalRef(result);
-  const rows = Object.values(result.models).filter((m) => m.metrics.test?.mae !== undefined).sort((a, b) => a.metrics.test.mae - b.metrics.test.mae);
+  const rows = Object.values(result.models).filter((m) => m.metrics.test?.[metric] !== undefined).sort((a, b) => a.metrics.test[metric] - b.metrics.test[metric]);
   if (!rows.length) return null;
-  const max = Math.max(1e-9, ...rows.map((r) => r.metrics.test.mae));
+  const max = Math.max(1e-9, ...rows.map((r) => r.metrics.test[metric]));
   const unit = rows.find((r) => r.forecast)?.forecast?.unit;
   const vn = rows.find((r) => r.forecast)?.forecast?.value_name ?? "";
-  const refMae = ref?.metrics.test.mae;
+  const refMae = ref?.metrics.test[metric];
   const random = rows.some((r) => r.forecast?.split === "random");
   return (
     <div className="col" style={{ gap: 10 }}>
       <div className="col" style={{ gap: 8 }}>
         {rows.map((r, i) => {
           const isRef = r === ref;
-          const mae = r.metrics.test.mae;
+          const mae = r.metrics.test[metric];
           const lift = refMae && !isRef ? 1 - mae / refMae : null;
           const mp = masePhrase(r.metrics.test.mase, unit);
           return (
@@ -129,7 +138,7 @@ export function ForecastRace({ result }: { result: RunResult }) {
                   initial={{ width: 0 }} animate={{ width: `${(mae / max) * 100}%` }} transition={{ ...spring.gentle, delay: i * 0.06 }} />
                 {refMae !== undefined && <div style={{ position: "absolute", top: 0, bottom: 0, left: `${(refMae / max) * 100}%`, borderLeft: "2px dashed var(--text-2)", opacity: 0.6 }} />}
               </div>
-              <span className="num small" style={{ width: 62, textAlign: "right", fontWeight: 650 }}><AnimatedNumber value={mae} format={(v) => fmtV(v)} /></span>
+              <span className="num small" style={{ width: 62, textAlign: "right", fontWeight: 650 }}><AnimatedNumber value={mae} format={show} /></span>
               <Tooltip content={mp?.text ?? "MASE compares with the simple seasonal rule"} width={220}>
                 <span className="tiny num" style={{ width: 118, textAlign: "right", whiteSpace: "nowrap", display: "inline-block", color: lift === null ? "var(--text-3)" : lift >= 0 ? "var(--success)" : "var(--warning)", fontWeight: 650 }}>
                   {lift === null ? (isRef ? "baseline" : "") : lift >= 0 ? `${Math.round(lift * 100)}% less error` : `${Math.round(-lift * 100)}% more error`}
@@ -140,7 +149,7 @@ export function ForecastRace({ result }: { result: RunResult }) {
         })}
       </div>
       <span className="tiny muted" style={{ lineHeight: 1.5 }}>
-        Bars show the average miss (<b>MAE</b>, in {vn || "the series' units"}) — <b>shorter is better</b>. The dashed line is <b>{lastSeason(unit)}</b>, the forecast that needs no learning at all.
+        Bars show {metric === "mae" ? <>the average miss (<b>MAE</b>, in {vn || "the series' units"})</> : <><b>{metricLabel(metric)}</b> (your ranking metric)</>} — <b>shorter is better</b>. The dashed line is <b>{lastSeason(unit)}</b>, the forecast that needs no learning at all.
         {random && " These are one-step scores from a random split, so every bar is flattered."}
         {!ref && " Add “same as last season” to your line-up to see the baseline."}
       </span>

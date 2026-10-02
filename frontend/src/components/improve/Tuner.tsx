@@ -4,9 +4,10 @@ import { fadeUp, spring } from "../../design/motion";
 import { api } from "../../lib/api";
 import { navigate } from "../../lib/router";
 import { toast, useJob, useProject, type Trial } from "../../lib/store";
-import type { RunResult } from "../../lib/types";
-import { AnimatedNumber, Field, ProgressBar, Segmented, Select, Slider, Spinner } from "../glass";
-import { CV_SCORING, fmtMetric, metricLabel, primaryMetric } from "../train/util";
+import type { CustomMetric, RunResult, Task } from "../../lib/types";
+import { AnimatedNumber, Field, InfoTip, ProgressBar, Segmented, Select, Slider, Spinner } from "../glass";
+import { closestBuiltin, findCustom, isCustomKey } from "../metrics/custom";
+import { CV_SCORING, cvScoringFor, fmtMetric, metricLabel, primaryMetric, useRankMetric } from "../train/util";
 import { SpaceEditor, initialSpace, toSpace, type SpaceState } from "./SpaceEditor";
 import { TrialChart } from "./TrialChart";
 import { useTune } from "./tuneStore";
@@ -15,6 +16,26 @@ const scoreFmt = (metric: string, v: number | null | undefined) => (metric.start
 const deltaFmt = (metric: string, d: number) =>
   metric.startsWith("neg_") ? `${d.toPrecision(3)} less error` : metric === "r2" ? d.toFixed(3) : `${(d * 100).toFixed(1)} pts`;
 const fmtVal = (v: any) => (typeof v === "number" ? String(Number(v.toPrecision(4))) : String(v));
+
+const scorerMetric = (v: string) => v.replace(/^neg_/, "");
+
+/**
+ * What tuning should optimise, following the project's ranking metric. Cross-validation needs a built-in scorer, so
+ * a custom score maps to its closest built-in metric and e.g. MSE maps to RMSE.
+ */
+function tuningTarget(rank: string, task: Task, result: RunResult): { scoring: string; closest?: string; custom?: CustomMetric; mapped?: string } {
+  if (isCustomKey(rank)) {
+    const cm = findCustom(rank);
+    if (!cm) return { scoring: primaryMetric(task) };
+    const have = (m: string) => Object.values(result.models).some((x) => !x.baseline && x.metrics.test?.[m] !== undefined);
+    const cands = CV_SCORING[task].map((o) => scorerMetric(o.value)).filter(have);
+    const closest = closestBuiltin(cm, task, cands.length ? cands : [primaryMetric(task)], result);
+    return { scoring: cvScoringFor(closest, task), closest, custom: cm };
+  }
+  if (!rank) return { scoring: primaryMetric(task) };
+  const scoring = cvScoringFor(rank, task);
+  return { scoring, mapped: scorerMetric(scoring) !== rank ? rank : undefined };
+}
 
 /** Automatic hyperparameter search for one classic model. */
 export function Tuner({ result }: { result: RunResult }) {
@@ -33,7 +54,12 @@ export function Tuner({ result }: { result: RunResult }) {
   const [search, setSearch] = useState<"random" | "grid">("random");
   const [nIter, setNIter] = useState(20);
   const [cv, setCv] = useState("3");
-  const [scoring, setScoring] = useState(primaryMetric(task));
+  const rank = useRankMetric(result);
+  const target = useMemo(() => tuningTarget(rank, task, result), [rank, task, result]);
+  const [scoring, setScoringRaw] = useState(target.scoring);
+  const [touched, setTouched] = useState(false);
+  const setScoring = (v: string) => { setScoringRaw(v); setTouched(true); };
+  useEffect(() => { if (!touched) setScoringRaw(target.scoring); }, [target.scoring, touched]);
   const [starting, setStarting] = useState(false);
 
   // Hand-off from coach "Start tuning" buttons.
@@ -132,6 +158,23 @@ export function Tuner({ result }: { result: RunResult }) {
           <Select value={scoring} onChange={setScoring} options={CV_SCORING[task]} />
         </Field>
       </div>
+
+      {(target.custom || target.mapped) && (
+        <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={spring.gentle} className="inset row" style={{ gap: 10, padding: "10px 12px", alignItems: "flex-start" }}>
+          <span style={{ fontSize: 18 }}>🎯</span>
+          <span className="small" style={{ lineHeight: 1.5 }}>
+            {target.custom ? (
+              <><b>Tuning optimises a built-in metric</b> <span className="muted">— we picked <b style={{ color: "var(--text)" }}>{metricLabel(target.closest!)}</b> as the nearest to your score “{target.custom.name}”.
+                {scorerMetric(scoring) !== target.closest ? " (You've chosen a different one above.)" : ""} Afterwards, train again and check the leaderboard ranked by your own score.</span></>
+            ) : (
+              <><b>Tuning can't optimise {metricLabel(target.mapped!)} directly</b> <span className="muted">— it uses {metricLabel(scorerMetric(target.scoring))}, the closest scorer cross-validation offers.{target.mapped === "mse" ? " MSE and RMSE always rank models the same way." : ""}</span></>
+            )}
+          </span>
+          <InfoTip text={target.custom
+            ? "Each trial is scored with cross-validation on the training rows, which needs a ready-made scorer. Your own score is worked out from each model's test results after training, so we choose the built-in metric your formula leans on most — or, for costs, the one that ranks this run's models most like your score."
+            : "Cross-validation can score with accuracy, F1, balanced accuracy, ROC-AUC (classification) or R², RMSE, MAE (regression)."} />
+        </motion.div>
+      )}
 
       <div className="row" style={{ gap: 12 }}>
         {live ? (

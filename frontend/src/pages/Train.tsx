@@ -6,7 +6,7 @@ import { LiveDashboard } from "../components/train/LiveDashboard";
 import { TrainResults } from "../components/train/TrainResults";
 import { TrainSetup } from "../components/train/TrainSetup";
 import { SaveHint, SaveModelButton, SaveStrip } from "../components/train/save/SaveEntry";
-import { isForecast, isRecsys, liveProjectId } from "../components/train/util";
+import { isForecast, isRecsys, liveProjectId, useRankedCoach } from "../components/train/util";
 import { navigate } from "../lib/router";
 import { isUnsupervised, useJob, useProject } from "../lib/store";
 
@@ -37,6 +37,7 @@ export function TrainStep() {
   const mine = kind === "train" && liveProjectId() === project.id;
   const live = mine && (status === "running" || (status === "finished" && result?.job_id !== jobId));
   const mode = live ? "live" : !result || showSetup ? (project.prepared_id ? "setup" : "cta") : "results";
+  const rankedCoach = useRankedCoach(result);
 
   const img = project.modality === "image";
   const txt = project.modality === "text";
@@ -89,7 +90,7 @@ export function TrainStep() {
     <StepLayout
       title={stepLabel}
       subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : fc ? "Teach your models the rhythm of the series — then see whose forecast of the hidden future comes closest." : rec ? "Teach your models who likes what — then see whose top-10 lists hit the mark." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
-      coach={<CoachPanel intro={intro} suggestions={mode === "results" ? result?.coach ?? [] : []} extra={mode === "results" ? <SaveHint result={result} /> : undefined} />}
+      coach={<CoachPanel intro={intro} suggestions={mode === "results" ? rankedCoach : []} extra={mode === "results" ? <SaveHint result={result} /> : undefined} />}
       footer={
         <>
           <NextBar back="prepare"

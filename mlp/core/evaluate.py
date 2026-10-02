@@ -48,7 +48,9 @@ def cls_metrics(y, pred, proba, n_classes) -> dict:
 def reg_metrics(y, pred) -> dict:
     from sklearn import metrics as M
     y, pred = np.asarray(y, float), np.asarray(pred, float)
-    out = {"r2": M.r2_score(y, pred), "mae": M.mean_absolute_error(y, pred), "rmse": float(np.sqrt(M.mean_squared_error(y, pred))),
+    mse = float(M.mean_squared_error(y, pred))
+    out = {"r2": M.r2_score(y, pred), "mae": M.mean_absolute_error(y, pred), "rmse": float(np.sqrt(mse)), "mse": mse,
+           "median_ae": float(np.median(np.abs(y - pred))) if len(y) else 0.0, "max_error": float(np.max(np.abs(y - pred))) if len(y) else 0.0,
            "explained_variance": M.explained_variance_score(y, pred)}
     nz = np.abs(y) > 1e-9
     if nz.mean() > 0.9:
