@@ -109,6 +109,27 @@ async def predict_file(mid: str, file: UploadFile = File(...)):
     return jsonable(library.predict_frame(mid, df))
 
 
+@router.post("/library/import")
+async def import_model(file: UploadFile = File(...), trust: bool = False):
+    """Import an exported bundle. Unsigned bundles answer 409 {needs_trust, reason, summary} until re-sent with ?trust=true."""
+    from fastapi.responses import JSONResponse
+    data = await file.read()
+    try:
+        meta = library.import_zip(data, trust)
+    except library.NeedsTrust as e:
+        return JSONResponse({"needs_trust": True, "reason": e.reason, "summary": jsonable(e.summary),
+                             "error": e.reason, "detail": e.reason}, status_code=409)
+    return jsonable(meta)
+
+
+@router.get("/library/{mid}/architecture")
+def architecture(mid: str):
+    """The model's plain-JSON description (settings, network layers, data recipe) — no weights."""
+    import json as _json
+    meta = _json.loads((library.ROOT / mid / "meta.json").read_text())
+    return jsonable(library.architecture_of(meta))
+
+
 @router.get("/library/{mid}/export")
 def export(mid: str):
     meta = library.get(mid)

@@ -161,6 +161,18 @@ def serve_entry(conn, family: str):
         if op == "validate_arch":
             from .nn.builder import summarize
             return summarize(kw["arch"], kw["n_features"], kw["n_out"], kw.get("image_shape"))
+        if op == "load_check":
+            pp_, est_ = load(kw["model_dir"])
+            return {"ok": True, "model": type(est_).__name__, "preprocessor": type(pp_).__name__}
+        if op == "export_weights":
+            _, est_ = load(kw["model_dir"])
+            base = getattr(est_, "est", est_)  # unwrap a decision-threshold wrapper
+            state = getattr(base, "state", None)
+            if isinstance(state, dict) and state:
+                import torch
+                torch.save({k: (v if hasattr(v, "shape") else torch.tensor(v)) for k, v in state.items()}, os.path.join(kw["model_dir"], "weights.pt"))
+                return {"ok": True, "weights": True}
+            return {"ok": True, "weights": False}
         if op == "lab_decode":
             from pathlib import Path
 

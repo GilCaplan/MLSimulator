@@ -161,13 +161,137 @@ def predict_frame(mid: str, df: pd.DataFrame) -> dict:
     return out_small
 
 
+BUNDLE_FILES = {"meta.json", "result.json", "model.joblib", "preprocessor.joblib", "architecture.json", "weights.pt",
+                "MANIFEST.json", "SIGNATURE", "README.txt"}
+MAX_IMPORT_BYTES = 500 * 1024 * 1024
+
+
+def _bundle_key() -> bytes:
+    """Per-install secret used to sign exported bundles (so this computer can recognise its own exports)."""
+    import secrets
+    p = DATA_DIR / "run" / ".bundle_key"
+    if not p.exists():
+        p.write_bytes(secrets.token_bytes(32))
+    return p.read_bytes()
+
+
+def _sign(manifest: bytes) -> str:
+    import hashlib
+    import hmac
+    return hmac.new(_bundle_key(), manifest, hashlib.sha256).hexdigest()
+
+
+def architecture_of(meta: dict) -> dict:
+    """A plain, human-readable description of the model (no pickles): what it is, its settings and its data recipe."""
+    from .registry import MODEL_INDEX
+    spec = MODEL_INDEX.get(meta.get("model_id"), {})
+    return {"app": "ml-playground", "kind": "model-architecture", "version": 1,
+            "model_id": meta.get("model_id"), "label": meta.get("label"), "family": spec.get("family"),
+            "task": meta.get("task"), "modality": meta.get("modality", "tabular"), "params": meta.get("params") or {},
+            "nn_arch": meta.get("nn_arch") or (spec.get("default_arch") if spec.get("nn") else None),
+            "threshold": meta.get("threshold"), "target": meta.get("target"),
+            "classes": meta.get("classes"), "feature_names": meta.get("feature_names"), "input_schema": meta.get("input_schema"),
+            "image_shape": meta.get("image_shape"), "pipeline": meta.get("pipeline")}
+
+
 def export_zip(mid: str) -> bytes:
-    buf = io.BytesIO()
+    """Bundle: model + preprocessing (joblib), architecture.json, PyTorch weights.pt for networks, README, signed manifest."""
+    import hashlib
     import zipfile
+
+    from ..config import VERSION
+    d = ROOT / mid
+    meta = json.loads((d / "meta.json").read_text())
+    if meta.get("family") == "torch" and not (d / "weights.pt").exists():
+        try:
+            procs.call("torch", "export_weights", model_dir=str(d))
+        except Exception:  # noqa: BLE001 — weights.pt is a convenience; the joblib bundle is complete without it
+            pass
+    files: dict[str, bytes] = {f.name: f.read_bytes() for f in d.iterdir() if f.name in BUNDLE_FILES - {"MANIFEST.json", "SIGNATURE", "README.txt"}}
+    files["architecture.json"] = json.dumps(jsonable(architecture_of(meta)), indent=2).encode()
+    torch_note = ("\nPyTorch network weights (state_dict) are in weights.pt; the layer layout is in architecture.json → nn_arch.\n"
+                  "import torch\nstate = torch.load('weights.pt', weights_only=True)\n" if "weights.pt" in files else "")
+    files["README.txt"] = (
+        f"ML Playground model bundle — {meta.get('name')} ({meta.get('label')})\n\n"
+        "Import it back: ML Playground → Model Library → Import model.\n\n"
+        "Use it in Python (needs the ML Playground 'mlp' package on the Python path):\n"
+        "import joblib\npre = joblib.load('preprocessor.joblib')\nmodel = joblib.load('model.joblib')\n"
+        "X = pre.transform(dataframe)\npred = pre.decode_y(model.predict(X))\n" + torch_note +
+        "\narchitecture.json describes the model, its settings and its data-preparation recipe in plain JSON.\n"
+        "Only load .joblib files you trust: they can run code when loaded.\n").encode()
+    manifest = json.dumps({"app": "ml-playground", "app_version": VERSION, "exported_at": time.time(), "model_id": meta.get("model_id"),
+                           "files": {k: hashlib.sha256(v).hexdigest() for k, v in sorted(files.items())}}, indent=2).encode()
+    buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        for f in (ROOT / mid).iterdir():
-            z.write(f, f.name)
-        z.writestr("README.txt", "ML Playground model bundle.\n\nimport joblib\npre = joblib.load('preprocessor.joblib')\n"
-                   "model = joblib.load('model.joblib')\nX = pre.transform(dataframe)\npred = pre.decode_y(model.predict(X))\n\n"
-                   "Requires the ML Playground 'mlp' package on the Python path.\n")
+        for k, v in files.items():
+            z.writestr(k, v)
+        z.writestr("MANIFEST.json", manifest)
+        z.writestr("SIGNATURE", _sign(manifest))
     return buf.getvalue()
+
+
+class NeedsTrust(Exception):
+    def __init__(self, reason: str, summary: dict):
+        super().__init__(reason)
+        self.reason, self.summary = reason, summary
+
+
+def import_zip(data: bytes, trust: bool = False) -> dict:
+    """Add an exported bundle to the library. Bundles signed by this install are trusted; others need trust=True
+    (their pickled model files could run code). The model is test-loaded in a worker process, never in this one."""
+    import hashlib
+    import hmac
+    import zipfile
+
+    from .registry import MODEL_INDEX
+    if len(data) > MAX_IMPORT_BYTES:
+        raise ValueError("That file is larger than 500 MB.")
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile:
+        raise ValueError("That isn't a .zip file exported from ML Playground.") from None
+    names = {n for n in z.namelist() if not n.endswith("/")}
+    for n in names:
+        if n.startswith("/") or ".." in n or "/" in n or "\\" in n:
+            raise ValueError("The bundle contains unexpected paths.")
+    missing = {"meta.json", "model.joblib", "preprocessor.joblib"} - names
+    if missing:
+        raise ValueError("This doesn't look like an ML Playground model bundle (missing " + ", ".join(sorted(missing)) + ").")
+    if sum(i.file_size for i in z.infolist()) > 4 * MAX_IMPORT_BYTES:
+        raise ValueError("The bundle unpacks to more than 2 GB.")
+    meta = json.loads(z.read("meta.json"))
+    manifest_raw = z.read("MANIFEST.json") if "MANIFEST.json" in names else None
+    signed = False
+    reason = "This bundle isn't signed by this computer (it may come from another person or an older version)."
+    if manifest_raw is not None:
+        manifest = json.loads(manifest_raw)
+        bad = [k for k, h in manifest.get("files", {}).items() if k in names and hashlib.sha256(z.read(k)).hexdigest() != h]
+        if bad:
+            raise ValueError("The bundle is damaged or was modified (" + ", ".join(bad) + " changed).")
+        sig = z.read("SIGNATURE").decode().strip() if "SIGNATURE" in names else ""
+        signed = bool(sig) and hmac.compare_digest(sig, _sign(manifest_raw))
+        if not signed and sig:
+            reason = "This bundle was exported from a different ML Playground install."
+    summary = {"name": meta.get("name"), "label": meta.get("label"), "task": meta.get("task"), "model_id": meta.get("model_id"),
+               "modality": meta.get("modality", "tabular"), "created_at": meta.get("created_at"), "signed": signed}
+    if meta.get("model_id") not in MODEL_INDEX:
+        raise ValueError(f"This model type ({meta.get('model_id')}) isn't available in this version of ML Playground.")
+    if not signed and not trust:
+        raise NeedsTrust(reason, summary)
+    new_mid = new_id("m")
+    d = ROOT / new_mid
+    d.mkdir(parents=True)
+    try:
+        for n in names & BUNDLE_FILES - {"MANIFEST.json", "SIGNATURE", "README.txt"}:
+            (d / n).write_bytes(z.read(n))
+        meta.update({"id": new_mid, "name": f"{meta.get('name') or meta.get('label')} (imported)", "imported_at": time.time(),
+                     "imported_signed": signed, "job_id": None, "key": None, "project_id": None})
+        meta.setdefault("family", "torch" if MODEL_INDEX[meta["model_id"]].get("nn") or MODEL_INDEX[meta["model_id"]].get("torch") else "classic")
+        (d / "meta.json").write_text(json.dumps(jsonable(meta)))
+        if not (d / "result.json").exists():
+            (d / "result.json").write_text("{}")
+        procs.call(meta["family"], "load_check", model_dir=str(d))
+    except Exception as e:  # noqa: BLE001
+        shutil.rmtree(d, ignore_errors=True)
+        raise ValueError(f"The model couldn't be loaded: {e}") from None
+    return meta

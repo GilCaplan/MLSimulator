@@ -2,14 +2,17 @@ import type { UIPrefs } from "../design/prefs";
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, TimeseriesSetInfo, ForecastResponse, LabsCatalog, TryExample, TryResult, TryInputs, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, TimeseriesSetInfo, ForecastResponse, LabsCatalog, TryExample, TryResult, TryInputs, ModelArchitecture, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** the parsed JSON error body, when there was one (e.g. ImportNeedsTrust for a 409 from /library/import) */
+  data?: unknown;
+  constructor(message: string, status: number, data?: unknown) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -23,12 +26,14 @@ async function req<T>(method: string, path: string, body?: unknown, base = ""): 
   const res = await fetch(`${base}/api${path}`, init);
   if (!res.ok) {
     let msg = res.statusText;
+    let data: unknown;
     try {
       const j = await res.json();
+      data = j;
       msg = j.error || j.detail || msg;
       if (typeof msg !== "string") msg = JSON.stringify(msg);
     } catch { /* not JSON */ }
-    throw new ApiError(msg, res.status);
+    throw new ApiError(msg, res.status, data);
   }
   return res.json() as Promise<T>;
 }
@@ -143,6 +148,13 @@ export const api = {
   tryInputs: (jobId: string, key: string) => get<TryInputs>(`/jobs/${jobId}/models/${key}/inputs`),
 
   // library
+  /** import an exported bundle; unsigned bundles reject with an ApiError (status 409) until re-sent with trust = true */
+  importModel: (file: File, trust = false) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<SavedModel>("POST", `/library/import${trust ? "?trust=true" : ""}`, fd);
+  },
+  modelArchitecture: (id: string) => get<ModelArchitecture>(`/library/${id}/architecture`),
   saveModel: (body: { job_id: string; key: string; name: string; notes?: string; project_id?: string }) => post<SavedModel>("/library/save", body),
   library: () => get<SavedModel[]>("/library"),
   savedModel: (id: string) => get<SavedModel>(`/library/${id}`),

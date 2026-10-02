@@ -847,3 +847,18 @@ export interface CustomMetric {
   description?: string;
   created_at?: number;
 }
+
+/* ---- Model bundles: export / import (mlp/core/library.py) */
+/** plain-JSON description of a model (GET /library/{id}/architecture; also inside exported bundles) */
+export interface ModelArchitecture {
+  app: "ml-playground"; kind: "model-architecture"; version: number;
+  model_id: string; label: string; family?: string; task: string; modality: Modality;
+  params: Record<string, any>; nn_arch: NNArch | null; threshold?: number | null; target?: string | null;
+  classes?: string[] | null; feature_names?: string[]; input_schema?: InputSchemaItem[]; image_shape?: number[] | null;
+  pipeline?: Partial<PipelineSpec> | null;
+}
+/** 409 answer from POST /library/import when a bundle isn't signed by this install */
+export interface ImportNeedsTrust {
+  needs_trust: true; reason: string;
+  summary: { name?: string; label?: string; task?: string; model_id?: string; modality?: string; created_at?: number; signed: boolean };
+}
