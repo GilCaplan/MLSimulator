@@ -2,7 +2,9 @@ import type { ComponentType } from "react";
 import { AugmentationDemo } from "./AugmentationDemo";
 import { BaselinesDemo } from "./BaselinesDemo";
 import { CalibrationDemo } from "./CalibrationDemo";
+import { ChoosingKDemo } from "./ChoosingKDemo";
 import { ConvolutionsDemo } from "./ConvolutionsDemo";
+import { CurseDemo } from "./CurseDemo";
 import { FairnessDemo } from "./FairnessDemo";
 import { FeaturesDemo } from "./FeaturesDemo";
 import { ImbalanceDemo } from "./ImbalanceDemo";
@@ -34,6 +36,8 @@ export const DEMOS: Record<string, ComponentType<DemoProps>> = {
   splits: SplitsDemo,
   features: FeaturesDemo,
   calibration: CalibrationDemo,
+  choosing_k: ChoosingKDemo,
+  curse: CurseDemo,
   convolutions: ConvolutionsDemo,
   augmentation: AugmentationDemo,
 };

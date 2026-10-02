@@ -128,6 +128,26 @@ CHALLENGES.update({
     },
 })
 
+CHALLENGES.update({
+    "choosing_k": {
+        "kind": "unsupervised", "task": "clustering", "target": "segment", "truth": "segment",
+        "preset_pipeline": {"scale": {"method": "standard"}},
+        "preset_models": ["kmeans"],
+        "allowed_models": ["kmeans", "gmm", "agglomerative"],
+        "goals": [{"metric": "ari", "op": ">=", "value": 0.85}],
+        "solution": {"params": {"kmeans": {"n_clusters": 5}}},
+    },
+    "curse": {
+        "kind": "unsupervised", "task": "clustering", "target": "machine_state", "truth": "machine_state",
+        "preset_pipeline": {"scale": {"method": "standard"}},
+        "preset_models": ["kmeans"],
+        "preset_params": {"kmeans": {"n_clusters": 4}},
+        "allowed_models": ["kmeans", "gmm", "agglomerative"],
+        "goals": [{"metric": "ari", "op": ">=", "value": 0.75}],
+        "solution": {"pipeline": {"reduce": {"method": "pca", "n_components": 1}}},
+    },
+})
+
 METRIC_LABELS = {
     "accuracy": "Accuracy", "balanced_accuracy": "Balanced accuracy", "recall_pos": "Recall ({pos})",
     "precision_pos": "Precision ({pos})", "f1_pos": "F1 ({pos})", "r2": "R²",
@@ -136,6 +156,7 @@ METRIC_LABELS = {
     "estimate_gap": "Gap between your test score and the real world",
     "ece": "Calibration error",
     "roc_auc": "ROC-AUC",
+    "ari": "Agreement with the hidden groups (ARI)",
 }
 
 PERCENT_METRICS = {"accuracy", "balanced_accuracy", "recall_pos", "precision_pos", "f1_pos", "tpr_gap", "mae_vs_baseline",
@@ -169,6 +190,8 @@ def metric_value(metric: str, ch: dict, y_true, y_pred, hidden: pd.DataFrame, pr
                  your_test: dict | None = None, baseline_value: float | None = None, goal: dict | None = None) -> tuple[float, dict]:
     from sklearn import metrics as M
     extra: dict = {}
+    if metric == "ari":
+        return float(M.adjusted_rand_score(np.asarray(y_true).astype(str), np.asarray(y_pred).astype(str))), extra
     if metric == "mae_vs_baseline":
         yt, yp = np.asarray(y_true, float), np.asarray(y_pred, float)
         base = float(np.mean(np.abs(yt - baseline_value)))

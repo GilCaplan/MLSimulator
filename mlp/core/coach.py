@@ -296,3 +296,48 @@ def results_suggestions(results: dict, lb: list, prepared, model_cfgs, options) 
                      "Neural nets and boosting shine with thousands of rows. With little data, simpler models often win."))
     order = {"high": 0, "warn": 1, "info": 2}
     return sorted(out, key=lambda s: order[s["severity"]])[:10]
+
+
+def unsupervised_suggestions(results: dict, prepared) -> list[dict]:
+    out = []
+    task = prepared.task
+    has_truth = bool((prepared.payload or {}).get("truth_train"))
+    scaled = prepared.spec.get("scale", {}).get("method", "standard") != "none"
+    if not scaled:
+        out.append(S("scale_unsup", "high", "Turn on scaling",
+                     "Clustering, maps and anomaly scores all measure distances. Unscaled, the column with the biggest numbers decides everything.",
+                     {"kind": "pipeline", "label": "Standard scaling", "patch": {"scale": {"method": "standard"}}}))
+    for key, res in results.items():
+        m = res["metrics"].get("test", {})
+        label = res["label"]
+        if task == "clustering":
+            sil = m.get("silhouette")
+            if res["model_id"] == "dbscan" and (m.get("noise_share") or 0) > 0.5:
+                out.append(S(f"noise_{key}", "warn", f"{label} called most rows noise",
+                             "The neighbourhood size (eps) is too small for this data — try a larger eps or fewer min neighbours.",
+                             {"kind": "model_params", "key": key, "label": "Double eps", "patch": {"eps": round(float(res["params"].get("eps", 0.8)) * 2, 2)}}))
+            elif res["model_id"] == "dbscan" and m.get("n_clusters", 0) <= 1:
+                out.append(S(f"one_{key}", "warn", f"{label} found a single blob",
+                             "eps is so large that everything is connected. Try a smaller eps.",
+                             {"kind": "model_params", "key": key, "label": "Halve eps", "patch": {"eps": round(float(res["params"].get("eps", 0.8)) / 2, 2)}}))
+            elif sil is not None and sil < 0.25:
+                out.append(S(f"sil_{key}", "info", f"{label}'s groups overlap a lot",
+                             f"Silhouette is {sil:.2f} (1 = crisp, 0 = overlapping). Try a different k, fewer/better features, or a PCA step."))
+        if task == "anomaly" and has_truth and m.get("roc_auc") is not None and m["roc_auc"] < 0.7:
+            if res["model_id"] == "lof":
+                nn = int(res["params"].get("n_neighbors", 20))
+                out.append(S(f"auc_{key}", "warn", f"{label} is being fooled by groups of anomalies",
+                             f"ROC-AUC {m['roc_auc']:.2f}. When anomalies resemble each other, each one's {nn} nearest neighbours are other "
+                             "anomalies, so it looks 'normal' locally (masking). Use more neighbours than a group of anomalies.",
+                             {"kind": "model_params", "key": key, "label": f"Use {nn * 3} neighbours", "patch": {"n_neighbors": min(100, nn * 3)}}))
+            else:
+                out.append(S(f"auc_{key}", "warn", f"{label} struggles to rank the real anomalies",
+                             f"ROC-AUC {m['roc_auc']:.2f}. Check scaling, try another detector, or drop columns that are noisy for everyone."))
+    if task == "clustering":
+        out.append(S("sweep", "info", "Not sure about k?",
+                     "The k sweep tries k = 2…10 and plots how crisp the groups are (silhouette) and the elbow of the within-cluster spread.",
+                     {"kind": "goto", "step": "improve", "label": "Open the k sweep"}))
+        if has_truth:
+            out.append(S("truth", "info", "Compare with the hidden truth",
+                         "Your data has a truth column the models never saw. Agreement scores (ARI, purity) show whether the groups match it — real projects rarely have this luxury."))
+    return out

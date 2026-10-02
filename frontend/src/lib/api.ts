@@ -1,7 +1,7 @@
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
@@ -98,6 +98,10 @@ export const api = {
   tune: (body: { prepared_id: string; model_id: string; params: Record<string, any>; space: Record<string, any>; search: "random" | "grid"; n_iter: number; cv: number; scoring?: string; project_id?: string }) =>
     post<{ job_id: string }>("/jobs/tune", body),
   jobs: () => get<{ id: string; kind: string; status: string; project_id?: string; created_at: number }[]>("/jobs"),
+  /** k sweep for clustering → job with `sweep.k` events, result via sweepResult */
+  sweep: (body: { prepared_id: string; model_id: "kmeans" | "gmm" | "agglomerative"; k_min: number; k_max: number; project_id?: string }) =>
+    post<{ job_id: string }>("/jobs/sweep", body),
+  sweepResult: (id: string) => get<SweepResult>(`/jobs/${id}/result`),
   job: (id: string) => get<{ id: string; status: string; kind: string; error?: string; progress: Record<string, any> }>(`/jobs/${id}`),
   cancelJob: (id: string) => post(`/jobs/${id}/cancel`),
   result: (id: string) => get<RunResult>(`/jobs/${id}/result`),
@@ -111,6 +115,7 @@ export const api = {
   deleteModel: (id: string) => req("DELETE", `/library/${id}`),
   warm: (family: "torch" | "classic") => post("/library/warm", { family }),
   predict: (id: string, rows: Record<string, any>[]) => post<PredictResponse>(`/library/${id}/predict`, { rows }),
+  assign: (id: string, rows: Record<string, any>[]) => post<AssignResponse>(`/library/${id}/assign`, { rows }),
   predictImage: (id: string, images: string[]) => post<ImagePredictResponse>(`/library/${id}/predict-image`, { images }),
   sensitivity: (id: string, row: Record<string, any>, class_index?: number | null) =>
     post<{ curves: { name: string; x: number[]; y: number[] }[] }>(`/library/${id}/sensitivity`, { row, class_index }),

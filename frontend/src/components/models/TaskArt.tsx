@@ -168,3 +168,132 @@ export function ImageNumberArt({ active }: { active: boolean }) {
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ discover (unsupervised) art */
+
+const GROUPS = [
+  { cx: 54, cy: 46, color: "#0A84FF" },
+  { cx: 160, cy: 40, color: "#FF375F" },
+  { cx: 112, cy: 98, color: "#30D158" },
+];
+
+/** Grey dots drift together into three coloured groups; halos and centre marks appear, then it all relaxes. Loops. */
+export function ClusteringArt({ active }: { active: boolean }) {
+  const dots = useMemo(() => {
+    const r = rng(23);
+    return Array.from({ length: 27 }, (_, i) => {
+      const g = GROUPS[i % 3];
+      const a = r() * Math.PI * 2;
+      const d = 4 + r() * 19;
+      return { g, x0: 16 + r() * (W - 32), y0: 12 + r() * (H - 24), x1: g.cx + Math.cos(a) * d, y1: g.cy + Math.sin(a) * d * 0.85 };
+    });
+  }, []);
+  const times = [0, 0.3, 0.84, 1];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      {GROUPS.map((g, i) => (
+        <motion.ellipse key={`h${i}`} cx={g.cx} cy={g.cy} rx={30} ry={26} fill={g.color} stroke={g.color} strokeWidth={1.5} strokeDasharray="4 4"
+          animate={{ opacity: [0, 0, 1, 1, 0], scale: [0.6, 0.6, 1, 1, 0.8] }}
+          transition={{ duration: DUR, times: [0, 0.3, 0.46, 0.84, 1], repeat: Infinity, ease: "easeOut", delay: i * 0.08 }}
+          style={{ originX: `${g.cx}px`, originY: `${g.cy}px`, fillOpacity: active ? 0.14 : 0.09, strokeOpacity: 0.5 }} />
+      ))}
+      {dots.map((d, i) => (
+        <motion.circle key={i} r={5} stroke="white" strokeWidth={1.3}
+          initial={{ cx: d.x0, cy: d.y0, fill: "#8e8e93" }}
+          animate={{ cx: [d.x0, d.x1, d.x1, d.x0], cy: [d.y0, d.y1, d.y1, d.y0], fill: ["#8e8e93", d.g.color, d.g.color, "#8e8e93"] }}
+          transition={{ duration: DUR, times, repeat: Infinity, ease: [0.32, 0.72, 0, 1], delay: (i % 7) * 0.025 }} />
+      ))}
+      {GROUPS.map((g, i) => (
+        <motion.g key={`c${i}`} animate={{ opacity: [0, 0, 1, 1, 0], scale: [0, 0, 1, 1, 0] }}
+          transition={{ duration: DUR, times: [0, 0.38, 0.5, 0.84, 1], repeat: Infinity, delay: i * 0.1 }}
+          style={{ originX: `${g.cx}px`, originY: `${g.cy}px` }}>
+          <circle cx={g.cx} cy={g.cy} r={7} fill="var(--glass-strong)" stroke={g.color} strokeWidth={2} />
+          <path d={`M${g.cx - 3.5} ${g.cy}h7M${g.cx} ${g.cy - 3.5}v7`} stroke={g.color} strokeWidth={2} strokeLinecap="round" />
+        </motion.g>
+      ))}
+    </svg>
+  );
+}
+
+/** A tilted 3-D cloud (with a wireframe box) flattens onto a 2-D map while neighbours stay neighbours. Loops. */
+export function MapArt({ active }: { active: boolean }) {
+  const pts = useMemo(() => {
+    const r = rng(41);
+    const cols = ["#0A84FF", "#BF5AF2", "#FF9F0A"];
+    return Array.from({ length: 30 }, (_, i) => {
+      const g = i % 3;
+      // 3-D blob centres, projected obliquely; map positions keep the groups apart
+      const c3 = [[-0.6, 0.4, -0.5], [0.5, -0.3, 0.6], [0.2, 0.6, 0.5]][g];
+      const [x, y, z] = c3.map((c) => c + (r() - 0.5) * 0.55);
+      const px = 110 + x * 62 + z * 26, py = 58 - y * 34 + z * 15;
+      const mx = [62, 158, 112][g] + (r() - 0.5) * 34, my = [104, 100, 90][g] + (r() - 0.5) * 16;
+      return { color: cols[g], px, py, mx, my, rz: 3.2 + (z + 1) * 1.6 };
+    });
+  }, []);
+  const t = { duration: DUR, repeat: Infinity, ease: [0.32, 0.72, 0, 1] as const };
+  const times = [0, 0.32, 0.82, 1];
+  // oblique wireframe box around the cloud
+  const box = "M58 28 L150 28 L176 44 L84 44 Z M58 28 L58 84 L84 100 L176 100 L176 44 M84 44 L84 100 M58 84 L150 84 L150 28 M150 84 L176 100";
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      <motion.path d={box} fill="none" stroke="var(--text-3)" strokeWidth={1.1} strokeDasharray="3 3"
+        animate={{ opacity: [0.7, 0.7, 0, 0, 0.7] }} transition={{ ...t, times: [0, 0.22, 0.38, 0.86, 1] }} />
+      <motion.g animate={{ opacity: [0, 0, 1, 1, 0], y: [10, 10, 0, 0, 10] }} transition={{ ...t, times: [0, 0.26, 0.44, 0.84, 1] }}>
+        <path d={`M24 ${H - 46} L${W - 24} ${H - 46} L${W - 8} ${H - 8} L8 ${H - 8} Z`} fill="var(--glass-strong)" stroke="var(--hairline)" />
+        {[0.25, 0.5, 0.75].map((f) => (
+          <line key={f} x1={24 + (8 - 24) * f} y1={H - 46 + 38 * f} x2={W - 24 + 16 * f} y2={H - 46 + 38 * f} stroke="var(--hairline)" />
+        ))}
+        {[0.2, 0.4, 0.6, 0.8].map((f) => (
+          <line key={`v${f}`} x1={24 + (W - 48) * f} y1={H - 46} x2={8 + (W - 16) * f} y2={H - 8} stroke="var(--hairline)" />
+        ))}
+      </motion.g>
+      {pts.map((p, i) => (
+        <motion.circle key={i} fill={p.color} stroke="white" strokeWidth={1.1}
+          initial={{ cx: p.px, cy: p.py, r: p.rz }}
+          animate={{ cx: [p.px, p.mx, p.mx, p.px], cy: [p.py, p.my, p.my, p.py], r: [p.rz, 4.2, 4.2, p.rz], opacity: active ? 1 : 0.9 }}
+          transition={{ ...t, times, delay: (i % 6) * 0.03 }} />
+      ))}
+      <motion.text x={W - 6} y={16} textAnchor="end" fontSize={10} fontWeight={700} fill="var(--text-3)"
+        animate={{ opacity: [1, 1, 0, 0, 1] }} transition={{ ...t, times: [0, 0.22, 0.32, 0.88, 1] }}>many columns</motion.text>
+      <motion.text x={W - 6} y={16} textAnchor="end" fontSize={10} fontWeight={700} fill="var(--accent)"
+        animate={{ opacity: [0, 0, 1, 1, 0] }} transition={{ ...t, times: [0, 0.34, 0.46, 0.84, 1] }}>a 2-D map</motion.text>
+    </svg>
+  );
+}
+
+/** A calm crowd of dots breathes inside a dashed "normal" boundary; one far-off dot glows red. Loops. */
+export function AnomalyArt({ active }: { active: boolean }) {
+  const crowd = useMemo(() => {
+    const r = rng(7);
+    return Array.from({ length: 30 }, () => {
+      const a = r() * Math.PI * 2;
+      const d = Math.sqrt(r());
+      return { x: 84 + Math.cos(a) * d * 50, y: 68 + Math.sin(a) * d * 32, k: r() };
+    });
+  }, []);
+  const ox = 186, oy = 30;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      <motion.ellipse cx={84} cy={68} rx={62} ry={42} fill="none" stroke="var(--success)" strokeWidth={1.6} strokeDasharray="5 5"
+        animate={{ pathLength: [0, 1, 1, 1], opacity: [0, 0.8, 0.8, 0] }}
+        transition={{ duration: DUR, times: [0, 0.3, 0.85, 1], repeat: Infinity, ease: "easeInOut" }} />
+      {crowd.map((c, i) => (
+        <motion.circle key={i} cx={c.x} cy={c.y} r={4.6} fill="#64D2FF" stroke="white" strokeWidth={1.2}
+          animate={{ cx: [c.x, c.x + (c.k - 0.5) * 6, c.x], cy: [c.y, c.y + (0.5 - c.k) * 5, c.y] }}
+          transition={{ duration: 2.6 + c.k * 1.6, repeat: Infinity, ease: "easeInOut" }} />
+      ))}
+      <motion.line x1={146} y1={52} x2={ox - 8} y2={oy + 5} stroke="#FF453A" strokeWidth={1.4} strokeDasharray="3 3"
+        animate={{ pathLength: [0, 0, 1, 1, 0], opacity: [0, 0, 0.8, 0.8, 0] }}
+        transition={{ duration: DUR, times: [0, 0.35, 0.5, 0.85, 1], repeat: Infinity }} />
+      <motion.circle cx={ox} cy={oy} fill="none" stroke="#FF453A" strokeWidth={2}
+        animate={{ r: [7, 22], opacity: [active ? 0.9 : 0.6, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }} />
+      <circle cx={ox} cy={oy} r={11} fill="#FF453A" opacity={0.18} style={{ filter: "blur(3px)" }} />
+      <motion.circle cx={ox} cy={oy} r={6} fill="#FF453A" stroke="white" strokeWidth={1.4}
+        animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ originX: `${ox}px`, originY: `${oy}px` }} />
+      <motion.g animate={{ opacity: [0, 0, 1, 1, 0], y: [4, 4, 0, 0, 4] }} transition={{ duration: DUR, times: [0, 0.45, 0.55, 0.85, 1], repeat: Infinity }}>
+        <rect x={ox - 30} y={oy + 13} width={60} height={20} rx={10} fill="#FF453A" />
+        <text x={ox} y={oy + 27} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="white">unusual!</text>
+      </motion.g>
+    </svg>
+  );
+}

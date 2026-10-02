@@ -15,7 +15,7 @@ from ..core.jobs import manager
 from ..core.registry import MODEL_INDEX, defaults
 from ..core.store import datasets, new_id, prepared_store, projects
 from ..lessons.catalog import LESSON_INDEX, LESSONS
-from ..lessons.generators import GENERATORS, IMAGE_LESSONS
+from ..lessons.generators import GENERATORS, IMAGE_LESSONS, UNSUPERVISED_LESSONS
 from ..lessons.grading import CHALLENGES, goal_label, grade
 from ..util.jsonable import jsonable
 
@@ -96,9 +96,10 @@ def start_challenge(lid: str):
     for mid in ch["preset_models"]:
         params = {**defaults(mid), **ch.get("preset_params", {}).get(mid, {})}
         models.append({"key": new_id("m"), "model_id": mid, "params": params, "nn_arch": MODEL_INDEX[mid].get("default_arch")})
+    unsup = lid in UNSUPERVISED_LESSONS
     project = projects.create({"name": f"{lesson['emoji']} {lesson['challenge']['title']}", "task": ch["task"], "step": "data",
-                               "modality": ch.get("modality", "tabular"),
-                               "dataset_id": did, "target": ch["target"], "pipeline": ch.get("preset_pipeline") or None,
+                               "modality": ch.get("modality", "tabular"), "truth": ch.get("truth"),
+                               "dataset_id": did, "target": None if unsup else ch["target"], "pipeline": ch.get("preset_pipeline") or None,
                                "models": models, "challenge": {"lesson_id": lid}})
     prog = _progress().get(lid, {})
     _update(lid, started_at=prog.get("started_at") or time.time(), project_id=project["id"])
@@ -136,6 +137,9 @@ def check(lid: str, body: dict = Body(...)):
     if lid in IMAGE_LESSONS:
         out = procs.call(res["family"], "predict_arrays", model_dir=str(d), images=np.asarray(hidden.images))
         hidden, train = hidden.frame, train.frame
+    elif lid in UNSUPERVISED_LESSONS:
+        a = procs.call(res["family"], "assign", model_dir=str(d), rows=hidden.drop(columns=[ch["truth"]]).to_dict("records"))
+        out = {"predictions": a.get("cluster", [])}
     else:
         out = procs.call(res["family"], "predict_frame", model_dir=str(d), frame=hidden.drop(columns=[ch["target"]]))
     baseline_value = float(train[ch["target"]].mean()) if ch["task"] == "regression" else None

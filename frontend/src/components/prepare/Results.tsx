@@ -151,7 +151,7 @@ function SplitsResult({ report }: { report: PrepareReport }) {
   );
 }
 
-function FeaturesResult({ report }: { report: PrepareReport }) {
+export function FeaturesResult({ report }: { report: PrepareReport }) {
   const names = report.feature_names_out;
   const shown = names.slice(0, 40);
   return (

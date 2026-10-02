@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { spring } from "../../design/motion";
 import { Glass, InfoTip } from "../glass";
 
-export type StageId = "clean" | "features" | "encode" | "outliers" | "split" | "scale" | "select" | "balance" | "target";
+export type StageId = "clean" | "features" | "encode" | "outliers" | "split" | "holdout" | "scale" | "select" | "reduce" | "balance" | "target";
 
 /** Collapsible glass card for one pipeline stage. */
 export function StageCard({ id, icon, title, why, info, summary, open, onToggle, flash, dim, children }: {

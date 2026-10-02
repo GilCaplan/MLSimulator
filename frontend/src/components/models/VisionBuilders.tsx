@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { spring } from "../../design/motion";
 import { compact } from "../../lib/format";
 import { useProject } from "../../lib/store";
-import type { NNArch } from "../../lib/types";
+import type { NNArch, Task } from "../../lib/types";
 import { Slider, Toggle } from "../glass";
 import { convOutShape, resnetStages } from "./archLayers";
 import { useIoShape } from "./meta";
@@ -11,7 +11,7 @@ const pctFmt = (v: number) => `${Math.round(v * 100)}%`;
 
 /** cnn2d: flatten the feature maps vs. average each one (global average pooling), with the weight cost of each. */
 export function GlobalPoolCard({ arch, onChange }: { arch: NNArch; onChange: (a: NNArch) => void }) {
-  const task = useProject((s) => s.project?.task ?? null);
+  const task = useProject((s) => (s.project?.task ?? null) as Task | null);
   const { imageShape } = useIoShape(task);
   const on = !!arch.global_pool;
   const shape = convOutShape(arch, imageShape);
@@ -84,7 +84,7 @@ function PoolPicture({ on }: { on: boolean }) {
 
 /** Tiny ResNet: width / stages / blocks / dropout sliders, a residual-block explainer and the stage pyramid. */
 export function ResNetBuilder({ arch, onChange }: { arch: NNArch; onChange: (a: NNArch) => void }) {
-  const task = useProject((s) => s.project?.task ?? null);
+  const task = useProject((s) => (s.project?.task ?? null) as Task | null);
   const { imageShape } = useIoShape(task);
   const set = (p: Partial<NNArch>) => onChange({ ...arch, ...p });
   const stages = resnetStages(arch, imageShape);

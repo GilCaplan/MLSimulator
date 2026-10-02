@@ -82,9 +82,12 @@ export function ScaleCard({ ctx, open, onToggle, flash }: CardProps) {
     <StageCard
       id="scale" icon={STAGE_ICONS.scale} title="Scale numbers" open={open} onToggle={onToggle} flash={flash}
       summary={stageState("scale", spec, false)}
-      why="Puts features on similar ranges, so “income in dollars” doesn't drown out “age in years”."
-      info="Scalers are fitted on the training rows only, then applied to validation/test. Distance-based models (KNN, SVM) and gradient-trained models (linear models, neural nets) care a lot; tree models don't care at all."
+      why={ctx.unsup
+        ? <><b>Distances need scaling.</b> Groups, maps and outliers are all about how far apart rows are — unscaled, one big-number column decides everything.</>
+        : "Puts features on similar ranges, so “income in dollars” doesn't drown out “age in years”."}
+      info="Scalers are fitted on the training rows only, then applied to validation/test. Distance-based models (KNN, SVM, clustering, PCA) and gradient-trained models (linear models, neural nets) care a lot; tree models don't care at all."
     >
+      {ctx.unsup && <DistanceNote off={off} />}
       <div className="row wrap" style={{ gap: 18, alignItems: "flex-start" }}>
         <div className="col" style={{ gap: 12, flex: "1 1 240px" }}>
           <Segmented<PipelineSpec["scale"]["method"]>
@@ -107,5 +110,29 @@ export function ScaleCard({ ctx, open, onToggle, flash }: CardProps) {
         <div style={{ flex: "1 1 260px" }}><ScaleDemo method={spec.scale.method} /></div>
       </div>
     </StageCard>
+  );
+}
+
+/** Unsupervised projects: why scaling matters so much when everything is measured in distances. */
+function DistanceNote({ off }: { off: boolean }) {
+  const rows = [
+    { name: "age", raw: 34, w: off ? 0.04 : 0.5, color: "#0A84FF" },
+    { name: "income", raw: 52000, w: off ? 0.96 : 0.5, color: "#FF9F0A" },
+  ];
+  return (
+    <div className="inset col" style={{ padding: 14, gap: 10, borderLeft: `3px solid ${off ? "var(--warning)" : "var(--success)"}` }}>
+      <span className="small" style={{ lineHeight: 1.5, color: "var(--text-2)" }}>
+        How much each column counts when measuring the distance between two shoppers {off ? <b style={{ color: "var(--warning)" }}>without scaling</b> : <b style={{ color: "var(--success)" }}>with scaling</b>}:
+      </span>
+      <div className="row" style={{ height: 26, borderRadius: 9, overflow: "hidden", gap: 2 }}>
+        {rows.map((r) => (
+          <motion.div key={r.name} animate={{ flexGrow: r.w }} transition={spring.gentle}
+            style={{ flexBasis: 0, height: "100%", background: r.color, color: "white", fontSize: 11, fontWeight: 650, display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap", overflow: "hidden", minWidth: 4 }}>
+            {r.w > 0.15 ? `${r.name} · ${Math.round(r.w * 100)}%` : ""}
+          </motion.div>
+        ))}
+      </div>
+      <span className="tiny muted">{off ? "Income is measured in thousands, so it swamps age — the groups would be decided by income alone." : "Both columns now have a fair say in who counts as “similar”."}</span>
+    </div>
   );
 }

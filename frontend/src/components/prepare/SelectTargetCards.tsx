@@ -14,16 +14,16 @@ export function SelectCard({ ctx, open, onToggle, flash }: CardProps) {
   const { spec } = ctx;
   const fs = spec.feature_select;
   const maxK = estimateFeatures(ctx);
-  const usesK = fs.method === "kbest" || fs.method === "mutual_info" || fs.method === "model";
+  const usesK = !ctx.unsup && (fs.method === "kbest" || fs.method === "mutual_info" || fs.method === "model");
   return (
     <StageCard
       id="select" icon={STAGE_ICONS.select} title="Feature selection" open={open} onToggle={onToggle} flash={flash}
-      summary={stageState("select", spec, false)}
+      summary={ctx.unsup && fs.method !== "variance" ? "all" : stageState("select", spec, false)}
       why="Keep only the most useful columns. Fewer, better features can mean faster training and less overfitting."
       info="Selection is decided using training rows only. With few features you usually don't need it; it shines when there are many columns relative to rows."
     >
       <ChoiceGrid<FsMethod>
-        value={fs.method}
+        value={ctx.unsup && fs.method !== "variance" ? "none" : fs.method}
         min={150}
         compact
         onChange={(v) => patchPipeline("feature_select", { method: v, k: Math.min(fs.k, maxK) })}
@@ -33,8 +33,11 @@ export function SelectCard({ ctx, open, onToggle, flash }: CardProps) {
           { value: "mutual_info", icon: "🔗", label: "Mutual information", blurb: "Also catches curvy, non-linear relationships." },
           { value: "variance", icon: "〰️", label: "Variance", blurb: "Drop features that barely change at all." },
           { value: "model", icon: "🌲", label: "Model-based", blurb: "A random forest votes on what matters." },
-        ]}
+        ].filter((o) => !ctx.unsup || o.value === "none" || o.value === "variance") as { value: FsMethod; icon: string; label: string; blurb: string }[]}
       />
+      {ctx.unsup && (
+        <Note icon="🙈">The other methods rank columns by how well they predict the answer — and here there is no answer column. To trim noise, drop columns in <b>Clean</b> or merge them with <b>Reduce (PCA)</b>.</Note>
+      )}
       <AnimatePresence initial={false} mode="wait">
         {usesK && (
           <motion.div key="k" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}>

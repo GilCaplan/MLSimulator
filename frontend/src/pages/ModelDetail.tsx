@@ -6,10 +6,11 @@ import { ImagePlayground } from "../components/library/ImagePlayground";
 import { Performance } from "../components/library/Performance";
 import { Playground } from "../components/library/Playground";
 import { Recipe } from "../components/library/Recipe";
-import { EditableText, PageFrame, TASK_META, emojiFor, headline, rise, specFor, useRegistry } from "../components/library/shared";
+import { EditableText, PageFrame, emojiFor, headline, isUnsupModel, rise, specFor, taskMeta, useRegistry } from "../components/library/shared";
+import { UnsupPlayground } from "../components/library/UnsupPlayground";
 import { spring } from "../design/motion";
 import { ApiError, api } from "../lib/api";
-import { pct, timeAgo } from "../lib/format";
+import { timeAgo } from "../lib/format";
 import { navigate } from "../lib/router";
 import { toast } from "../lib/store";
 import type { SavedModel } from "../lib/types";
@@ -17,6 +18,12 @@ import type { SavedModel } from "../lib/types";
 const IMAGE_JUMPS = [
   { id: "try", label: "🎨 Try it live" },
   { id: "performance", label: "🏆 Performance" },
+  { id: "recipe", label: "📜 Recipe" },
+];
+
+const UNSUP_JUMPS = [
+  { id: "try", label: "🎮 Try it live" },
+  { id: "performance", label: "🔍 What it found" },
   { id: "recipe", label: "📜 Recipe" },
 ];
 
@@ -31,8 +38,8 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
   const registry = useRegistry();
   const spec = specFor(registry, model.model_id);
   const h = headline(model);
-  const task = TASK_META[model.task];
-  const v = Math.max(0, h.value ?? 0);
+  const task = taskMeta(model.task);
+  const unsup = isUnsupModel(model);
   return (
     <Glass variant="strong" pad="lg" animate_in>
       <div className="row between wrap" style={{ gap: 10, marginBottom: 18 }}>
@@ -63,10 +70,10 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
           </div>
         </div>
         <div className="col center" style={{ gap: 4, flexShrink: 0 }}>
-          <ProgressRing value={v} size={84} stroke={8} color={v >= 0.85 ? "var(--success)" : v >= 0.6 ? "var(--accent)" : "var(--warning)"}>
-            <span style={{ fontSize: 17, fontWeight: 750 }}>{h.value === null ? "—" : pct(h.value, 0)}</span>
+          <ProgressRing value={h.ring} size={84} stroke={8} color={h.tone}>
+            <span style={{ fontSize: unsup ? 15 : 17, fontWeight: 750 }}>{h.value === null ? "—" : unsup ? h.text : `${Math.round(h.value * 100)}%`}</span>
           </ProgressRing>
-          <span className="tiny muted">test {h.label.toLowerCase()}</span>
+          <span className="tiny muted">{unsup ? "" : "test "}{h.label.toLowerCase()}</span>
         </div>
       </div>
     </Glass>
@@ -131,13 +138,15 @@ export function ModelPage({ modelId }: { modelId: string }) {
       <Header model={model} onPatch={patch} />
       <motion.nav variants={rise} className="row wrap" style={{ gap: 6, position: "sticky", top: 0, zIndex: 5, pointerEvents: "none" }}>
         <div className="glass strong row" style={{ padding: 4, gap: 2, borderRadius: 999, pointerEvents: "auto" }}>
-          {(model.modality === "image" ? IMAGE_JUMPS : JUMPS).map((j) => (
+          {(model.modality === "image" ? IMAGE_JUMPS : isUnsupModel(model) ? UNSUP_JUMPS : JUMPS).map((j) => (
             <button key={j.id} className="btn ghost sm" onClick={() => jump(j.id)}>{j.label}</button>
           ))}
         </div>
       </motion.nav>
       {model.modality === "image" ? (
         <ImagePlayground key={model.id} model={model} />
+      ) : isUnsupModel(model) ? (
+        <UnsupPlayground key={model.id} model={model} />
       ) : (
         <>
           <Playground key={model.id} model={model} />

@@ -4,19 +4,19 @@ import { spring } from "../../design/motion";
 import { colorAt } from "../../lib/colors";
 import { METRIC_HELP, secs } from "../../lib/format";
 import { navigate } from "../../lib/router";
-import { toast, useProject } from "../../lib/store";
+import { isUnsupervised, toast, useProject } from "../../lib/store";
 import type { ModelResult, RunResult } from "../../lib/types";
 import { AnimatedNumber, EmptyState, Glass, InfoTip, Segmented } from "../glass";
 import { BarList, ConfusionMatrix, DecisionSurface, Histogram, LineChart, ResidualPlot, RocChart, type Series } from "../charts";
-import { NetworkDiagram } from "../nn/NetworkDiagram";
-import { diagramLayers } from "./archLayers";
 import { Calibration } from "./Calibration";
 import { ErrorAnalysis } from "./Mistakes";
+import { ModelSettings as Settings } from "./ModelSettings";
 import { SaveModal } from "./SaveModal";
+import { UnsupDetail } from "./unsup/UnsupDetail";
 import { VisionFilters } from "./VisionFilters";
 import { VisionGallery } from "./VisionGallery";
 import { VisionLooks } from "./VisionLooks";
-import { archFor, baselineOf, fmtMetric, isUnit, metricLabel, nFeatures, nOutputs, useSaved, vsBaseline } from "./util";
+import { baselineOf, fmtMetric, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
 
 type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters";
 
@@ -35,6 +35,11 @@ const turnOnCalibration = () => {
 
 /** Full report for one trained model, with tabs. */
 export function ModelDetail({ result, model }: { result: RunResult; model: ModelResult }) {
+  if (isUnsupervised(result.task)) return <UnsupDetail result={result} model={model} />;
+  return <SupervisedDetail result={result} model={model} />;
+}
+
+function SupervisedDetail({ result, model }: { result: RunResult; model: ModelResult }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [saving, setSaving] = useState(false);
   const spec = useProject((s) => s.registry.find((r) => r.id === model.model_id));
@@ -294,48 +299,6 @@ function Curve({ model }: { model: ModelResult }) {
         {loss.length > 0 && <div><h4 style={{ marginBottom: 6 }}>Loss {c.loss ? <span className="faint small">({c.loss})</span> : null}</h4><LineChart series={loss} height={220} xLabel={c.x_label} marker={marker} /></div>}
         {score.length > 0 && <div><h4 style={{ marginBottom: 6 }}>Score {c.score ? <span className="faint small">({metricLabel(c.score)})</span> : null}</h4><LineChart series={score} height={220} xLabel={c.x_label} marker={marker} /></div>}
       </div>
-    </div>
-  );
-}
-
-function Settings({ model }: { model: ModelResult }) {
-  const spec = useProject((s) => s.registry.find((r) => r.id === model.model_id));
-  const merged: Record<string, any> = {};
-  for (const hp of spec?.params ?? []) merged[hp.name] = hp.default;
-  Object.assign(merged, model.params || {});
-  const entries = Object.entries(merged);
-  const arch = spec?.nn ? archFor(model) : null;
-  return (
-    <div className="col" style={{ gap: 16 }}>
-      {arch && (
-        <div className="inset" style={{ padding: 10 }}>
-          <NetworkDiagram layers={diagramLayers(arch, nFeatures(), nOutputs(), model.vision?.image_shape ?? useProject.getState().report?.image_shape)} height={240} />
-        </div>
-      )}
-      {entries.length === 0 ? (
-        <span className="small muted">Default settings were used.</span>
-      ) : (
-        <div className="inset" style={{ overflow: "hidden" }}>
-          <table className="table">
-            <thead><tr><th>Setting</th><th>Value</th><th>What it does</th></tr></thead>
-            <tbody>
-              {entries.map(([k, v]) => {
-                const hp = spec?.params.find((p) => p.name === k);
-                return (
-                  <tr key={k}>
-                    <td><b>{hp?.label ?? k}</b></td>
-                    <td className="mono">
-                      {typeof v === "number" ? String(Number(v.toPrecision(5))) : String(v)}
-                      {hp && v !== hp.default && <span className="badge accent" style={{ marginLeft: 8, height: 18, fontSize: 10 }}>changed</span>}
-                    </td>
-                    <td className="muted" style={{ whiteSpace: "normal" }}>{hp?.help}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

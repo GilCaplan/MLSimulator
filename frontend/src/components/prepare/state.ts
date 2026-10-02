@@ -1,4 +1,4 @@
-import { fullPipeline, useProject } from "../../lib/store";
+import { fullPipeline, isUnsupervised, useProject } from "../../lib/store";
 import { droppedSources, estimateOutputs } from "./features/featureOps";
 import type { ColumnSummary, DatasetSummary, PipelineSpec, PrepareReport, Project } from "../../lib/types";
 
@@ -28,6 +28,8 @@ export interface PrepCtx {
   used: ColumnSummary[];
   targetCol: ColumnSummary | undefined;
   isClf: boolean;
+  /** clustering / reduction / anomaly: no target; `truth` (if any) is hidden from the models */
+  unsup: boolean;
 }
 
 export const AUTO_IGNORED = new Set<ColumnSummary["role"]>(["id", "text", "datetime"]);
@@ -41,7 +43,7 @@ export function usePrepCtx(): PrepCtx | null {
   const spec = fullPipeline(project);
   if (!spec) return null;
   const ds = dataset && dataset.id === project.dataset_id ? dataset : null;
-  const columns = (ds?.columns || []).filter((c) => c.name !== spec.target);
+  const columns = (ds?.columns || []).filter((c) => c.name !== spec.target && c.name !== spec.truth);
   const drop = new Set(spec.drop_columns);
   // engineered features may drop their source; a group split hides the group column from the models
   for (const st of spec.features || []) droppedSources(st).forEach((c) => drop.add(c));
@@ -51,6 +53,7 @@ export function usePrepCtx(): PrepCtx | null {
     project, spec, dataset: ds, report, columns, used,
     targetCol: ds?.columns.find((c) => c.name === spec.target),
     isClf: spec.task === "classification",
+    unsup: isUnsupervised(spec.task),
   };
 }
 
@@ -78,6 +81,8 @@ export function trainClassCounts(ctx: PrepCtx): Record<string, number> | null {
 
 export const MODELS_NEED_SCALING = new Set([
   "svm", "svr", "knn", "logistic_regression", "ridge", "lasso", "elastic_net", "mlp", "cnn1d", "cnn2d", "ft_transformer", "gcn",
+  // unsupervised models that measure distances or spread
+  "kmeans", "gmm", "dbscan", "agglomerative", "pca", "tsne", "one_class_svm", "lof",
 ]);
 
 export const fmtInt = (n: number) => Math.round(n).toLocaleString();

@@ -4,7 +4,7 @@ import { api } from "../../../lib/api";
 import { classColor } from "../../../lib/colors";
 import { fmt } from "../../../lib/format";
 import { toast, useProject } from "../../../lib/store";
-import type { DatasetProfile, DatasetSummary } from "../../../lib/types";
+import type { DatasetProfile, DatasetSummary, Task } from "../../../lib/types";
 import { BarList, Histogram } from "../../charts";
 import { Glass, Segmented, Spinner } from "../../glass";
 import { CoachPanel, NextBar, StepLayout } from "../../shell/Wizard";
@@ -33,7 +33,8 @@ export function ImageDataStep() {
   const project = useProject((s) => s.project)!;
   const dataset = useProject((s) => s.dataset);
   const profile = useProject((s) => s.profile);
-  const task = project.task;
+  /* image projects are always supervised */
+  const task = project.task as Task | null;
 
   const [mode, setMode] = useState<ImageSource>("sets");
   const [pickerOpen, setPickerOpen] = useState(false);

@@ -6,21 +6,29 @@ import { EncodeCard, OutliersCard } from "../components/prepare/EncodeOutliersCa
 import { FeaturesCard } from "../components/prepare/features/FeaturesCard";
 import { FlowStrip } from "../components/prepare/FlowStrip";
 import { ImagePrepareStep } from "../components/prepare/image/ImagePrepareStep";
+import { HoldoutCard, ReduceCard } from "../components/prepare/ReduceHoldoutCards";
 import { Results, ResultsSkeleton } from "../components/prepare/Results";
 import { SelectCard, TargetCard } from "../components/prepare/SelectTargetCards";
 import { ScaleCard, SplitCard } from "../components/prepare/SplitScaleCards";
 import type { StageId } from "../components/prepare/StageCard";
 import { usePrepCtx } from "../components/prepare/state";
+import { UnsupervisedResults } from "../components/prepare/UnsupervisedResults";
 import { EmptyState, Glass, Spinner } from "../components/glass";
-import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
+import { CoachPanel, NextBar, StepLayout, useStepLabel } from "../components/shell/Wizard";
 import { spring } from "../design/motion";
 import { api } from "../lib/api";
 import { navigate } from "../lib/router";
-import { fullPipeline, toast, useProject } from "../lib/store";
+import { fullPipeline, isUnsupervised, toast, useProject } from "../lib/store";
 
 const DEFAULT_OPEN: Record<StageId, boolean> = {
-  clean: true, features: true, encode: false, outliers: false, split: true, scale: false, select: false, balance: true, target: true,
+  clean: true, features: true, encode: false, outliers: false, split: true, holdout: true, scale: false, select: false, reduce: false, balance: true, target: true,
 };
+
+const UNSUP_INTRO = (
+  <>No answer column means no test to cheat on — so there's <b>no split and no balancing</b> here. What matters most is <b>scaling</b>:
+    clustering, maps and outlier detection all measure how far apart rows are, and unscaled columns would shout over each other.
+    <br /><br />Press <b>Run preparation</b> to see your rows on a map.</>
+);
 
 export function PrepareStep() {
   const image = useProject((s) => s.project?.modality === "image");
@@ -33,7 +41,8 @@ function TabularPrepareStep() {
   const report = useProject((s) => s.report);
   const ctx = usePrepCtx();
   const [running, setRunning] = useState(false);
-  const [open, setOpen] = useState(DEFAULT_OPEN);
+  const [open, setOpen] = useState(() => (isUnsupervised(useProject.getState().project?.task) ? { ...DEFAULT_OPEN, scale: true } : DEFAULT_OPEN));
+  const trainLabel = useStepLabel("train");
   const [flash, setFlash] = useState<StageId | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const autoRan = useRef(false);
@@ -76,7 +85,7 @@ function TabularPrepareStep() {
 
   // Auto-run once on the first visit, when nothing has been prepared yet.
   useEffect(() => {
-    if (autoRan.current || !project?.dataset_id || !project.target || !project.task) return;
+    if (autoRan.current || !project?.dataset_id || (!project.target && !isUnsupervised(project.task)) || !project.task) return;
     if (report || project.prepared_id) return;
     autoRan.current = true;
     run(false);
@@ -96,24 +105,26 @@ function TabularPrepareStep() {
     return (
       <StepLayout title="Prepare your data" subtitle="Clean, split and balance the data before training.">
         <Glass>
-          <EmptyState icon="📊" title="Pick a dataset first" text="Choose or generate a dataset and tell us which column to predict — then come back here to prepare it."
+          <EmptyState icon="📊" title="Pick a dataset first" text={isUnsupervised(project.task) ? "Choose or generate a dataset to explore — then come back here to prepare it." : "Choose or generate a dataset and tell us which column to predict — then come back here to prepare it."}
             action={<button className="btn primary" onClick={() => navigate(`/p/${project.id}/data`)}>Go to Data →</button>} />
         </Glass>
       </StepLayout>
     );
   }
 
-  const { spec, isClf, used } = ctx;
+  const { spec, isClf, used, unsup } = ctx;
   const stale = !!report && project.prepared_id !== report.prepared_id;
   const fresh = !!report && !stale;
   const hasCategorical = used.some((c) => c.role === "categorical") || (!ctx.dataset && !!report?.categorical_columns.length);
-  const stages: StageId[] = ["clean", "features", "encode", "outliers", "split", "scale", "select", isClf ? "balance" : "target"];
+  const stages: StageId[] = unsup
+    ? ["clean", "features", "encode", "outliers", "holdout", "scale", "select", "reduce"]
+    : ["clean", "features", "encode", "outliers", "split", "scale", "select", "reduce", isClf ? "balance" : "target"];
   const cardProps = (id: StageId) => ({ ctx, open: open[id], onToggle: toggle(id), flash: flash === id, onJump: pick });
 
   const status = running
     ? "Preparing your data…"
     : fresh
-      ? `Ready: ${report!.splits.train.toLocaleString()} training rows · ${report!.n_features} features`
+      ? `Ready: ${report!.splits.train.toLocaleString()} ${unsup ? "rows to explore" : "training rows"} · ${report!.n_features} features`
       : stale
         ? "Settings changed — run again"
         : project.prepared_id
@@ -123,14 +134,16 @@ function TabularPrepareStep() {
   return (
     <StepLayout
       title="Prepare your data"
-      subtitle="Turn raw rows into something models can learn from: fill gaps, turn words into numbers, hide a test set, and even out rare classes."
+      subtitle={unsup
+        ? "Turn raw rows into something models can compare: fill gaps, turn words into numbers, put every column on the same scale — and optionally squash it with PCA."
+        : "Turn raw rows into something models can learn from: fill gaps, turn words into numbers, hide a test set, and even out rare classes."}
       coach={
         <CoachPanel
-          intro={<>Real data is messy. Blanks, words, wildly different scales and rare classes all trip models up. Each stage below fixes one of these — the defaults are sensible, so you can simply press <b>Run preparation</b> and see what happens.</>}
+          intro={unsup ? UNSUP_INTRO : <>Real data is messy. Blanks, words, wildly different scales and rare classes all trip models up. Each stage below fixes one of these — the defaults are sensible, so you can simply press <b>Run preparation</b> and see what happens.</>}
           suggestions={fresh ? report!.coach : []}
         />
       }
-      footer={<NextBar status={status} back="data" next="train" nextLabel="Train" nextDisabled={!project.prepared_id || running} />}
+      footer={<NextBar status={status} back="data" next="train" nextLabel={trainLabel} nextDisabled={!project.prepared_id || running} />}
     >
       {/* sticky pipeline overview + run */}
       <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} style={{ position: "sticky", top: 4, zIndex: 6 }}>
@@ -163,10 +176,11 @@ function TabularPrepareStep() {
       <FeaturesCard {...cardProps("features")} />
       <EncodeCard {...cardProps("encode")} />
       <OutliersCard {...cardProps("outliers")} />
-      <SplitCard {...cardProps("split")} />
+      {unsup ? <HoldoutCard {...cardProps("holdout")} /> : <SplitCard {...cardProps("split")} />}
       <ScaleCard {...cardProps("scale")} />
       <SelectCard {...cardProps("select")} />
-      {isClf ? <BalanceCard {...cardProps("balance")} /> : <TargetCard {...cardProps("target")} />}
+      <ReduceCard {...cardProps("reduce")} />
+      {!unsup && (isClf ? <BalanceCard {...cardProps("balance")} /> : <TargetCard {...cardProps("target")} />)}
 
       {/* results */}
       <div ref={resultsRef} className="col" style={{ gap: 14, scrollMarginTop: 150, marginTop: 8 }}>
@@ -189,7 +203,9 @@ function TabularPrepareStep() {
         {report ? (
           <div style={{ position: "relative" }}>
             <div style={{ opacity: stale || running ? 0.55 : 1, filter: stale || running ? "saturate(0.6)" : "none", transition: "opacity .35s, filter .35s" }}>
-              <Results report={report} logTarget={spec.target_transform === "log1p"} />
+              {unsup || isUnsupervised(report.task)
+                ? <UnsupervisedResults report={report} task={String(report.task)} />
+                : <Results report={report} logTarget={spec.target_transform === "log1p"} />}
             </div>
             <AnimatePresence>
               {running && (

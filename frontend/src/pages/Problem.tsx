@@ -2,12 +2,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Glass } from "../components/glass";
 import { CheckDot } from "../components/models/ModelCard";
-import { ClassificationArt, ImageClassifyArt, ImageNumberArt, RegressionArt } from "../components/models/TaskArt";
+import { AnomalyArt, ClassificationArt, ClusteringArt, ImageClassifyArt, ImageNumberArt, MapArt, RegressionArt } from "../components/models/TaskArt";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { api } from "../lib/api";
-import { toast, useProject } from "../lib/store";
-import type { Modality, ProblemType, Task } from "../lib/types";
+import { isUnsupervised, toast, useProject } from "../lib/store";
+import type { Modality, ProblemType, Project } from "../lib/types";
 
 /** Used until /api/problems answers (or if it can't be reached) so the page is never empty. */
 const FALLBACK: ProblemType[] = [
@@ -37,6 +37,21 @@ const LOOK: Record<string, { examples: string[]; art?: (active: boolean) => Reac
     art: (a) => <ImageNumberArt active={a} />,
     tint: "linear-gradient(135deg, rgba(48,209,88,.14), rgba(94,92,230,.12))",
   },
+  clustering: {
+    examples: ["🛍️ Customer segments", "🎵 Songs that sound alike", "🧬 Similar patients or cells"],
+    art: (a) => <ClusteringArt active={a} />,
+    tint: "linear-gradient(135deg, rgba(10,132,255,.13), rgba(48,209,88,.12))",
+  },
+  reduction: {
+    examples: ["🗺️ See 20 columns at once", "🔍 Spot hidden groups by eye", "🧹 Squash redundant columns"],
+    art: (a) => <MapArt active={a} />,
+    tint: "linear-gradient(135deg, rgba(191,90,242,.13), rgba(255,159,10,.11))",
+  },
+  anomaly: {
+    examples: ["💳 Odd card transactions", "🏭 Machines about to fail", "🧾 Data-entry mistakes"],
+    art: (a) => <AnomalyArt active={a} />,
+    tint: "linear-gradient(135deg, rgba(100,210,255,.14), rgba(255,69,58,.11))",
+  },
 };
 
 const GROUP_BLURB: Record<string, string> = {
@@ -51,10 +66,12 @@ const GROUP_BLURB: Record<string, string> = {
 const modalityOf = (m?: Modality | null): Modality => m ?? "tabular";
 
 /** Set the project's problem (task × modality); downstream choices are reset when it changes. */
-function chooseProblem(task: Task, modality: Modality) {
+function chooseProblem(taskIn: string, modality: Modality) {
   const st = useProject.getState();
   const p = st.project;
   if (!p) return;
+  // pictures are always supervised: an unsupervised task falls back to image classification
+  const task = (modality === "image" && isUnsupervised(taskIn) ? "classification" : taskIn) as NonNullable<Project["task"]>;
   const sameTask = p.task === task;
   const sameModality = modalityOf(p.modality) === modality;
   if (sameTask && sameModality) return;
@@ -63,8 +80,12 @@ function chooseProblem(task: Task, modality: Modality) {
     return;
   }
   const patch: Partial<typeof p> = { task, modality, models: [], pipeline: null, prepared_id: null, last_job_id: null };
+  // the answer column and the hidden "truth" column are the same idea seen from two sides: carry it across
+  const toUnsup = isUnsupervised(task), fromUnsup = isUnsupervised(p.task);
+  if (toUnsup && !fromUnsup && p.target && !p.truth) patch.truth = p.target;
+  if (!toUnsup && fromUnsup && !p.target && p.truth) patch.target = p.truth;
   // a table can't feed an image model (and vice versa): forget the dataset too
-  if (!sameModality) Object.assign(patch, { dataset_id: null, target: null });
+  if (!sameModality) Object.assign(patch, { dataset_id: null, target: null, truth: null });
   st.update(patch);
   st.setReport(null);
   st.setResult(null);
@@ -99,18 +120,22 @@ export function ProblemStep() {
 
   const current = problems.find((p) => p.task === task && p.modality === modality);
   const status = current
-    ? <>Great — we'll build {/^[aeiou]/i.test(current.label) ? "an" : "a"} <b>{current.label.toLowerCase()}</b> model.</>
+    ? current.unsupervised
+      ? <>Great — no answers needed. We'll explore: <b>{current.question.replace(/\?$/, "").toLowerCase()}?</b></>
+      : <>Great — we'll build {/^[aeiou]/i.test(current.label) ? "an" : "a"} <b>{current.label.toLowerCase()}</b> model.</>
     : "Choose one to continue";
+  const discover = problems.filter((p) => p.unsupervised && p.enabled);
 
   return (
     <StepLayout
-      title="What do you want to predict?"
-      subtitle="Every machine-learning project starts with one question. Pick the kind of answer you're after — and what your examples look like."
+      title="What do you want to find out?"
+      subtitle="Every machine-learning project starts with one question. Predict an answer you already have examples of — or discover structure nobody has labelled yet."
       coach={
         <CoachPanel
           intro={<>A model learns from examples where the answer is already known, then guesses the answer for new ones.
             <br /><br />The first big choice is <b>what kind of answer</b> it gives: a <b>category</b> (classification) or a <b>number</b> (regression).
-            <br /><br />The second is <b>what the examples are</b>: rows in a table, or <b>pictures</b>. Together they decide which algorithms and scores make sense later on.</>}
+            <br /><br />The second is <b>what the examples are</b>: rows in a table, or <b>pictures</b>. Together they decide which algorithms and scores make sense later on.
+            <br /><br />No answer column at all? That's <b>unsupervised learning</b> — the <b>Discover</b> problems find groups, draw a map of your data or flag the odd rows out, all without being told what's right.</>}
         />
       }
       footer={<NextBar next="models" nextDisabled={!task} status={status} />}
@@ -134,7 +159,7 @@ export function ProblemStep() {
       <Glass animate_in>
         <div className="col" style={{ gap: 4, marginBottom: 14 }}>
           <span className="eyebrow">Not sure?</span>
-          <h3>Two quick questions</h3>
+          <h3>Three quick questions</h3>
         </div>
         <div className="row wrap" style={{ gap: 14, alignItems: "stretch" }}>
           <div className="inset col" style={{ padding: 14, gap: 10, flex: "2 1 380px" }}>
@@ -159,15 +184,44 @@ export function ProblemStep() {
               <PictureButton on={modality === "tabular" && !!task} onClick={() => chooseProblem(task ?? "classification", "tabular")}>📋 No, a table</PictureButton>
             </div>
           </div>
+          <DiscoverQuestion problems={discover} task={task} />
         </div>
       </Glass>
     </StepLayout>
   );
 }
 
+/** "No answer column? → Discover": the way into unsupervised learning. */
+function DiscoverQuestion({ problems, task }: { problems: ProblemType[]; task: string | null }) {
+  const on = isUnsupervised(task);
+  if (!problems.length) return null;
+  return (
+    <div className="inset col" style={{ padding: 14, gap: 10, flex: "1 1 100%", transition: "border-color .2s", borderColor: on ? "var(--accent)" : undefined }}>
+      <div className="row wrap" style={{ gap: 10, alignItems: "baseline" }}>
+        <span className="small" style={{ fontWeight: 650 }}>3 · Is there an answer column at all?</span>
+        <span className="tiny muted" style={{ lineHeight: 1.55 }}>
+          No answer column? → <b>Discover</b>. The model looks for structure on its own — you judge whether it makes sense.
+        </span>
+      </div>
+      <div className="row wrap" style={{ gap: 8 }}>
+        {problems.map((p) => {
+          const active = task === p.task;
+          return (
+            <motion.button key={p.id} whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} transition={spring.snappy}
+              className={`btn sm${active ? " primary" : ""}`} onClick={() => chooseProblem(p.task, "tabular")}>
+              <span>{p.emoji}</span> {p.question}
+              <AnimatePresence>{active && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>✓</motion.span>}</AnimatePresence>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ProblemTile({ problem, selected, dim }: { problem: ProblemType; selected: boolean; dim: boolean }) {
   const look = LOOK[problem.id] ?? { examples: [], tint: "var(--fill)" };
-  const pick = () => chooseProblem(problem.task as Task, problem.modality);
+  const pick = () => chooseProblem(problem.task, problem.modality);
   return (
     <motion.div variants={fadeUp}>
       <motion.div
@@ -192,6 +246,7 @@ function ProblemTile({ problem, selected, dim }: { problem: ProblemType; selecte
             <span style={{ fontSize: 13 }}>{problem.emoji}</span>{problem.label}
           </span>
           <h2 style={{ fontSize: 23 }}>{problem.question}</h2>
+          {problem.unsupervised && <span className="tiny faint">No answer column needed</span>}
         </div>
         <div className="col" style={{ gap: 6 }}>
           {look.examples.map((ex, i) => (

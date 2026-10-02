@@ -1,14 +1,17 @@
 import { api } from "../../lib/api";
-import { modelConfigFor, useProject } from "../../lib/store";
-import type { Modality, ModelConfig, Project, Task } from "../../lib/types";
+import { isUnsupervised, modelConfigFor, useProject } from "../../lib/store";
+import type { CSSProperties } from "react";
+import type { Modality, ModelConfig, Project, Task, UnsupervisedTask } from "../../lib/types";
 
 export interface Template {
   id: string;
   emoji: string;
   title: string;
   blurb: string;
-  task: Task;
+  task: Task | UnsupervisedTask;
   sample?: string;
+  /** unsupervised: hidden comparison column (defaults to the dataset's truth hint) */
+  truth?: string;
   preset?: string;
   /** synthetic image set (POST /datasets/image-set) — makes this an image project */
   imageSet?: string;
@@ -32,6 +35,10 @@ export const TEMPLATES: Template[] = [
     imageSet: "shapes", modality: "image", target: "label", models: ["cnn2d", "tiny_resnet", "logistic_regression"], tint: "rgba(255,159,10,.18)" },
   { id: "count_dots", emoji: "🎲", title: "Count the dots", blurb: "Predict how many dots are in a picture — regression straight from pixels.", task: "regression",
     imageSet: "count_dots", modality: "image", target: "value", models: ["cnn2d", "random_forest"], tint: "rgba(100,210,255,.18)" },
+  { id: "segments", emoji: "🛍️", title: "Shopping segments", blurb: "No labels at all: let the models discover the natural groups of shoppers — then peek at the real segments.", task: "clustering",
+    sample: "customers", truth: "segment", models: ["kmeans", "gmm", "dbscan"], tint: "rgba(255,214,10,.2)" },
+  { id: "faults", emoji: "🏭", title: "Factory faults", blurb: "Learn what a healthy machine looks like and flag the sensor readings that don't fit.", task: "anomaly",
+    sample: "sensors", truth: "status", models: ["isolation_forest", "lof", "one_class_svm"], tint: "rgba(255,69,58,.14)" },
   { id: "moons", emoji: "🌙", title: "Two moons playground", blurb: "Two interlocking crescents — watch each model draw its own boundary.", task: "classification", preset: "moons",
     models: ["svm", "mlp", "decision_tree"], tint: "rgba(191,90,242,.16)" },
 ];
@@ -53,14 +60,25 @@ export async function createFromTemplate(t: Template): Promise<Project> {
     .map((s) => modelConfigFor(s!));
   const modality: Modality = t.modality ?? "tabular";
   const created = await api.createProject({ name: t.title, task: t.task, emoji: t.emoji, modality });
+  const unsup = isUnsupervised(t.task);
   return api.saveProject({
     ...created,
     task: t.task,
     emoji: t.emoji,
     modality,
     dataset_id: dataset.id,
-    target: t.target ?? dataset.target_hint ?? null,
+    target: unsup ? null : t.target ?? dataset.target_hint ?? null,
+    ...(unsup ? { truth: t.truth ?? dataset.truth_hint ?? null } : {}),
     models,
     step: "models",
   });
 }
+
+/** Badge text + colours for a project's task (cards and templates). */
+export const TASK_BADGE: Record<string, { label: string; icon: string; cls?: string; style?: CSSProperties }> = {
+  classification: { label: "Classification", icon: "🏷️", cls: "accent" },
+  regression: { label: "Regression", icon: "📈", style: { background: "rgba(191,90,242,.16)", color: "var(--accent-2)" } },
+  clustering: { label: "Clustering", icon: "🫧", cls: "warning" },
+  reduction: { label: "Data map", icon: "🗺️", cls: "success" },
+  anomaly: { label: "Anomaly", icon: "🚨", cls: "danger" },
+};

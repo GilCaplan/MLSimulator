@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { spring, stagger } from "../../design/motion";
 import { api } from "../../lib/api";
-import { toast } from "../../lib/store";
+import { isUnsupervised, toast } from "../../lib/store";
 import type { Catalog, DatasetSummary, Point, Task } from "../../lib/types";
 import { Scatter } from "../charts";
 import { Glass, Slider, Spinner } from "../glass";
@@ -52,8 +52,10 @@ function MiniPreview({ preset, params }: { preset: string; params: Record<string
   return <Scatter points={liftFlat(data.points, cont)} continuous={cont} height={120} radius={2.2} showLegend={false} />;
 }
 
-export function PresetsPanel({ catalog, task, onLoaded }: { catalog: Catalog; task: Task | null; onLoaded: (d: DatasetSummary) => void }) {
-  const entries = Object.entries(catalog.presets).filter(([, p]) => !task || p.task === task);
+export function PresetsPanel({ catalog, task, onLoaded }: { catalog: Catalog; task: string | null; onLoaded: (d: DatasetSummary) => void }) {
+  // discovery projects: the category-style shapes (blobs, moons…) — their answer column becomes the hidden truth
+  const want = task && isUnsupervised(task) ? "classification" : task;
+  const entries = Object.entries(catalog.presets).filter(([, p]) => !want || p.task === want);
   const [sel, setSel] = useState<string | null>(null);
   const [state, setState] = useState<{ preset: string | null; params: Record<string, number> }>({ preset: null, params: {} });
   const [busy, setBusy] = useState(false);

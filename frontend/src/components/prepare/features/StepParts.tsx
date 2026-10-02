@@ -73,7 +73,7 @@ export function FormulaEditor({ value, onChange, columns, target }: {
     const caret = before.length + pad.length + (caretInside && text.includes("(") ? text.indexOf("(") + 1 : text.length);
     requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(caret, caret); });
   };
-  const usesTarget = new RegExp(`(^|[^A-Za-z0-9_])${target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Za-z0-9_])`).test(value);
+  const usesTarget = !!target && new RegExp(`(^|[^A-Za-z0-9_])${target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Za-z0-9_])`).test(value);
   return (
     <div className="col" style={{ gap: 8, width: "100%" }}>
       <div className="row" style={{ gap: 8 }}>

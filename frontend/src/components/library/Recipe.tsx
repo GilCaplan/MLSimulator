@@ -39,10 +39,22 @@ export function describeFeature(f: FeatureStep): { name: string; how: string; ic
 
 interface Step { icon: string; title: string; text: ReactNode; extra?: ReactNode; off?: boolean }
 
+const UNSUP_GOAL: Record<string, [string, string, string]> = {
+  clustering: ["🫧", "Find natural groups", "No target column — the model grouped similar rows on its own"],
+  reduction: ["🗺️", "Draw a 2-D map", "No target column — the model folded every input onto a flat map"],
+  anomaly: ["🚨", "Spot unusual rows", "No target column — the model learned what normal looks like and scores how unusual each row is"],
+};
+
 function pipelineSteps(p: PipelineSpec, m: SavedModel): Step[] {
   const steps: Step[] = [];
   const nIn = m.input_schema.length;
-  steps.push({
+  const unsup = UNSUP_GOAL[m.task as string];
+  const ignored = (p.drop_columns ?? []).filter((c) => c !== p.truth);
+  steps.push(unsup ? {
+    icon: unsup[0],
+    title: unsup[1],
+    text: <>{unsup[2]}, using {nIn} input{nIn === 1 ? "" : "s"}{ignored.length ? <> (ignored: {ignored.join(", ")})</> : null}.{p.truth ? <> The column <b>{p.truth}</b> was hidden from it and only used afterwards to check the result.</> : null}</>,
+  } : {
     icon: "🎯",
     title: `Predict “${m.target}”`,
     text: <>A {m.task} problem using {nIn} input{nIn === 1 ? "" : "s"}{p.drop_columns?.length ? <> (ignored: {p.drop_columns.join(", ")})</> : null}.</>,
@@ -79,7 +91,7 @@ function pipelineSteps(p: PipelineSpec, m: SavedModel): Step[] {
     title: "Fill in missing values",
     text: p.impute?.numeric === "drop_rows"
       ? "Rows with missing numbers were dropped."
-      : <>Gaps in numbers were filled with {IMPUTE_NUM[p.impute?.numeric] ?? p.impute?.numeric}; gaps in categories with {p.impute?.categorical === "constant" ? "a “missing” label" : "the most common category"}.</>,
+      : <>Gaps in numbers were filled with {IMPUTE_NUM[p.impute?.numeric ?? "median"] ?? p.impute?.numeric}; gaps in categories with {p.impute?.categorical === "constant" ? "a “missing” label" : "the most common category"}.</>,
   });
   steps.push({
     icon: "🔤",
@@ -99,7 +111,9 @@ function pipelineSteps(p: PipelineSpec, m: SavedModel): Step[] {
       : "Every row was kept, even unusual ones.",
   });
   const test = p.split?.test_size ?? 0.2, val = p.split?.val_size ?? 0;
-  steps.push({
+  if (unsup) {
+    steps.push({ icon: "📚", title: "Every row used", text: "No train/test split: with no answers to check, there's no exam to hold rows back for. The model looked at all of them." });
+  } else steps.push({
     icon: "✂️",
     title: p.split?.method === "group" ? "Split by group into train / validation / test" : p.split?.method === "time" ? "Split by time: past → train, future → test" : "Split into train / validation / test",
     text: <>
@@ -133,6 +147,7 @@ function pipelineSteps(p: PipelineSpec, m: SavedModel): Step[] {
       : fs.method === "variance" ? `Dropped features that barely change${fs.threshold != null ? ` (variance below ${fs.threshold})` : ""}.`
       : `Kept the features a quick helper model found most important${fs.k ? ` (up to ${fs.k})` : ""}.`,
   });
+  if (unsup) return steps;
   if (m.task === "classification") {
     const r = { ...{ mode: "none", over: "smote", under: "random", clean: "none", k_neighbors: 5 }, ...((p.resample ?? {}) as Partial<PipelineSpec["resample"]>) } as PipelineSpec["resample"];
     const clean = CLEAN[r.clean ?? "none"];

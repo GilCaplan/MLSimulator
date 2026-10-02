@@ -103,6 +103,47 @@ MODELS.append({"id": "baseline", "label": "Baseline", "family": "Reference", "ta
                "description": "Always predicts the most common class (or the average). Any real model must beat it.",
                "params": []})
 
+_UNSUP = [
+    {"id": "kmeans", "label": "K-Means", "family": "Clustering", "tasks": ["clustering"], "emoji": "🎯", "trainer": "unsupervised",
+     "description": "Drops k centre points, assigns every row to its nearest centre, moves the centres to the middle of their rows, and repeats.",
+     "params": [P("n_clusters", "Clusters (k)", "int", 3, "How many groups to look for. Use the k sweep on Improve to choose.", min=2, max=20),
+                P("init", "Starting positions", "choice", "k-means++", "k-means++ spreads the starting centres out; random can get stuck.", options=["k-means++", "random"]),
+                P("max_iter", "Max steps", "int", 30, "How many move-the-centres steps at most.", min=1, max=100)]},
+    {"id": "gmm", "label": "Gaussian Mixture", "family": "Clustering", "tasks": ["clustering"], "emoji": "🫧", "trainer": "unsupervised",
+     "description": "Fits overlapping bell-shaped blobs; each row gets a probability of belonging to each blob. Handles stretched clusters.",
+     "params": [P("n_components", "Clusters", "int", 3, "How many blobs.", min=2, max=20),
+                P("covariance_type", "Blob shape", "choice", "full", "full = any ellipse, diag = axis-aligned, spherical = round.", options=["full", "diag", "spherical"]),
+                P("max_iter", "Max steps", "int", 60, "Expectation-maximisation steps.", min=5, max=300)]},
+    {"id": "dbscan", "label": "DBSCAN", "family": "Clustering", "tasks": ["clustering"], "emoji": "🧭", "trainer": "unsupervised",
+     "description": "Finds dense regions of any shape and labels isolated points as noise. You don't choose k — you choose how close is 'close'.",
+     "params": [P("eps", "Neighbourhood size (eps)", "float", 0.8, "How close points must be to count as neighbours (in scaled units).", min=0.05, max=5.0, step=0.05),
+                P("min_samples", "Min neighbours", "int", 8, "How many neighbours make a point part of a dense region.", min=2, max=50)]},
+    {"id": "agglomerative", "label": "Hierarchical clustering", "family": "Clustering", "tasks": ["clustering"], "emoji": "🌳", "trainer": "unsupervised",
+     "description": "Starts with every row alone and keeps merging the two closest groups until k remain.",
+     "params": [P("n_clusters", "Clusters (k)", "int", 3, "Where to stop merging.", min=2, max=20),
+                P("linkage", "Merge rule", "choice", "ward", "ward = keep groups compact; average/complete/single = other notions of 'closest'.", options=["ward", "average", "complete", "single"])]},
+    {"id": "pca", "label": "PCA", "family": "Reduction", "tasks": ["reduction"], "emoji": "🧮", "trainer": "unsupervised",
+     "description": "Finds the directions along which your data varies most and keeps the top few — a faithful, linear summary.",
+     "params": [P("n_components", "Components kept", "int", 5, "How many directions to keep.", min=2, max=50)]},
+    {"id": "tsne", "label": "t-SNE", "family": "Reduction", "tasks": ["reduction"], "emoji": "🗺️", "trainer": "unsupervised",
+     "description": "Builds a 2-D map that keeps similar rows next to each other. Great pictures; distances between far-apart groups mean little.",
+     "params": [P("perplexity", "Perplexity", "float", 30.0, "Roughly how many neighbours each point cares about. Small = local detail, large = global shape.", min=5.0, max=100.0, step=1.0)]},
+    {"id": "isolation_forest", "label": "Isolation Forest", "family": "Anomaly", "tasks": ["anomaly"], "emoji": "🌲", "trainer": "unsupervised",
+     "description": "Randomly splits the data again and again; unusual rows get isolated in very few splits.",
+     "params": [P("n_estimators", "Trees", "int", 200, "More trees = steadier scores.", min=20, max=1000, step=10),
+                P("contamination", "Expected share of anomalies", "float", 0.05, "Sets the alarm threshold: the top share of scores get flagged.", min=0.005, max=0.3, step=0.005)]},
+    {"id": "one_class_svm", "label": "One-Class SVM", "family": "Anomaly", "tasks": ["anomaly"], "emoji": "🛡️", "trainer": "unsupervised",
+     "description": "Draws a smooth boundary around the 'normal' data; anything outside is suspicious.",
+     "params": [P("nu", "Boundary tightness (nu)", "float", 0.05, "Upper bound on the share of training rows left outside.", min=0.005, max=0.5, step=0.005),
+                P("kernel", "Kernel", "choice", "rbf", "Shape of the boundary.", options=["rbf", "linear", "poly"]),
+                P("contamination", "Expected share of anomalies", "float", 0.05, "Sets the alarm threshold.", min=0.005, max=0.3, step=0.005)]},
+    {"id": "lof", "label": "Local Outlier Factor", "family": "Anomaly", "tasks": ["anomaly"], "emoji": "🔎", "trainer": "unsupervised",
+     "description": "Compares each row's local density with its neighbours'. Rows in much emptier places than their neighbours are outliers.",
+     "params": [P("n_neighbors", "Neighbours", "int", 20, "Size of the local neighbourhood.", min=3, max=100),
+                P("contamination", "Expected share of anomalies", "float", 0.05, "Sets the alarm threshold.", min=0.005, max=0.3, step=0.005)]},
+]
+MODELS.extend(_UNSUP)
+
 MODEL_INDEX = {m["id"]: m for m in MODELS}
 
 

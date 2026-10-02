@@ -3,14 +3,21 @@ import { useMemo } from "react";
 import { stagger } from "../../design/motion";
 import { classColor } from "../../lib/colors";
 import { fmt } from "../../lib/format";
-import type { DatasetProfile, Task } from "../../lib/types";
+import type { DatasetProfile } from "../../lib/types";
 import { BarList, Heatmap, Histogram, Scatter } from "../charts";
 import { Glass, InfoTip, Spinner } from "../glass";
 import { liftFlat } from "./shared";
 import { Disclosure, DivergingBars, SectionTitle } from "./ui";
 
 /** Target distribution, 2-D map, target correlations and correlation heatmap. */
-export function ProfilePanel({ profile, target, task, loading }: { profile: DatasetProfile | null; target: string | null; task: Task | null; loading: boolean }) {
+export function ProfilePanel({ profile, target, loading, unsupervised }: {
+  profile: DatasetProfile | null;
+  /** the answer column — or, for unsupervised projects, the hidden truth column used for colouring */
+  target: string | null;
+  task?: string | null;
+  loading: boolean;
+  unsupervised?: boolean;
+}) {
   const continuous = !!profile?.target_hist;
   const classes = profile?.class_balance?.labels ?? null;
   const points = useMemo(
@@ -29,6 +36,7 @@ export function ProfilePanel({ profile, target, task, loading }: { profile: Data
   }
   const total = profile.class_balance ? profile.class_balance.counts.reduce((a, b) => a + b, 0) + profile.class_balance.other : 0;
   const corr = profile.target_correlations ?? [];
+  if (unsupervised) return <UnsupervisedProfile profile={profile} truth={target} points={points} classes={classes} continuous={continuous} total={total} loading={loading} />;
   return (
     <motion.div variants={stagger(0.06)} initial="hidden" animate="show" className="col" style={{ gap: 16 }}>
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "stretch" }}>
@@ -73,6 +81,54 @@ export function ProfilePanel({ profile, target, task, loading }: { profile: Data
               </Disclosure>
             </div>
           )}
+        </Glass>
+      )}
+    </motion.div>
+  );
+}
+
+/** Unsupervised projects: the hidden truth (if any), the bird's-eye map and which columns overlap. */
+function UnsupervisedProfile({ profile, truth, points, classes, continuous, total, loading }: {
+  profile: DatasetProfile;
+  truth: string | null;
+  points: ReturnType<typeof liftFlat>;
+  classes: string[] | null;
+  continuous: boolean;
+  total: number;
+  loading: boolean;
+}) {
+  const cb = profile.class_balance;
+  const map = (
+    <Glass animate_in>
+      <SectionTitle icon="🗺️" title="Bird's-eye view"
+        help="PCA squashes all the numeric columns onto a flat map while keeping as much of the spread as possible. Dots that are close are similar rows."
+        right={loading ? <Spinner size={14} color="var(--accent)" /> : null}
+        sub={truth
+          ? <>Every row as a dot, coloured by the hidden “{truth}” — the models won't see these colours. Clumps are what they'll hunt for.</>
+          : "Every row as a dot. Do you see clumps, a long smear or a few lonely dots? That's what the models will hunt for."} />
+      <Scatter points={truth ? points : points.map((p) => ({ ...p, label: null }))} classes={classes} continuous={continuous && !!truth} height={cb ? 220 : 280} radius={2.6} showLegend={!!truth} />
+    </Glass>
+  );
+  return (
+    <motion.div variants={stagger(0.06)} initial="hidden" animate="show" className="col" style={{ gap: 16 }}>
+      {cb ? (
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, alignItems: "stretch" }}>
+          <Glass animate_in>
+            <SectionTitle icon="🙈" title="The hidden answer key"
+              help="These are the real groups, known only because this is practice data. The models never get them — they're used afterwards to grade what the models found."
+              sub={<>How many rows have each <b>{truth}</b> value</>} />
+            <BarList labels={cb.labels} values={cb.counts} colors={cb.labels.map((l) => classColor(l, classes))}
+              format={(v) => `${Math.round(v).toLocaleString()} · ${total ? Math.round((v / total) * 100) : 0}%`} />
+          </Glass>
+          {map}
+        </div>
+      ) : map}
+      {profile.correlation_matrix && (
+        <Glass animate_in>
+          <SectionTitle icon="🔗" title="Which columns move together?"
+            help="Correlation runs from −1 to +1. Columns that move together carry overlapping information — they count twice when the models measure how far apart rows are."
+            sub="Strongly linked pairs say the same thing twice. Consider dropping one, or let PCA (in Prepare) merge them." />
+          <Heatmap columns={profile.correlation_matrix.columns} matrix={profile.correlation_matrix.matrix} />
         </Glass>
       )}
     </motion.div>

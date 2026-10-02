@@ -84,13 +84,20 @@ def run_train(job):
                                              "curve": res.get("curve"), "cv": res.get("cv")})
     if not results:
         raise RuntimeError("Every model failed: " + "; ".join(f"{k}: {v}" for k, v in failures.items()))
+    from .unsupervised import UNSUPERVISED_TASKS
+    unsup = prepared.task in UNSUPERVISED_TASKS
     try:
+        if unsup:
+            raise StopIteration
         results["baseline"] = run_baseline(prepared)
         manager.emit(job, "log", {"level": "info", "message": "Added the baseline (always guessing) for comparison."})
+    except StopIteration:
+        pass
     except Exception as e:  # noqa: BLE001
         print("baseline failed:", e)
     lb = leaderboard(results, prepared.task, getattr(prepared, "modality", "tabular"))
-    suggestions = coach.results_suggestions(results, lb, prepared, req.get("models"), options)
+    suggestions = (coach.unsupervised_suggestions(results, prepared) if unsup
+                   else coach.results_suggestions(results, lb, prepared, req.get("models"), options))
     return {"job_id": job.id, "task": prepared.task, "prepared_id": prepared.id, "models": results, "failures": failures,
             "leaderboard": lb, "coach": suggestions, "classes": prepared.classes,
             "feature_names": prepared.feature_names, "options": options}
@@ -101,6 +108,18 @@ def run_tune(job):
     prepared = prepared_store.get(req["prepared_id"])
     payload = {"family": family(req["model_id"]), "op": "tune", "prepared_id": prepared.id, **req}
     out = run_in_process(payload, lambda t, d: manager.emit(job, t, d), job.cancel, "tuning")
+    if out[0] == "cancelled":
+        raise Cancelled()
+    if out[0] == "error":
+        raise RuntimeError(out[1])
+    return out[1]
+
+
+def run_sweep_job(job):
+    req = job.request
+    prepared = prepared_store.get(req["prepared_id"])
+    payload = {"family": "classic", "op": "sweep", "prepared_id": prepared.id, **req}
+    out = run_in_process(payload, lambda t, d: manager.emit(job, t, d), job.cancel, "k sweep")
     if out[0] == "cancelled":
         raise Cancelled()
     if out[0] == "error":

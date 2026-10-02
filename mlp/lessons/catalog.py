@@ -404,8 +404,67 @@ NEW_LESSONS.update({
     },
 })
 
+NEW_LESSONS.update({
+    "choosing_k": {
+        "id": "choosing_k", "stage": "Discover", "emoji": "🫧", "title": "Clustering: how many groups?",
+        "tagline": "Clustering always finds the number of groups you ask for — so ask carefully.",
+        "modeled_on": "Retail world — customer segmentation (clustering)",
+        "learn": [
+            {"icon": "🧩", "heading": "No answers to learn from", "body": "In **clustering** there's no target column. The algorithm groups rows that look alike — useful for customer segments, document topics, or machine states."},
+            {"icon": "🎯", "heading": "K-means needs a k", "body": "K-means drops **k** centres, assigns each row to the nearest one, moves each centre to the middle of its rows, and repeats until nothing moves. It will happily split your data into 3 groups even if there are really 5."},
+            {"icon": "📉", "heading": "Choosing k", "body": "Try several k and compare: the **silhouette** score (how much closer points are to their own group than to the next one — higher is better) and the **elbow** of the within-group spread (inertia). Pick a k where the groups are crisp *and* make sense."},
+            {"icon": "🔍", "heading": "Name the groups", "body": "A cluster is only useful once you can describe it: 'young, frequent, discount-loving' → *students*. The cluster **profiles** show which features make each group different."},
+        ],
+        "demo": "choosing_k",
+        "demo_caption": "Change k and watch k-means move its centres, while the silhouette and the elbow tell you which k fits.",
+        "quiz": [
+            {"q": "You run k-means with k=3 on data that truly has 5 groups. What happens?",
+             "options": ["It refuses to run", "It merges some real groups into 3 clusters", "It finds 5 anyway", "It labels the rest as noise"],
+             "answer": 1, "explain": "K-means always returns exactly k groups."},
+            {"q": "Which signal helps choose k?",
+             "options": ["The silhouette score across different k", "Training accuracy", "ROC-AUC", "The number of columns"],
+             "answer": 0, "explain": "Silhouette (and the elbow) compare how well-separated the groups are for each k."},
+        ],
+        "challenge": {
+            "title": "Segment the shoppers", "dataset_name": "Shoppers (practice)",
+            "story": "A retailer wants customer segments for marketing. The analyst ran k-means with the default **k = 3** and the segments feel muddled — the marketing team can't describe them.",
+            "task": "Find segments that match the real customer types (a hidden column checks your groups — agreement ARI ≥ 0.85).",
+            "hints": ["Train once and look at the cluster profiles — do any clusters look like two kinds of shoppers mixed together?", "Open **Refine → k sweep** and compare silhouette for k = 2…10.", "Set K-Means to the k with the best silhouette and train again."],
+            "solution": "With k = 3 real segments get merged (ARI ≈ 0.57). The k sweep peaks at k = 5, which recovers the five shopper types almost perfectly (ARI ≈ 1.0).",
+        },
+    },
+    "curse": {
+        "id": "curse", "stage": "Discover", "emoji": "🌫️", "title": "The curse of dimensionality",
+        "tagline": "With enough noisy columns, every point looks equally far from every other.",
+        "modeled_on": "Predicting suspicious network packets (many weak features)",
+        "learn": [
+            {"icon": "📏", "heading": "Distances need signal", "body": "Clustering, KNN and anomaly detection all compare **distances**. A useful column adds real differences; a noisy column adds random ones."},
+            {"icon": "🌫️", "heading": "Noise piles up", "body": "With 3 meaningful sensors and 40 noisy ones, the random part of every distance dwarfs the real part. Groups that are obvious in 3-D become invisible in 43-D — the **curse of dimensionality**."},
+            {"icon": "🧮", "heading": "PCA finds the strong directions", "body": "**PCA** rotates the data to the directions of greatest variation. When useful sensors move *together*, they form a direction that stands far above the noise. Keep only the components that stand out on the **scree plot** and drop the rest."},
+            {"icon": "✂️", "heading": "Fewer, better dimensions", "body": "Reducing dimensions (PCA, feature selection, domain knowledge) often helps clustering and distance-based models more than any tuning."},
+        ],
+        "demo": "curse",
+        "demo_caption": "Add noisy columns one by one and watch the gap between near and far neighbours vanish — then let PCA find the signal again.",
+        "quiz": [
+            {"q": "Why does adding many noisy columns hurt k-means?",
+             "options": ["It makes training slower only", "Random differences dominate the distances, hiding real groups", "K-means can't handle more than 10 columns", "It changes k"],
+             "answer": 1, "explain": "Distances get swamped by noise."},
+            {"q": "On a PCA scree plot, one component explains far more than the rest, which sit at a flat level. What should you keep?",
+             "options": ["All components", "Just the component(s) that stand out above the flat noise level", "Only the last component", "None"],
+             "answer": 1, "explain": "The flat tail is noise; the standout components carry the signal."},
+        ],
+        "challenge": {
+            "title": "Machine moods", "dataset_name": "Factory sensors (practice)",
+            "story": "A factory logs **43 sensor channels**. Engineers know the machines run in four states, but k-means on all channels produces meaningless groups. Somewhere in the noise, a few sensors tell the real story.",
+            "task": "Recover the four machine states (agreement with the hidden states ARI ≥ 0.75).",
+            "hints": ["Train once: how well do the clusters match? Look at the profiles — do they make sense?", "On **Prepare → Reduce**, add a PCA step. Train a PCA 'map' model first to see its scree plot.", "Keep only the components that stand out on the scree plot (here: 1) and cluster again with k = 4."],
+            "solution": "On all 43 channels k-means scores ARI ≈ 0.31. PCA reveals one direction far above the noise; clustering on it recovers the four states (ARI ≈ 0.98).",
+        },
+    },
+})
+
 ORDER = ["baselines", "missing", "outliers", "leakage", "features", "splits", "scaling", "imbalance", "overfitting",
-         "calibration", "shortcut", "fairness", "convolutions", "augmentation"]
+         "calibration", "shortcut", "fairness", "choosing_k", "curse", "convolutions", "augmentation"]
 _by_id = {l["id"]: l for l in LESSONS} | NEW_LESSONS
 LESSONS = [{**_by_id[i], "order": n + 1} for n, i in enumerate(ORDER)]
 LESSON_INDEX = {l["id"]: l for l in LESSONS}

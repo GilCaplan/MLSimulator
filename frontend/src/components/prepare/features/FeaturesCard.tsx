@@ -33,7 +33,7 @@ export function FeaturesCard({ ctx, open, onToggle, flash }: CardProps) {
     steps.forEach((s, i) => {
       for (const n of outputNames(s)) {
         if (!n) continue;
-        if (n === spec.target) out[i] = `“${n}” is the name of your target — pick another name.`;
+        if (n && n === (spec.target ?? spec.truth)) out[i] = `“${n}” is the name of your target — pick another name.`;
         else if (seen.has(n)) out[i] = `Step ${seen.get(n)! + 1} already creates “${n}” — this one will overwrite it.`;
         else if (allCols.includes(n)) out[i] = `“${n}” already exists in your data — it will be replaced by this feature.`;
         seen.set(n, i);
@@ -184,7 +184,7 @@ export function FeaturesCard({ ctx, open, onToggle, flash }: CardProps) {
               numeric={[...dsNumeric, ...earlier(s.op === "bin" ? steps.length : i).filter((n) => !dsNumeric.includes(n))]}
               dates={dateChoices}
               formulaCols={[...allCols.filter((c) => c !== spec.target), ...earlier(i)]}
-              target={spec.target}
+              target={spec.target ?? spec.truth ?? ""}
               colInfo={colInfo}
               preview={preview.cols}
               loading={preview.loading}

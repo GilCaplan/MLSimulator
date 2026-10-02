@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useProject } from "../../lib/store";
+import { isUnsupervised, useProject } from "../../lib/store";
 import type { DatasetSummary, Point } from "../../lib/types";
 
 let idCounter = 0;
@@ -12,8 +12,27 @@ export function adoptDataset(d: DatasetSummary, target?: string | null) {
   s.setProfile(null);
   s.setReport(null);
   const names = d.columns.map((c) => c.name);
+  if (isUnsupervised(s.project?.task)) {
+    s.update({ dataset_id: d.id, target: null, truth: defaultTruth(d, target), pipeline: null, prepared_id: null });
+    return;
+  }
   const t = target && names.includes(target) ? target : d.target_hint ?? names[names.length - 1] ?? null;
   s.update({ dataset_id: d.id, target: t, pipeline: null, prepared_id: null });
+}
+
+/**
+ * Unsupervised projects: the hidden comparison column for a dataset — the sample's truth hint, else the answer
+ * column of category-style data (toy shapes, designed data, classification samples), else none.
+ */
+export function defaultTruth(d: DatasetSummary, keep?: string | null): string | null {
+  const names = d.columns.map((c) => c.name);
+  if (keep && names.includes(keep)) return keep;
+  if (d.truth_hint && names.includes(d.truth_hint)) return d.truth_hint;
+  const hint = d.target_hint && names.includes(d.target_hint) ? d.target_hint : null;
+  if (!hint) return null;
+  const col = d.columns.find((c) => c.name === hint);
+  const categorical = d.task_hint === "classification" || (!!col && col.unique <= 20);
+  return categorical ? hint : null;
 }
 
 /** Debounced copy of a value (compared by JSON so fresh-but-equal objects don't retrigger). */

@@ -74,14 +74,17 @@ export function stepFlags(p: LessonProgress | undefined): Record<LessonStepId, b
 
 /** Format a goal / check value: R² as a decimal, everything else as a percentage. */
 export const fmtGoal = (metric: string, v: number | null | undefined) =>
-  v === null || v === undefined ? "—" : metric === "r2" ? (Math.abs(v) >= 100 ? v.toExponential(1) : v.toFixed(2)) : pct(v, metric === "tpr_gap" ? 1 : 0);
+  v === null || v === undefined ? "—"
+    : metric === "r2" || metric === "ari" || metric === "roc_auc" ? (Math.abs(v) >= 100 ? v.toExponential(1) : v.toFixed(2))
+    : pct(v, metric === "tpr_gap" ? 1 : 0);
 
 /** The learner's own-test metric comparable to a hidden-set goal metric (if any). */
-export const OWN_METRIC: Record<string, string | undefined> = { accuracy: "accuracy", balanced_accuracy: "balanced_accuracy", r2: "r2" };
+export const OWN_METRIC: Record<string, string | undefined> = { accuracy: "accuracy", balanced_accuracy: "balanced_accuracy", r2: "r2", ari: "ari" };
 
 export const SHORT_METRIC: Record<string, string> = {
   accuracy: "accuracy", balanced_accuracy: "balanced accuracy", r2: "R²", recall_pos: "recall", precision_pos: "precision",
-  f1_pos: "F1", tpr_gap: "approval gap",
+  f1_pos: "F1", tpr_gap: "approval gap", ari: "agreement (ARI)", ece: "calibration error", roc_auc: "ROC-AUC",
+  mae_vs_baseline: "gain over baseline", estimate_gap: "estimate gap",
 };
 
 /** Headline numbers for the "your test vs the real world" contrast — leads with a failed goal when there is one. */
@@ -89,7 +92,7 @@ export function headline(check: ChallengeCheck) {
   const own = check.your_test;
   const comparable = (g: ChallengeCheck["goals"][number]) => !!OWN_METRIC[g.metric] && own[OWN_METRIC[g.metric]!] !== undefined;
   const g = check.goals.find((x) => !x.passed && comparable(x)) ?? check.goals.find((x) => !x.passed) ?? check.goals.find(comparable) ?? check.goals[0];
-  const ownKey = comparable(g) ? OWN_METRIC[g.metric]! : own.r2 !== undefined ? "r2" : "accuracy";
+  const ownKey = comparable(g) ? OWN_METRIC[g.metric]! : own.r2 !== undefined ? "r2" : own.silhouette !== undefined ? "silhouette" : "accuracy";
   const ownMetric = own[ownKey] !== undefined ? ownKey : Object.keys(own)[0];
   return { ownMetric, ownValue: own[ownMetric] as number | undefined, goal: g };
 }

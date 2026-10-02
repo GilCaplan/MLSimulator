@@ -50,7 +50,7 @@ def save(job_id: str, key: str, name: str, notes: str = "", project_id: str | No
             "modality": getattr(prepared, "modality", "tabular"), "image_shape": prepared.image_shape}
     (d / "meta.json").write_text(json.dumps(jsonable(meta)))
     detail = {k: res.get(k) for k in ("confusion", "roc", "pr", "residuals", "importance", "surface", "curve", "cv", "thresholds", "notes",
-                                      "calibration", "mistakes", "slices", "vision")}
+                                      "calibration", "mistakes", "slices", "vision", "clusters", "reduction", "anomaly")}
     (d / "result.json").write_text(json.dumps(jsonable(detail)))
     return meta
 
@@ -93,6 +93,10 @@ def _fam(mid: str) -> str:
 
 def predict(mid: str, rows: list[dict]) -> dict:
     return procs.call(_fam(mid), "predict", model_dir=str(ROOT / mid), rows=rows)
+
+
+def assign(mid: str, rows: list[dict]) -> dict:
+    return procs.call(_fam(mid), "assign", model_dir=str(ROOT / mid), rows=rows)
 
 
 def predict_image(mid: str, images: list[str]) -> dict:

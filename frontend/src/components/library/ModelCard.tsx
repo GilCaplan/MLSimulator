@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
 import { forwardRef, useState } from "react";
 import { spring } from "../../design/motion";
-import { pct, timeAgo } from "../../lib/format";
+import { timeAgo } from "../../lib/format";
 import { navigate } from "../../lib/router";
 import type { SavedModel } from "../../lib/types";
 import { ProgressRing, Tooltip } from "../glass";
 import { Thumb } from "../train/visionKit";
-import { EditableText, TASK_META, headline } from "./shared";
+import { EditableText, headline, taskMeta } from "./shared";
 
 /** One saved model in the library grid. */
 export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: string; onRename: (name: string) => void; onDelete: () => void }>(
@@ -14,9 +14,8 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
     const [hover, setHover] = useState(false);
     const [renaming, setRenaming] = useState(false);
     const h = headline(model);
-    const v = h.value ?? 0;
-    const tone = v >= 0.85 ? "var(--success)" : v >= 0.6 ? "var(--accent)" : "var(--warning)";
-    const task = TASK_META[model.task];
+    const tone = h.tone;
+    const task = taskMeta(model.task);
     return (
       <motion.div
         ref={ref}
@@ -61,12 +60,14 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
         </div>
 
         <div className="inset row" style={{ padding: "10px 12px", gap: 12 }}>
-          <ProgressRing value={Math.max(0, v)} size={46} stroke={5} color={tone}>
-            <span style={{ fontSize: 10.5 }}>{h.value === null ? "—" : Math.round(Math.max(0, v) * 100)}</span>
+          <ProgressRing value={h.ring} size={46} stroke={5} color={tone}>
+            {["classification", "regression"].includes(model.task)
+              ? <span style={{ fontSize: 10.5 }}>{h.value === null ? "—" : Math.round(h.ring * 100)}</span>
+              : <span style={{ fontSize: 13 }}>{task.icon}</span>}
           </ProgressRing>
           <div className="col grow" style={{ gap: 0 }}>
-            <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }} className="num">{h.value === null ? "—" : pct(h.value, 1)}</span>
-            <span className="tiny muted">test {h.label.toLowerCase()}</span>
+            <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }} className="num">{h.text}</span>
+            <span className="tiny muted">{["classification", "regression"].includes(model.task) ? "test " : ""}{h.label.toLowerCase()}</span>
           </div>
           {model.modality === "image" && model.dataset?.id && (
             <div className="row" style={{ gap: 0 }}>

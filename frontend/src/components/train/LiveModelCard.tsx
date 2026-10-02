@@ -7,7 +7,9 @@ import { Glass, ProgressBar, ProgressRing, Tooltip } from "../glass";
 import { LineChart, type Series } from "../charts";
 import { NetworkDiagram } from "../nn/NetworkDiagram";
 import { alignWeights, diagramLayers } from "./archLayers";
-import { archFor, fmtMetric, nFeatures, nOutputs, primaryMetric } from "./util";
+import { LiveClusterWalk, WalkExplainer } from "./unsup/LiveClusterWalk";
+import { archFor, fmtMetric, metricHelp, metricLabel, nFeatures, nOutputs, primaryMetric } from "./util";
+import { isUnsupervised } from "../../lib/store";
 
 const STATE: Record<LiveModel["state"], { label: string; cls: string; color: string }> = {
   queued: { label: "Queued", cls: "", color: "var(--text-3)" },
@@ -46,19 +48,24 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
   const weights = useMemo(() => (layers ? alignWeights(m.weights, layers) : undefined), [layers, m.weights]);
   const { series, kind } = curveSeries(m.points);
   const active = m.state === "running" || m.state === "evaluating";
-  const indeterminate = m.state === "running" && !m.epochs && (!m.iter || m.iter.n === 0);
+  const indeterminate = m.state === "running" && !m.epochs && (!m.iter || m.iter.n === 0 || isUnsupervised(project?.task));
+  const unsup = isUnsupervised(project?.task);
+  const walk = unsup && (m.model_id === "kmeans" || m.model_id === "gmm" || !!m.clusterSteps?.length);
   const test = m.metrics?.test?.[metric];
+  const wide = m.nn || walk;
 
   const counter = m.epochs
     ? m.state === "done" && (m.epoch ?? 0) < m.epochs ? `Stopped early at epoch ${m.epoch} / ${m.epochs}` : `Epoch ${m.epoch ?? 0} / ${m.epochs}`
     : m.nn && m.state === "running" ? "Warming up the network…"
-    : m.iter && m.iter.n > 0
+    : walk && m.clusterSteps?.length && m.state === "running"
+      ? `Iteration ${m.clusterSteps.length} · up to ${m.iter?.n ?? "?"}`
+    : m.iter && m.iter.n > 0 && !walk
       ? `Step ${m.iter.i} / ${m.iter.n}`
-      : m.state === "running" ? "Fitting…" : m.state === "evaluating" ? "Grading on test rows…" : m.state === "queued" ? "Waiting its turn" : "";
+      : m.state === "running" ? (unsup ? "Exploring…" : "Fitting…") : m.state === "evaluating" ? (unsup ? "Scoring the result…" : "Grading on test rows…") : m.state === "queued" ? "Waiting its turn" : "";
 
   return (
     <motion.div layout initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring.gentle, delay: index * 0.05 }}
-      style={{ gridColumn: m.nn ? "span 2" : undefined, minWidth: 0 }}>
+      style={{ gridColumn: wide ? "span 2" : undefined, minWidth: 0 }}>
       <Glass style={{ height: "100%", padding: 16, opacity: m.state === "queued" ? 0.7 : 1, borderColor: m.state === "done" ? "rgba(48,209,88,.45)" : undefined, transition: "border-color .4s, opacity .4s" }}>
         <div className="row" style={{ gap: 12, marginBottom: 12 }}>
           <ProgressRing value={m.state === "done" ? 1 : m.pct} size={46} color={st.color}>
@@ -83,7 +90,8 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
           </div>
         </div>
 
-        <div style={{ display: m.nn ? "grid" : "block", gridTemplateColumns: m.nn ? "minmax(0, 1fr) minmax(0, 1fr)" : undefined, gap: 14 }}>
+        <div style={{ display: wide ? "grid" : "block", gridTemplateColumns: wide ? "minmax(0, 1fr) minmax(0, 1fr)" : undefined, gap: 14 }}>
+          {walk && <LiveClusterWalk m={m} />}
           {m.nn && layers && (
             <div className="inset" style={{ padding: 6, overflow: "hidden" }}>
               <NetworkDiagram layers={layers} height={170} compact training={m.state === "running"} weights={weights} speed={1.3} />
@@ -99,13 +107,18 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
                   className="col" style={{ gap: 6, transformPerspective: 600 }}>
                   {series.length > 0 && <LineChart series={series} height={m.nn ? 120 : 100} showLegend={false} />}
                   <div className="row between inset" style={{ padding: "8px 12px" }}>
-                    <span className="small muted">Test {metric === "r2" ? "R²" : "accuracy"}</span>
-                    <b className="num gradient-text" style={{ fontSize: 22 }}>{fmtMetric(metric, test)}</b>
+                    <span className="small muted">{unsup ? metricLabel(metric) : `Test ${metric === "r2" ? "R²" : "accuracy"}`}</span>
+                    <b className="num gradient-text" style={{ fontSize: 22 }}>{unsup && test === undefined ? "done" : fmtMetric(metric, test)}</b>
                   </div>
+                  {unsup && metricHelp(metric, project?.task) && <span className="tiny faint" style={{ lineHeight: 1.45 }}>{metricHelp(metric, project?.task)!.split(". ")[0]}.</span>}
                 </motion.div>
               ) : m.state === "failed" ? (
                 <motion.div key="fail" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: [0, -6, 6, -3, 0] }} className="small" style={{ color: "var(--danger)", lineHeight: 1.5 }}>
                   {m.error}
+                </motion.div>
+              ) : walk ? (
+                <motion.div key="walk" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <WalkExplainer gmm={m.model_id === "gmm"} />
                 </motion.div>
               ) : series.length > 0 ? (
                 <motion.div key="chart" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -121,7 +134,7 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
                   )}
                   {(indeterminate || m.state === "evaluating") && (
                     <span className="small" style={{ background: "linear-gradient(90deg, var(--text-3) 0%, var(--text) 50%, var(--text-3) 100%)", backgroundSize: "800px 100%", animation: "shimmer 1.8s infinite linear", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", fontWeight: 560 }}>
-                      {m.state === "evaluating" ? "grading on unseen rows…" : m.nn ? "warming up the network…" : "fitting… this model learns in one go"}
+                      {m.state === "evaluating" ? (unsup ? "measuring how good the structure is…" : "grading on unseen rows…") : m.nn ? "warming up the network…" : unsup ? (project?.task === "anomaly" ? "learning what “normal” looks like…" : project?.task === "reduction" ? "folding the data onto a flat map…" : "looking for natural groups…") : "fitting… this model learns in one go"}
                     </span>
                   )}
                 </motion.div>

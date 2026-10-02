@@ -52,6 +52,12 @@ def predict(mid: str, body: dict = Body(...)):
     return jsonable(library.predict(mid, rows))
 
 
+@router.post("/library/{mid}/assign")
+def assign(mid: str, body: dict = Body(...)):
+    """Unsupervised models: cluster + distances to centres, anomaly score, and/or 2-D map position for rows."""
+    return jsonable(library.assign(mid, body.get("rows") or []))
+
+
 @router.post("/library/{mid}/predict-image")
 def predict_image(mid: str, body: dict = Body(...)):
     images = body.get("images") or []

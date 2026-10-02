@@ -8,7 +8,8 @@ import { navigate } from "../lib/router";
 import { toast } from "../lib/store";
 import type { SavedModel, Task } from "../lib/types";
 
-type Filter = "all" | Task | "image";
+type Filter = "all" | Task | "image" | "discover";
+const UNSUP = ["clustering", "reduction", "anomaly"];
 
 export function LibraryPage() {
   const registry = useRegistry();
@@ -25,14 +26,15 @@ export function LibraryPage() {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (models ?? []).filter((m) =>
-      (filter === "all" || m.task === filter || (filter === "image" && m.modality === "image")) &&
-      (!q || [m.name, m.label, m.dataset?.name, m.target, m.notes, m.modality === "image" ? "image picture" : ""].some((s) => s && s.toLowerCase().includes(q))));
+      (filter === "all" || m.task === filter || (filter === "image" && m.modality === "image") || (filter === "discover" && UNSUP.includes(m.task))) &&
+      (!q || [m.name, m.label, m.dataset?.name, m.target, m.notes, m.task, m.modality === "image" ? "image picture" : ""].some((s) => s && s.toLowerCase().includes(q))));
   }, [models, query, filter]);
 
   const counts = useMemo(() => ({
     classification: (models ?? []).filter((m) => m.task === "classification").length,
     regression: (models ?? []).filter((m) => m.task === "regression").length,
     image: (models ?? []).filter((m) => m.modality === "image").length,
+    discover: (models ?? []).filter((m) => UNSUP.includes(m.task)).length,
   }), [models]);
 
   const rename = async (m: SavedModel, name: string) => {
@@ -97,6 +99,7 @@ export function LibraryPage() {
               { value: "classification", label: `🏷️ Classification · ${counts.classification}` },
               { value: "regression", label: `📈 Regression · ${counts.regression}` },
               ...(counts.image ? [{ value: "image" as Filter, label: `🖼️ Images · ${counts.image}` }] : []),
+              ...(counts.discover ? [{ value: "discover" as Filter, label: `🫧 Discover · ${counts.discover}` }] : []),
             ]}
           />
         </motion.div>

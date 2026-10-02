@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import type { ReactNode } from "react";
 import { spring } from "../../design/motion";
 import { navigate } from "../../lib/router";
 import type { DatasetProfile, DatasetSummary, Project } from "../../lib/types";
@@ -15,7 +16,7 @@ const SOURCE: Record<DatasetSummary["source"], { label: string; icon: string; cl
 const ROLE_ICON: Record<string, string> = { numeric: "🔢", categorical: "🏷️", id: "🆔", text: "📝", datetime: "📅" };
 
 /** Dataset name/size card + the "What do you want to predict?" picker. */
-export function DatasetHeader({ dataset, project, profile, pickerOpen, onTogglePicker, onEditDesign, onTarget }: {
+export function DatasetHeader({ dataset, project, profile, pickerOpen, onTogglePicker, onEditDesign, onTarget, picker }: {
   dataset: DatasetSummary;
   project: Project;
   profile: DatasetProfile | null;
@@ -23,10 +24,12 @@ export function DatasetHeader({ dataset, project, profile, pickerOpen, onToggleP
   onTogglePicker: () => void;
   onEditDesign?: () => void;
   onTarget: (t: string) => void;
+  /** replaces the "what do you want to predict?" row (unsupervised projects pick a hidden truth instead) */
+  picker?: ReactNode;
 }) {
   const src = SOURCE[dataset.source] ?? SOURCE.upload;
   const target = project.target ?? "";
-  const mismatch = profile?.task_guess && project.task && profile.task_guess !== project.task;
+  const mismatch = !picker && profile?.task_guess && project.task && profile.task_guess !== project.task;
   const options = [
     ...(target ? [] : [{ value: "", label: "Choose a column…" }]),
     ...dataset.columns.map((c) => ({ value: c.name, label: `${ROLE_ICON[c.role] ?? ""} ${c.name}` })),
@@ -66,13 +69,15 @@ export function DatasetHeader({ dataset, project, profile, pickerOpen, onToggleP
 
       <div className="divider" style={{ margin: "16px 0" }} />
 
-      <div className="row wrap" style={{ gap: 14 }}>
-        <span className="row" style={{ gap: 6, fontWeight: 650, fontSize: 15 }}>
-          🎯 What do you want to predict?
-          <InfoTip text="Pick the column that holds the answer. Every other column becomes a clue (a 'feature') the models can use." />
-        </span>
-        <Select value={target} options={options} onChange={onTarget} style={{ minWidth: 220, fontWeight: 600 }} />
-      </div>
+      {picker ?? (
+        <div className="row wrap" style={{ gap: 14 }}>
+          <span className="row" style={{ gap: 6, fontWeight: 650, fontSize: 15 }}>
+            🎯 What do you want to predict?
+            <InfoTip text="Pick the column that holds the answer. Every other column becomes a clue (a 'feature') the models can use." />
+          </span>
+          <Select value={target} options={options} onChange={onTarget} style={{ minWidth: 220, fontWeight: 600 }} />
+        </div>
+      )}
       <AnimatePresence>
         {mismatch && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}>

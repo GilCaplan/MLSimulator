@@ -33,3 +33,4 @@ Use `MLP_DATA_DIR` for test servers so your own `data/` folder stays clean.
 - [Adding a dataset (sample / preset)](docs/workflows/adding_a_dataset.md)
 - [Adding a lesson](docs/lessons_workflow.md)
 - [Release checklist](docs/workflows/release.md)
+- [Building with AI agents](docs/workflows/building_with_agents.md) (max 2 concurrent helpers)

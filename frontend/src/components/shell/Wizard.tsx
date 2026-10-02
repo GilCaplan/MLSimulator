@@ -1,18 +1,46 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { spring, stagger } from "../../design/motion";
+import { api } from "../../lib/api";
 import { navigate } from "../../lib/router";
 import { STEPS, stepAvailable, stepDone, useJob, useProject } from "../../lib/store";
-import type { StepId, Suggestion } from "../../lib/types";
+import type { ProblemType, StepId, Suggestion } from "../../lib/types";
 import { Glass, Spinner } from "../glass";
 import { ChallengeBanner } from "../lessons/ChallengeBanner";
+
+/* ------------------------------------------------------------------ problem-specific step labels */
+
+let problemsCache: ProblemType[] | null = null;
+let problemsLoad: Promise<ProblemType[]> | null = null;
+const loadProblems = () => (problemsLoad ??= api.problems().then((ps) => (problemsCache = ps)).catch(() => { problemsLoad = null; return [] as ProblemType[]; }));
+
+/** The problem type (task × modality) of the open project, from GET /api/problems (fetched once per session). */
+export function useProblem(): ProblemType | null {
+  const task = useProject((s) => s.project?.task ?? null);
+  const modality = useProject((s) => s.project?.modality ?? "tabular");
+  const [list, setList] = useState<ProblemType[] | null>(problemsCache);
+  useEffect(() => { if (!list) loadProblems().then((ps) => setList(ps)); }, [list]);
+  return list?.find((p) => p.task === task && p.modality === modality) ?? null;
+}
+
+/** Wizard label for a step ("Discover", "Refine", "Images"…), following the project's problem type. */
+export function useStepLabel(step: StepId): string {
+  const problem = useProblem();
+  return problem?.steps?.find(([id]) => id === step)?.[1] ?? STEPS.find((s) => s.id === step)?.label ?? step;
+}
+
+/** Friendlier blurbs for the renamed steps of unsupervised problems. */
+const STEP_BLURBS: Record<string, string> = {
+  Discover: "Watch groups emerge", Map: "Flatten it onto a map", Detect: "Spot the odd ones out", Refine: "Sharpen the result",
+};
 
 /** Left-hand vertical stepper for the guided flow. */
 export function Stepper({ current }: { current: StepId }) {
   const project = useProject((s) => s.project);
   const saving = useProject((s) => s.saving);
   const jobRunning = useJob((s) => s.status === "running" && s.kind === "train");
+  const problem = useProblem();
   if (!project) return null;
   return (
     <Glass pad={false} style={{ width: 232, padding: 12, display: "flex", flexDirection: "column", gap: 4, flexShrink: 0, alignSelf: "flex-start" }}>
@@ -28,7 +56,11 @@ export function Stepper({ current }: { current: StepId }) {
       </div>
       {STEPS.map((step, i) => {
         // image projects call the data step "Images"
-        const s = step.id === "data" && project.modality === "image" ? { ...step, label: "Images", icon: "🖼️", blurb: "Pictures to learn from" } : step;
+        const base = step.id === "data" && project.modality === "image" ? { ...step, label: "Images", icon: "🖼️", blurb: "Pictures to learn from" } : step;
+        // the problem type may rename steps (clustering: "Discover" / "Refine")
+        const label = problem?.steps?.find(([id]) => id === step.id)?.[1] ?? base.label;
+        const unsupBlurb = problem?.unsupervised ? ({ problem: "What do we want to find?", prepare: "Clean & scale" } as Partial<Record<StepId, string>>)[step.id] : undefined;
+        const s = label === base.label && !unsupBlurb ? base : { ...base, label, blurb: unsupBlurb ?? STEP_BLURBS[label] ?? base.blurb };
         const active = s.id === current;
         const done = stepDone(project, s.id);
         const avail = stepAvailable(project, s.id);

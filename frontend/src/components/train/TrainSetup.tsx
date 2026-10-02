@@ -2,8 +2,8 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { fadeUp, spring, stagger } from "../../design/motion";
 import { navigate } from "../../lib/router";
-import { DEFAULT_OPTIONS, useJob, useProject } from "../../lib/store";
-import type { TrainOptions } from "../../lib/types";
+import { DEFAULT_OPTIONS, isUnsupervised, useJob, useProject } from "../../lib/store";
+import type { Task, TrainOptions } from "../../lib/types";
 import { Field, Glass, InfoTip, NumberField, Segmented, Select, Spinner } from "../glass";
 import { CV_SCORING, keySettings, primaryMetric, startTraining } from "./util";
 
@@ -15,7 +15,8 @@ export function TrainSetup({ onCancel }: { onCancel?: () => void }) {
   const jobBusy = useJob((s) => s.status === "running");
   const [starting, setStarting] = useState(false);
   const opts: TrainOptions = { ...DEFAULT_OPTIONS, ...(project.options || {}) };
-  const task = project.task ?? "classification";
+  const unsup = isUnsupervised(project.task);
+  const task: Task = project.task === "regression" ? "regression" : "classification";
   const setOpt = (patch: Partial<TrainOptions>) => useProject.getState().update({ options: { ...opts, ...patch } });
   const hasClassic = project.models.some((m) => !spec(m.model_id)?.nn);
 
@@ -31,7 +32,7 @@ export function TrainSetup({ onCancel }: { onCancel?: () => void }) {
         <div className="row between" style={{ marginBottom: 14 }}>
           <div className="col" style={{ gap: 2 }}>
             <h3>The line-up</h3>
-            <span className="small muted">{project.models.length} model{project.models.length === 1 ? "" : "s"} will learn from the same training rows and be graded on the same hidden test rows.</span>
+            <span className="small muted">{project.models.length} model{project.models.length === 1 ? "" : "s"} will {unsup ? "explore the very same rows — no answers given, they have to find the structure on their own." : "learn from the same training rows and be graded on the same hidden test rows."}</span>
           </div>
           <button className="btn sm ghost" onClick={() => navigate(`/p/${project.id}/models`)}>Edit models</button>
         </div>
@@ -67,23 +68,38 @@ export function TrainSetup({ onCancel }: { onCancel?: () => void }) {
       <Glass animate_in>
         <h3 style={{ marginBottom: 14 }}>Training options</h3>
         <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
-          <Field label="Cross-validation" help="Cross-validation trains the model several times, each time holding out a different slice of the training data, and averages the scores. It's slower but tells you how stable a score is. Neural networks skip it to save time.">
+          {!unsup && <Field label="Cross-validation" help="Cross-validation trains the model several times, each time holding out a different slice of the training data, and averages the scores. It's slower but tells you how stable a score is. Neural networks skip it to save time.">
             <div>
               <Segmented value={String(opts.cv_folds || 0)} onChange={(v) => setOpt({ cv_folds: Number(v) })}
                 options={[{ value: "0", label: "Off" }, { value: "3", label: "3" }, { value: "5", label: "5" }, { value: "10", label: "10" }]} />
             </div>
             <span className="tiny faint">{opts.cv_folds ? `Re-checks each model on ${opts.cv_folds} different slices of the data.` : "One quick check on the test rows."}{opts.cv_folds && !hasClassic ? " (Only classic models run CV.)" : ""}</span>
-          </Field>
-          <Field label="CV metric" help="Which score cross-validation reports for each fold.">
+          </Field>}
+          {!unsup && <Field label="CV metric" help="Which score cross-validation reports for each fold.">
             <Select value={opts.cv_scoring || primaryMetric(task)} onChange={(v) => setOpt({ cv_scoring: v })} options={CV_SCORING[task]} style={{ opacity: opts.cv_folds ? 1 : 0.5 }} />
-          </Field>
+          </Field>}
           <Field label="Random seed" help="Models use randomness (shuffling, starting weights). The same seed gives the same result every time — change it to see how much luck is involved.">
             <div className="row" style={{ gap: 8 }}>
               <NumberField value={opts.seed} onChange={(v) => setOpt({ seed: Math.round(v) })} min={0} max={99999} />
               <motion.button whileTap={{ rotate: 180, scale: 0.9 }} className="btn sm icon" title="Roll a random seed" onClick={() => setOpt({ seed: Math.floor(Math.random() * 10000) })}>🎲</motion.button>
             </div>
           </Field>
-          {task === "classification" && (
+          {unsup && (
+            <div className="inset row" style={{ gap: 12, padding: "12px 14px", alignItems: "flex-start", gridColumn: "span 2" }}>
+              <span style={{ fontSize: 22 }}>🧭</span>
+              <span className="small" style={{ lineHeight: 1.55 }}>
+                <b>No answers, no exam.</b>{" "}
+                <span className="muted">
+                  {project.task === "clustering"
+                    ? "Clustering models get no labels, so there's no test score to cross-validate. They're judged by how crisp their groups are (silhouette) — and, if you kept a hidden truth column, by how well the groups match it."
+                    : project.task === "anomaly"
+                      ? "Anomaly detectors learn what “normal” looks like from all the rows and score how unusual each one is. If you kept a hidden truth column, we check whether the real anomalies got the highest scores."
+                      : "Map makers squash many columns onto a flat 2-D picture. They're judged by how honestly the map keeps real neighbours together (trustworthiness)."}
+                </span>
+              </span>
+            </div>
+          )}
+          {!unsup && task === "classification" && (
             <Field label="Calibrate probabilities"
               help="Many models give probabilities that aren't honest — “90% sure” might only be right 70% of the time (resampling like SMOTE makes this worse). Calibration fits a small correction on held-out folds so the numbers mean what they say. Sigmoid fits a smooth S-curve (good for small data); isotonic fits a flexible step curve (needs more rows). It changes the probabilities, rarely the answers.">
               <div>

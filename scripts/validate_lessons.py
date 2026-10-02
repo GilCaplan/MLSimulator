@@ -19,7 +19,7 @@ if not TORCH_MODE:
 from mlp.core.pipeline import prepare
 from mlp.core.evaluate import cls_metrics, reg_metrics
 from mlp.core.registry import build_estimator, defaults
-from mlp.lessons.generators import GENERATORS, IMAGE_LESSONS
+from mlp.lessons.generators import GENERATORS, IMAGE_LESSONS, UNSUPERVISED_LESSONS
 from mlp.lessons.grading import CHALLENGES, grade
 
 warnings.filterwarnings("ignore")
@@ -57,9 +57,31 @@ def run_image(lesson, cfg_name, seed):
     return out
 
 
+def run_unsupervised(lesson, cfg_name, seed):
+    from mlp.core.unsupervised import fit_unsupervised, prepare_unsupervised
+    ch = CHALLENGES[lesson]
+    train, hidden = GENERATORS[lesson](seed=seed)
+    pipe = deep_merge({"task": ch["task"], "target": None, "truth": ch["truth"]}, ch["preset_pipeline"])
+    params = copy.deepcopy(ch.get("preset_params", {}))
+    models = list(ch["preset_models"])
+    if cfg_name != "naive":
+        pipe = deep_merge(pipe, ch[cfg_name].get("pipeline", {}))
+        params = deep_merge(params, ch[cfg_name].get("params", {}))
+        models = ch[cfg_name].get("models", models)
+    prepared = prepare_unsupervised(train, pipe, "validate")
+    out = {}
+    for mid in models:
+        model = fit_unsupervised(mid, params.get(mid, {}), prepared, lambda *a: None, None, mid)
+        labels = model.cluster(prepared.preprocessor.transform(hidden.drop(columns=[ch["truth"]])))
+        out[mid] = grade(lesson, hidden, labels)
+    return out
+
+
 def run(lesson, cfg_name, seed):
     if lesson in IMAGE_LESSONS:
         return run_image(lesson, cfg_name, seed)
+    if lesson in UNSUPERVISED_LESSONS:
+        return run_unsupervised(lesson, cfg_name, seed)
     ch = CHALLENGES[lesson]
     train, hidden = GENERATORS[lesson](seed=seed)
     pipe = deep_merge({"target": ch["target"], "task": ch["task"]}, ch["preset_pipeline"])

@@ -1,10 +1,22 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { spring } from "../../design/motion";
-import { LOWER_IS_BETTER, METRIC_HELP, secs } from "../../lib/format";
-import { useProject } from "../../lib/store";
-import type { RunResult } from "../../lib/types";
+import { secs } from "../../lib/format";
+import { isUnsupervised, useProject } from "../../lib/store";
+import type { ModelResult, RunResult } from "../../lib/types";
 import { Glass, InfoTip, Select, Tooltip } from "../glass";
-import { CLS_METRICS, REG_METRICS, type BoardRow, boardRows, fmtMetric, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
+import { type BoardRow, boardRows, fmtMetric, isUnit, lowerBetter, metricHelp, metricLabel, rankMetrics, useSaved, vsBaseline } from "./util";
+
+/** Unsupervised runs have no train/test gap to show — a short fact about what each model found instead. */
+function sideFact(task: string, m: ModelResult): { text: string; tip: string } {
+  const t = m.metrics.test ?? {};
+  if (task === "clustering") {
+    const n = t.n_clusters;
+    const noise = t.noise_share ? ` · ${Math.round(t.noise_share * 100)}% noise` : "";
+    return { text: n === undefined ? "—" : `${n} group${n === 1 ? "" : "s"}${noise}`, tip: "How many groups it found (DBSCAN can also leave sparse points ungrouped as noise)." };
+  }
+  if (task === "anomaly") return { text: t.flagged_share === undefined ? "—" : `${Math.round(t.flagged_share * 100)}% flagged`, tip: "Share of rows it marks as unusual." };
+  return { text: t.explained_2d !== undefined ? `${Math.round(t.explained_2d * 100)}% kept` : "neighbours only", tip: "PCA: share of the data's variation its 2-D map keeps. t-SNE doesn't keep variation — it only tries to keep neighbours together." };
+}
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -24,9 +36,13 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
     const cfg = project?.models.find((m) => m.key === k);
     return cfg ? spec(cfg.model_id)?.label ?? cfg.model_id : k;
   };
-  const available = (result.task === "regression" ? REG_METRICS : CLS_METRICS).filter((m) => Object.values(result.models).some((r) => !r.baseline && r.metrics.test?.[m] !== undefined));
+  const task = result.task as string;
+  const unsup = isUnsupervised(task);
+  const available = rankMetrics(result);
   const rows = boardRows(result, metric);
-  const lower = LOWER_IS_BETTER.has(metric);
+  const lower = lowerBetter(metric);
+  const help = metricHelp(metric, task);
+  const noTruth = unsup && task !== "reduction" && !Object.values(result.models).some((r) => r.metrics.test?.[task === "anomaly" ? "roc_auc" : "ari"] !== undefined);
   const scores = rows.map((r) => r.score).filter((s): s is number => s !== null);
   const best = scores.length ? (lower ? Math.min(...scores) : Math.max(...scores)) : 0;
   const worst = scores.length ? (lower ? Math.max(...scores) : Math.min(...scores)) : 0;
@@ -53,12 +69,16 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
       <div className="row between wrap" style={{ marginBottom: 14, gap: 10 }}>
         <div className="col" style={{ gap: 2 }}>
           <h3>🏆 Leaderboard</h3>
-          <span className="small muted">Scored on test {project?.modality === "image" ? "pictures" : "rows"} none of the models saw while learning. Click a row for the full report.</span>
+          <span className="small muted">
+            {unsup
+              ? task === "clustering" ? "No answer key here — models are ranked by how crisp and well-separated their groups are. Click a row to see the groups." : task === "anomaly" ? "Ranked by how well the most unusual scores line up with the real anomalies you hid. Click a row to see what got flagged." : "Ranked by how honestly each map keeps real neighbours together. Click a row to explore the map."
+              : <>Scored on test {project?.modality === "image" ? "pictures" : "rows"} none of the models saw while learning. Click a row for the full report.</>}
+          </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
           <span className="small muted">Rank by</span>
-          <Select value={metric} onChange={onMetric} options={available.map((m) => ({ value: m, label: metricLabel(m) + (LOWER_IS_BETTER.has(m) ? " ↓" : "") }))} />
-          {METRIC_HELP[metric] && <InfoTip text={METRIC_HELP[metric]} />}
+          <Select value={metric} onChange={onMetric} options={(available.length ? available : [metric]).map((m) => ({ value: m, label: metricLabel(m) + (lowerBetter(m) ? " ↓" : "") }))} />
+          {help && <InfoTip text={help} />}
         </div>
       </div>
 
@@ -79,11 +99,25 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         </motion.div>
       )}
 
+      {noTruth && (
+        <div className="inset row" style={{ gap: 10, padding: "9px 12px", marginBottom: 12, alignItems: "flex-start" }}>
+          <span style={{ fontSize: 18 }}>🙈</span>
+          <span className="small" style={{ lineHeight: 1.5 }}>
+            <b>No hidden truth column</b>{" "}
+            <span className="muted">
+              {task === "anomaly"
+                ? "— there's no list of real anomalies to check against, so every detector simply flags its most unusual share of rows. Compare their score maps and top anomalies to judge them."
+                : "— so we can only judge how crisp the groups look, not whether they match real categories. Pick a truth column in Data to see agreement scores."}
+            </span>
+          </span>
+        </div>
+      )}
+
       <div className="row tiny faint" style={{ padding: "0 12px 6px", gap: 12 }}>
         <span style={{ width: 30 }} />
         <span style={{ flex: "0 0 180px" }}>Model</span>
-        <span className="grow">Test {metricLabel(metric)}</span>
-        <span style={{ width: 120, textAlign: "right" }}>Train → Test</span>
+        <span className="grow">{unsup ? metricLabel(metric) : `Test ${metricLabel(metric)}`}{lower ? " · lower is better" : ""}</span>
+        <span style={{ width: 120, textAlign: "right" }}>{unsup ? (task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
         <span style={{ width: 64, textAlign: "right" }}>Fit time</span>
       </div>
 
@@ -146,14 +180,21 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                   </span>
                   <b className="num" style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
                 </span>
-                <span className="row num small muted" style={{ width: 120, justifyContent: "flex-end", gap: 4 }}>
+                {unsup ? (() => {
+                  const f = sideFact(task, r.model);
+                  return (
+                    <Tooltip content={f.tip} width={220}>
+                      <span className="num small muted" style={{ width: 120, textAlign: "right", display: "inline-block" }}>{f.text}</span>
+                    </Tooltip>
+                  );
+                })() : <span className="row num small muted" style={{ width: 120, justifyContent: "flex-end", gap: 4 }}>
                   {fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}
                   {overfit && (
                     <Tooltip content={`It scores ${fmtMetric(metric, gap)} better on rows it practised on than on new ones — a sign of memorising (overfitting).`}>
                       <motion.span animate={{ scale: [1, 1.25, 1] }} transition={{ repeat: Infinity, duration: 1.8 }} style={{ cursor: "help" }}>⚠️</motion.span>
                     </Tooltip>
                   )}
-                </span>
+                </span>}
                 <span className="num small faint" style={{ width: 64, textAlign: "right" }}>{secs(r.fit)}</span>
               </motion.button>
             );

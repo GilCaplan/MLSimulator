@@ -1,6 +1,7 @@
 /* Shapes mirrored from the Python backend (mlp/). Keep in sync. */
 
 export type Task = "classification" | "regression";
+export type UnsupervisedTask = "clustering" | "reduction" | "anomaly";
 export type Modality = "tabular" | "image" | "text" | "ratings" | "timeseries";
 
 /** A problem type from GET /api/problems (task × modality), mirrored from mlp/core/problems.py */
@@ -16,6 +17,58 @@ export interface ProblemType {
   lower_is_better: boolean;
   enabled: boolean;
   steps: [StepId, string][];
+  /** clustering / reduction / anomaly: no target column (an optional hidden "truth" column is used only for comparison) */
+  unsupervised?: boolean;
+}
+
+/** Unsupervised results (mlp/core/unsupervised.py: evaluate_unsupervised) */
+export interface ClusterResult {
+  /** 2-D projection (PCA of the prepared features) coloured by cluster `c` (-1 = noise); `truth` if a truth column exists */
+  points: { x: number; y: number; c: number; truth?: string }[];
+  sizes: Record<string, number>;
+  /** k-means / GMM iterations for replaying the animation; `labels` index into `sample_points` */
+  steps: { iter: number; inertia: number; centroids_2d: number[][]; labels: number[] }[];
+  sample_points?: number[][] | null;
+  centroids_2d?: number[][];
+  center_ids?: number[];
+  contingency?: { rows: string[]; cols: number[]; matrix: number[][] };
+  /** what makes each cluster different: top features by z-score vs the overall mean (raw units) */
+  profiles?: { cluster: number; size: number; top: { feature: string; z: number; mean: number; overall: number }[] }[];
+}
+export interface ReductionResult {
+  points: { x: number; y: number; truth?: string }[];
+  explained?: number[];
+  cumulative?: number[];
+  loadings?: { component: number; top: { feature: string; w: number }[] }[];
+  /** share of variation kept vs number of components (PCA) */
+  kept_curve?: { k: number; kept: number }[];
+  kl_divergence?: number;
+}
+export interface AnomalyResult {
+  threshold: number;
+  hist: Histogram;
+  /** counts of truly anomalous rows per histogram bin (when a truth column exists) */
+  hist_true?: number[];
+  positive_label?: string;
+  top?: { columns: string[]; rows: { score: number; values: any[]; truth?: string }[] };
+  points: { x: number; y: number; score: number; flag: boolean; truth?: string }[];
+  surface?: { nx: number; ny: number; x: [number, number]; y: [number, number]; grid: number[] };
+}
+export interface SweepResult {
+  model_id: string;
+  rows: { k: number; silhouette?: number | null; davies_bouldin?: number | null; ari?: number | null; nmi?: number | null; inertia?: number; bic?: number }[];
+  best_k: number;
+  metric: string;
+  has_truth: boolean;
+}
+export interface AssignResponse {
+  cluster?: number[];
+  distances?: number[][];
+  center_ids?: number[];
+  score?: number[];
+  anomaly?: number[];
+  threshold?: number;
+  coords?: number[][];
 }
 
 export interface ImageSetInfo { label: string; task: Task; emoji: string; blurb: string; params: Record<string, number> }
@@ -124,6 +177,8 @@ export interface DatasetSummary {
   warnings?: string[];
   task_hint?: Task;
   target_hint?: string;
+  /** samples for unsupervised problems: the hidden comparison column */
+  truth_hint?: string;
   image_shape?: [number, number];
   spec?: SyntheticSpec;
   created_at: number;
@@ -216,8 +271,9 @@ export interface SyntheticPreview {
 }
 
 export interface PipelineSpec {
+  /** null for unsupervised problems */
   target: string;
-  task: Task;
+  task: Task | UnsupervisedTask;
   drop_columns: string[];
   impute: { numeric: "median" | "mean" | "most_frequent" | "zero" | "drop_rows"; categorical: "most_frequent" | "constant" };
   encode: { method: "onehot" | "ordinal"; max_categories: number };
@@ -242,6 +298,11 @@ export interface PipelineSpec {
     k_neighbors: number;
   };
   target_transform: "none" | "log1p";
+  /** unsupervised: hidden comparison column, and an optional held-out share */
+  truth?: string | null;
+  unsupervised?: { holdout: number };
+  /** dimensionality reduction step after scaling/selection (fitted on training rows) */
+  reduce?: { method: "none" | "pca"; n_components: number };
   /** image datasets: training resolution, colour, and on-the-fly augmentation (torch models only) */
   image?: { size: 16 | 24 | 32 | 48 | 64; grayscale: boolean; augment: { flip_h?: boolean; flip_v?: boolean; rotate?: number; shift?: number; brightness?: number; cutout?: boolean } };
   /** regression: drop rows whose target is outside [min, max] (data-entry errors) before splitting */
@@ -347,6 +408,9 @@ export interface ModelResult {
   /** true for the automatic 'always guess' reference row */
   baseline?: boolean;
   vision?: VisionResult | null;
+  clusters?: ClusterResult | null;
+  reduction?: ReductionResult | null;
+  anomaly?: AnomalyResult | null;
   fit_time_s: number;
   n_params?: number | null;
 }
@@ -383,7 +447,7 @@ export interface RunHistory { job_id: string; at: number; leaderboard: LeaderRow
 export interface Project {
   id: string;
   name: string;
-  task: Task | null;
+  task: Task | UnsupervisedTask | null;
   step: StepId;
   models: ModelConfig[];
   dataset_id?: string | null;
@@ -396,6 +460,8 @@ export interface Project {
   emoji?: string;
   /** data modality; absent = tabular */
   modality?: Modality;
+  /** unsupervised projects: optional hidden column used only to judge the result (never shown to models) */
+  truth?: string | null;
   /** set when the project was started from a lesson's practice challenge */
   challenge?: { lesson_id: string } | null;
   created_at: number;
@@ -415,7 +481,7 @@ export interface SavedModel {
   id: string;
   name: string;
   notes: string;
-  task: Task;
+  task: Task | UnsupervisedTask;
   model_id: string;
   label: string;
   family: "torch" | "classic";

@@ -32,6 +32,10 @@ def train_entry(payload: dict, q, cancel):
             from .tune import run_tune
             q.put(("result", run_tune(payload, prepared, emit, cancel)))
             return
+        if payload.get("op") == "sweep":
+            from .unsupervised import run_sweep
+            q.put(("result", run_sweep(payload, prepared, emit, cancel)))
+            return
         from .evaluate import evaluate
         from .registry import MODEL_INDEX, is_nn
         m = payload["model"]
@@ -39,6 +43,15 @@ def train_entry(payload: dict, q, cancel):
         seed = int(payload.get("options", {}).get("seed", 42))
         t0 = time.time()
         notes = {}
+        if MODEL_INDEX[model_id].get("trainer") == "unsupervised":
+            from .unsupervised import evaluate_unsupervised, fit_unsupervised
+            est = fit_unsupervised(model_id, m.get("params"), prepared, emit, cancel, key, seed)
+            fit_time = time.time() - t0
+            emit("model.evaluating", {"key": key})
+            result = evaluate_unsupervised(est, prepared, seed)
+            joblib.dump(est, payload["model_path"], compress=3)
+            q.put(("result", {**result, "curve": None, "notes": {}, "cv": None, "fit_time_s": round(fit_time, 3), "n_params": None}))
+            return
         if is_nn(model_id):
             from .train_nn import train_nn
             arch = m.get("nn_arch") or MODEL_INDEX[model_id]["default_arch"]
@@ -113,6 +126,9 @@ def serve_entry(conn, family: str):
             from .nn.builder import summarize
             return summarize(kw["arch"], kw["n_features"], kw["n_out"], kw.get("image_shape"))
         pp, est = load(kw["model_dir"])
+        if op == "assign":
+            X = pp.transform(pd.DataFrame(kw["rows"]))
+            return est.assign(X)
         if op == "predict_arrays":
             X = pp.transform(np.asarray(kw["images"]))
             pred = est.predict(X)

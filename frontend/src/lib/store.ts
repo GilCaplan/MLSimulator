@@ -19,7 +19,10 @@ export const STEPS: { id: StepId; label: string; icon: string; blurb: string }[]
 
 export const DEFAULT_OPTIONS: TrainOptions = { cv_folds: 0, seed: 42 };
 
-export function defaultPipeline(target: string, task: Task): PipelineSpec {
+export const UNSUPERVISED = new Set(["clustering", "reduction", "anomaly"]);
+export const isUnsupervised = (task?: string | null) => !!task && UNSUPERVISED.has(task);
+
+export function defaultPipeline(target: string, task: PipelineSpec["task"]): PipelineSpec {
   return {
     target,
     task,
@@ -36,13 +39,15 @@ export function defaultPipeline(target: string, task: Task): PipelineSpec {
     features: [],
     image: { size: 32, grayscale: false, augment: {} },
     target_filter: { enabled: false, min: null, max: null },
+    reduce: { method: "none", n_components: 5 },
+    unsupervised: { holdout: 0 },
   };
 }
 
 /** Merge a (possibly partial) saved pipeline over the defaults. */
 export function fullPipeline(p: Project): PipelineSpec | null {
-  if (!p.target || !p.task) return null;
-  const base = defaultPipeline(p.target, p.task);
+  if (!p.task || (!p.target && !isUnsupervised(p.task))) return null;
+  const base = defaultPipeline(p.target ?? "", p.task);
   const saved = (p.pipeline || {}) as any;
   const out: any = { ...base };
   for (const k of Object.keys(base) as (keyof PipelineSpec)[]) {
@@ -51,8 +56,9 @@ export function fullPipeline(p: Project): PipelineSpec | null {
     if (sv === undefined || sv === null) continue;
     out[k] = typeof bv === "object" && !Array.isArray(bv) ? { ...bv, ...sv } : sv;
   }
-  out.target = p.target;
+  out.target = p.target ?? null;
   out.task = p.task;
+  if (isUnsupervised(p.task)) out.truth = p.truth ?? null;
   return out;
 }
 
@@ -61,7 +67,7 @@ export function stepDone(p: Project | null, step: StepId): boolean {
   switch (step) {
     case "problem": return !!p.task;
     case "models": return p.models.length > 0;
-    case "data": return !!p.dataset_id && !!p.target;
+    case "data": return !!p.dataset_id && (!!p.target || isUnsupervised(p.task));
     case "prepare": return !!p.prepared_id;
     case "train": return !!p.last_job_id;
     case "improve": return false;
@@ -313,22 +319,27 @@ export interface LiveModel {
   error?: string;
   metrics?: Record<string, Record<string, number>>;
   cv: number[];
+  /** clustering: fixed 2-D sample of points (cluster.points) and the live iterations (cluster.step) */
+  clusterPoints?: number[][];
+  clusterSteps?: { iter: number; inertia: number; centroids_2d: number[][]; labels: number[] }[];
 }
 
 export interface Trial { i: number; n: number; params: Record<string, any>; score: number | null; std?: number; best?: any }
 
 interface JobState {
   jobId: string | null;
-  kind: "train" | "tune" | null;
+  kind: "train" | "tune" | "sweep" | null;
   status: "idle" | "running" | "finished" | "failed" | "cancelled";
   models: Record<string, LiveModel>;
   order: string[];
   logs: { level: string; message: string; t: number }[];
   trials: Trial[];
+  /** k sweep rows as they arrive (sweep.k) */
+  sweepRows: { k: number; silhouette?: number | null; ari?: number | null; inertia?: number; bic?: number; davies_bouldin?: number | null }[];
   error?: string;
   startedAt?: number;
   onDone?: (status: JobState["status"]) => void;
-  start: (jobId: string, kind: "train" | "tune", models?: { key: string; model_id: string; label: string; nn: boolean }[], onDone?: (s: JobState["status"]) => void) => void;
+  start: (jobId: string, kind: "train" | "tune" | "sweep", models?: { key: string; model_id: string; label: string; nn: boolean }[], onDone?: (s: JobState["status"]) => void) => void;
   cancel: () => Promise<void>;
   reset: () => void;
 }
@@ -343,12 +354,13 @@ export const useJob = create<JobState>((set, get) => ({
   order: [],
   logs: [],
   trials: [],
+  sweepRows: [],
 
   start: (jobId, kind, models = [], onDone) => {
     es?.close();
     const init: Record<string, LiveModel> = {};
     for (const m of models) init[m.key] = { ...m, state: "queued", pct: 0, points: [], cv: [] };
-    set({ jobId, kind, status: "running", models: init, order: models.map((m) => m.key), logs: [], trials: [], error: undefined, startedAt: Date.now(), onDone });
+    set({ jobId, kind, status: "running", models: init, order: models.map((m) => m.key), logs: [], trials: [], sweepRows: [], error: undefined, startedAt: Date.now(), onDone });
     es = new EventSource(`/api/jobs/${jobId}/events`);
     es.onmessage = (msg) => {
       const ev: JobEvent = JSON.parse(msg.data);
@@ -367,7 +379,7 @@ export const useJob = create<JobState>((set, get) => ({
 
   reset: () => {
     es?.close();
-    set({ jobId: null, kind: null, status: "idle", models: {}, order: [], logs: [], trials: [], error: undefined });
+    set({ jobId: null, kind: null, status: "idle", models: {}, order: [], logs: [], trials: [], sweepRows: [], error: undefined });
   },
 }));
 
@@ -430,6 +442,15 @@ function apply(ev: JobEvent) {
       break;
     case "model.failed":
       patchModel(d.key, () => ({ state: "failed", error: d.error }));
+      break;
+    case "cluster.points":
+      patchModel(d.key, () => ({ clusterPoints: d.points }));
+      break;
+    case "cluster.step":
+      patchModel(d.key, (m) => ({ clusterSteps: [...(m.clusterSteps || []), { iter: d.iter, inertia: d.inertia, centroids_2d: d.centroids_2d, labels: d.labels }] }));
+      break;
+    case "sweep.k":
+      useJob.setState({ sweepRows: [...useJob.getState().sweepRows, d] });
       break;
     case "tune.trial":
       useJob.setState({ trials: [...useJob.getState().trials, d] });

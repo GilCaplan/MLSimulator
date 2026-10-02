@@ -28,6 +28,16 @@ _Last updated: 2026-10-02 (session 2). If a session ends mid-task, start here._
 - New lessons `baselines`, `splits`, `features`, `calibration`: generators + grading in `mlp/lessons/`; still need
   calibration of `splits` goal, catalog content in `mlp/lessons/catalog.py`, end-to-end check, docs table update.
 
+## Phase 2 (unsupervised) — DONE, session 3
+- Backend done: `mlp/core/unsupervised.py` (prepare without target + hidden truth, k-means live steps, GMM, DBSCAN,
+  agglomerative, PCA, t-SNE, Isolation Forest, One-Class SVM, LOF, evaluation, k sweep), problems enabled, registry,
+  worker/trainer dispatch, `/jobs/sweep`, `/library/{id}/assign`, PCA `reduce` pipeline step, samples customers/sensors,
+  lessons `choosing_k`, `curse` (validated), `scripts/smoke_unsupervised.py`.
+- Frontend done: Discover problems, truth picker, hold-out + PCA Reduce stages, k sweep (Refine), live k-means
+  walk, cluster map/profiles/truth check, scree/loadings, anomaly scores/map/top anomalies, library assign playground,
+  home templates, demos for choosing_k & curse. 16 lessons. Rule: max 2 concurrent subagents.
+- Next: Phase 3 NLP (text classification) per `docs/expansion_plan.md`, then recommenders, forecasting.
+
 ## Next
 - Vision UI is complete (problem picker, image Data/Prepare, results tabs, playground, 14 lessons incl. 2 vision demos);
   pushed to GitHub, CI green (CI validates tabular lessons; image lessons need `validate_lessons.py --torch` locally).

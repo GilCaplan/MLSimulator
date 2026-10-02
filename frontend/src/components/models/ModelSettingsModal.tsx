@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useProject } from "../../lib/store";
-import type { ModelConfig, NNArch } from "../../lib/types";
+import type { ModelConfig, NNArch, Task } from "../../lib/types";
 import { HyperparamForm } from "../HyperparamForm";
 import { Modal } from "../glass";
 import { ArchPreview } from "./ArchPreview";
@@ -76,7 +76,7 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
                     : <LayerBuilder arch={arch} onChange={setArch} />}
                 </div>
                 <div style={{ position: "sticky", top: 0 }}>
-                  <ArchPreview arch={arch} task={project?.task ?? null} />
+                  <ArchPreview arch={arch} task={(project?.task ?? null) as Task | null} />
                 </div>
               </div>
             </section>

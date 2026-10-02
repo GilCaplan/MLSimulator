@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import { stagger } from "../../design/motion";
 import { classColor } from "../../lib/colors";
 import { fmt, pct } from "../../lib/format";
-import type { SavedModel } from "../../lib/types";
+import type { SavedModel, Task } from "../../lib/types";
 import { BarList, ConfusionMatrix, DecisionSurface, LineChart, ResidualPlot, RocChart, type Series } from "../charts";
 import { Glass, InfoTip, Segmented } from "../glass";
 import { Calibration } from "../train/Calibration";
@@ -11,7 +11,8 @@ import { ErrorAnalysis } from "../train/Mistakes";
 import { VisionFilters } from "../train/VisionFilters";
 import { VisionGallery } from "../train/VisionGallery";
 import { VisionLooks } from "../train/VisionLooks";
-import { MetricTiles, SectionTitle, rise } from "./shared";
+import { UnsupMetricTiles, UnsupViews } from "../train/unsup/UnsupViews";
+import { MetricTiles, SectionTitle, isUnsupModel, rise } from "./shared";
 
 function ChartCard({ title, help, caption, children, wide }: { title: string; help?: string; caption?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
@@ -26,8 +27,44 @@ function ChartCard({ title, help, caption, children, wide }: { title: string; he
   );
 }
 
+/** Clustering / map / anomaly models: headline numbers and the same task tabs as on the Train results. */
+function UnsupPerformance({ model }: { model: SavedModel }) {
+  const task = model.task as string;
+  const metrics = model.metrics?.test ?? {};
+  return (
+    <motion.section variants={rise}>
+      <SectionTitle
+        id="performance"
+        icon="🔍"
+        title="What it found"
+        subtitle={task === "clustering"
+          ? "The groups it discovered, what makes each one different and — if you kept a hidden truth column — how well they match reality."
+          : task === "anomaly"
+            ? "How it scored the training rows, which ones it flagged and how well that matched the real anomalies."
+            : "The map it drew of your data and how honestly it keeps real neighbours together."}
+      />
+      <Glass>
+        <div className="col" style={{ gap: 18 }}>
+          <UnsupMetricTiles task={task} metrics={metrics} />
+          <div className="row wrap tiny faint" style={{ gap: 14 }}>
+            {model.fit_time_s != null && <span>⏱ found in {model.fit_time_s < 1 ? `${Math.round(model.fit_time_s * 1000)} ms` : `${model.fit_time_s.toFixed(1)} s`}</span>}
+            {model.dataset?.n_rows != null && <span>📊 {model.dataset.n_rows.toLocaleString()} rows in the dataset</span>}
+            {model.pipeline?.truth && <span>🙈 hidden truth column: {model.pipeline.truth}</span>}
+          </div>
+          <UnsupViews task={task} detail={model.detail ?? {}} metrics={metrics} modelId={model.model_id} height={340} />
+        </div>
+      </Glass>
+    </motion.section>
+  );
+}
+
 /** "How it performed": test scores and the evaluation charts saved with the model. */
 export function Performance({ model }: { model: SavedModel }) {
+  if (isUnsupModel(model)) return <UnsupPerformance model={model} />;
+  return <SupervisedPerformance model={model} />;
+}
+
+function SupervisedPerformance({ model }: { model: SavedModel }) {
   const d = model.detail ?? {};
   const isCls = model.task === "classification";
   const test = model.metrics?.test ?? {};
@@ -152,7 +189,7 @@ function VisionSection({ model }: { model: SavedModel }) {
       </div>
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-          {tab === "gallery" && <VisionGallery vision={v} classes={model.classes} task={model.task} />}
+          {tab === "gallery" && <VisionGallery vision={v} classes={model.classes} task={model.task as Task} />}
           {tab === "looks" && <VisionLooks vision={v} label={model.label.toLowerCase()} />}
           {tab === "filters" && <VisionFilters vision={v} />}
         </motion.div>

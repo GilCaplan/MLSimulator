@@ -1,4 +1,4 @@
-import { fullPipeline, modelConfigFor, useProject } from "../../lib/store";
+import { fullPipeline, isUnsupervised, modelConfigFor, useProject } from "../../lib/store";
 import type { Modality, ModelConfig, ModelSpec, Task } from "../../lib/types";
 
 /** Display order + one-line plain-language explanation for each model family. */
@@ -11,11 +11,35 @@ export const FAMILIES: { id: string; icon: string; blurb: string }[] = [
   { id: "Ensemble", icon: "🌲", blurb: "Many trees vote together — sturdier than any single one." },
   { id: "Boosting", icon: "🚀", blurb: "Trees built one after another, each fixing the last one's mistakes." },
   { id: "Neural", icon: "🧠", blurb: "Layers of neurons you design yourself — flexible, data-hungry, fun to watch." },
+  // unsupervised families (no answer column)
+  { id: "Clustering", icon: "🫧", blurb: "Sort rows into groups of look-alikes — nobody tells them what the groups should be." },
+  { id: "Reduction", icon: "🗺️", blurb: "Squash many columns down to a 2-D map you can actually look at." },
+  { id: "Anomaly", icon: "🚨", blurb: "Learn what 'normal' looks like, then flag the rows that don't fit." },
 ];
+
+/** Plain-language "when to use it" line for the unsupervised models. */
+export const UNSUP_HINTS: Record<string, string> = {
+  kmeans: "Best for round, similar-sized groups. You choose how many (k).",
+  gmm: "Like K-Means with soft, stretchy blobs — rows can half-belong to two groups.",
+  dbscan: "Finds odd-shaped groups and leaves loners out as noise. No k needed.",
+  agglomerative: "Builds a family tree of rows, then cuts it into k branches.",
+  pca: "Fast and faithful: keeps the straight-line directions with the most spread.",
+  tsne: "Beautiful maps of local neighbourhoods — far-apart distances mean little.",
+  isolation_forest: "Quick, robust all-rounder. Odd rows are easy to cut off from the rest.",
+  lof: "Spots rows sitting in emptier places than their neighbours.",
+  one_class_svm: "Wraps a smooth fence around normal data; works best on smaller tables.",
+};
+
+/** One-click starter line-ups for the unsupervised problems. */
+export const UNSUP_STARTER: Record<string, string[]> = {
+  clustering: ["kmeans", "gmm", "dbscan"],
+  reduction: ["pca", "tsne"],
+  anomaly: ["isolation_forest", "lof", "one_class_svm"],
+};
 
 export const familyOf = (id: string) => FAMILIES.find((f) => f.id === id);
 
-export const FIRST_TRY = new Set(["logistic_regression", "linear_regression", "random_forest"]);
+export const FIRST_TRY = new Set(["logistic_regression", "linear_regression", "random_forest", "kmeans", "pca", "isolation_forest"]);
 
 /** Models designed for pictures (shown first, as "Vision", in image projects). */
 export const VISION_IDS = new Set(["cnn2d", "tiny_resnet"]);
@@ -27,6 +51,8 @@ export function badgesFor(spec: ModelSpec, modality: Modality = "tabular"): { te
   const out: { text: string; tone: "success" | "warning" | "accent" | "" }[] = [];
   const image = modality === "image";
   if (image ? VISION_IDS.has(spec.id) && spec.id === "cnn2d" : FIRST_TRY.has(spec.id)) out.push({ text: "Great first try", tone: "success" });
+  if (spec.id === "dbscan") out.push({ text: "Finds k itself", tone: "accent" });
+  if (spec.id === "tsne") out.push({ text: "Slow on big data", tone: "warning" });
   if (image && VISION_IDS.has(spec.id)) out.push({ text: "Built for pictures", tone: "accent" });
   if (!image && spec.requires === "image") out.push({ text: "Needs image data", tone: "warning" });
   if (spec.nn && !(image && VISION_IDS.has(spec.id))) out.push({ text: "Neural network", tone: "accent" });
@@ -43,6 +69,16 @@ export const BEGINNER_IMAGE: Record<Task, string[]> = {
   classification: ["cnn2d", "tiny_resnet", "logistic_regression"],
   regression: ["cnn2d", "tiny_resnet", "ridge"],
 };
+
+/** Starter line-up for any problem: beginner trio, vision starter or the unsupervised quick pick. */
+export function starterFor(task: string, image: boolean): string[] {
+  if (isUnsupervised(task)) return UNSUP_STARTER[task] ?? [];
+  const t = task as Task;
+  return (image ? BEGINNER_IMAGE : BEGINNER)[t] ?? [];
+}
+
+/** Does this model solve the given problem? (registry tasks may include unsupervised ones) */
+export const specFits = (s: ModelSpec, task: string) => (s.tasks as string[]).includes(task);
 
 /** "Random Forest", "Random Forest #2", … — copies numbered by their order in the line-up. */
 export function lineupLabels(models: ModelConfig[], spec: (id: string) => ModelSpec | undefined): Record<string, string> {

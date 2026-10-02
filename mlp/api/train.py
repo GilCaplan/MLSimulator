@@ -10,7 +10,7 @@ from ..core import procs
 from ..core.jobs import TERMINAL, manager
 from ..core.registry import MODEL_INDEX, public_registry
 from ..core.store import prepared_store
-from ..core.trainer import run_train, run_tune
+from ..core.trainer import run_sweep_job, run_train, run_tune
 
 router = APIRouter()
 
@@ -51,6 +51,14 @@ def start_tune(body: dict = Body(...)):
     if MODEL_INDEX.get(body.get("model_id"), {}).get("nn"):
         raise HTTPException(400, "Automatic tuning is available for classic models.")
     job = manager.submit("tune", body, run_tune)
+    return {"job_id": job.id}
+
+
+@router.post("/jobs/sweep")
+def start_sweep(body: dict = Body(...)):
+    """k sweep for clustering: {prepared_id, model_id: kmeans|gmm|agglomerative, k_min, k_max}."""
+    prepared_store.get(body["prepared_id"])
+    job = manager.submit("sweep", body, run_sweep_job)
     return {"job_id": job.id}
 
 

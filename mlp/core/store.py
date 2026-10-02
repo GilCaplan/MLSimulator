@@ -120,7 +120,7 @@ class ProjectStore:
 
     def create(self, doc: dict) -> dict:
         pid = new_id("p")
-        doc = {"name": "Untitled project", "task": None, "modality": "tabular", "step": "problem", "models": [], "history": [],
+        doc = {"name": "Untitled project", "task": None, "modality": "tabular", "truth": None, "step": "problem", "models": [], "history": [],
                **doc, "id": pid, "created_at": now(), "updated_at": now()}
         self.save(doc)
         return doc

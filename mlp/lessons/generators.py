@@ -333,3 +333,40 @@ def shapes_shifted(seed: int = 7, n: int = 1600, n_hidden: int = 1200):
 
 GENERATORS.update({"convolutions": shapes_anywhere, "augmentation": shapes_shifted})
 IMAGE_LESSONS = {"convolutions", "augmentation"}
+
+
+# ----------------------------------------------------------------------------- 15–16. unsupervised
+def customer_segments(seed: int = 7, n: int = 1200, n_hidden: int = 1500):
+    """Five shopper segments; the default k=3 merges real groups."""
+    segs = [([30, 25, 4, 0.8, 20], 0.26), ([42, 70, 6, 0.3, 45], 0.22), ([48, 140, 2, 0.1, 30], 0.16),
+            ([21, 18, 10, 0.6, 70], 0.2), ([58, 40, 1, 0.2, 10], 0.16)]
+    names = ["bargain hunters", "families", "premium", "students", "occasional"]
+
+    def make(n, rng):
+        seg = rng.choice(5, n, p=[w for _, w in segs])
+        X = np.array([c for c, _ in segs])[seg] + rng.normal(0, 1, (n, 5)) * np.array([4, 10, 1.2, 0.1, 7])
+        return pd.DataFrame({"age": X[:, 0].round(), "avg_basket": X[:, 1].round(2), "visits_per_month": X[:, 2].round(1),
+                             "discount_share": X[:, 3].round(2), "online_share_pct": X[:, 4].round(),
+                             "segment": np.asarray(names, dtype=object)[seg]})
+    return make(n, np.random.default_rng(seed)), make(n_hidden, np.random.default_rng(seed + 1000))
+
+
+def noisy_sensors(seed: int = 7, n: int = 1200, n_hidden: int = 1500, n_noise: int = 40):
+    """Four machine states visible in 3 of 43 sensor channels (which move together); the rest is noise."""
+    rng0 = np.random.default_rng(seed)
+    perm = rng0.permutation(3 + n_noise)
+    centers = np.outer([-3, -1, 1, 3], [1.2, 1.2, 1.2])
+
+    def make(n, rng):
+        st = rng.integers(0, 4, n)
+        sig = centers[st] + rng.normal(0, 0.7, (n, 3))
+        noise = rng.normal(0, 1, (n, n_noise))
+        M = np.hstack([sig, noise])[:, perm]
+        df = pd.DataFrame(M.round(3), columns=[f"sensor_{i + 1:02d}" for i in range(M.shape[1])])
+        df["machine_state"] = np.asarray(["idle", "warming", "running", "overloaded"], dtype=object)[st]
+        return df
+    return make(n, np.random.default_rng(seed)), make(n_hidden, np.random.default_rng(seed + 1000))
+
+
+GENERATORS.update({"choosing_k": customer_segments, "curse": noisy_sensors})
+UNSUPERVISED_LESSONS = {"choosing_k", "curse"}

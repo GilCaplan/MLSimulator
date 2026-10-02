@@ -36,6 +36,7 @@ DEFAULT_SPEC = {
     "split": {"test_size": 0.2, "val_size": 0.1, "stratify": True, "seed": 42, "method": "random", "group_column": None, "time_column": None},
     "dedupe": {"enabled": False},
     "features": [],
+    "reduce": {"method": "none", "n_components": 5},
     "scale": {"method": "standard"},
     "feature_select": {"method": "none", "k": 10},
     "resample": {"mode": "none", "over": "smote", "under": "random", "clean": "none", "k_neighbors": 5},
@@ -76,6 +77,7 @@ class Preprocessor:
         self.task = "classification"
         self.target = "target"
         self.fe_steps: list[dict] = []
+        self.reducer = None
         self.bin_edges: dict = {}
 
     # -- transforms --
@@ -103,11 +105,15 @@ class Preprocessor:
     def _finish(self, X: np.ndarray) -> np.ndarray:
         if len(X) == 0:
             n = len(self.selected) if self.selected is not None else X.shape[1]
+            if getattr(self, "reducer", None) is not None:
+                n = self.reducer.n_components_
             return np.zeros((0, n), dtype=np.float32)
         if self.scaler is not None:
             X = self.scaler.transform(X)
         if self.selected is not None:
             X = X[:, self.selected]
+        if getattr(self, "reducer", None) is not None:
+            X = self.reducer.transform(X)
         return X.astype(np.float32)
 
     def transform(self, df: pd.DataFrame) -> np.ndarray:
@@ -567,6 +573,14 @@ def prepare(df: pd.DataFrame, spec: dict, dataset_id: str, image_shape=None, max
             mask[0] = True
         pp.selected = np.where(mask)[0]
         names = [names[i] for i in pp.selected]
+    rd = spec.get("reduce") or {}
+    if rd.get("method") == "pca":
+        from sklearn.decomposition import PCA
+        S_sel = S_tr[:, pp.selected] if pp.selected is not None else S_tr
+        k = max(1, min(int(rd.get("n_components", 5)), S_sel.shape[1], len(S_sel)))
+        pp.reducer = PCA(n_components=k, random_state=seed).fit(S_sel)
+        warnings.append(f"PCA kept {k} components explaining {pp.reducer.explained_variance_ratio_.sum():.0%} of the variation.")
+        names = [f"PC{i + 1}" for i in range(k)]
     pp.feature_names_out = names
     fe_sources = set()
     for st in fe_steps:

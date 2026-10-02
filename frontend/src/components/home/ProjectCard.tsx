@@ -6,12 +6,22 @@ import { navigate } from "../../lib/router";
 import { STEPS, stepDone } from "../../lib/store";
 import type { Project } from "../../lib/types";
 import { Tooltip } from "../glass";
+import { TASK_BADGE } from "./templateData";
+
+/** Unsupervised projects name their last two steps differently (mirrors mlp/core/problems.py). */
+const STEP_RENAME: Record<string, Partial<Record<string, [string, string]>>> = {
+  clustering: { train: ["Discover", "Watch groups emerge"], improve: ["Refine", "Sharpen the result"] },
+  reduction: { train: ["Map", "Flatten it onto a map"], improve: ["Refine", "Sharpen the result"] },
+  anomaly: { train: ["Detect", "Spot the odd ones out"], improve: ["Refine", "Sharpen the result"] },
+};
 
 /** One recent project: name, task, where you left off, six-step progress dots, actions. */
 export function ProjectCard({ project: p, onDelete, onRename }: { project: Project; onDelete: () => void; onRename: (name: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.name);
-  const step = STEPS.find((s) => s.id === p.step) ?? STEPS[0];
+  const base = STEPS.find((s) => s.id === p.step) ?? STEPS[0];
+  const relabel = p.task ? STEP_RENAME[p.task]?.[base.id] : undefined;
+  const step = relabel ? { ...base, label: relabel[0], blurb: relabel[1] } : base;
   const done = STEPS.filter((s) => stepDone(p, s.id)).length;
   const open = () => !editing && navigate(`/p/${p.id}/${p.step || "problem"}`);
   const commit = () => {
@@ -33,7 +43,7 @@ export function ProjectCard({ project: p, onDelete, onRename }: { project: Proje
     >
       <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
         <span style={{ width: 42, height: 42, borderRadius: 13, background: "var(--fill)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-          {p.emoji || (p.task === "regression" ? "📈" : p.task === "classification" ? "🗂️" : "🎯")}
+          {p.emoji || (p.task === "regression" ? "📈" : p.task === "classification" ? "🗂️" : p.task ? TASK_BADGE[p.task]?.icon ?? "🎯" : "🎯")}
         </span>
         <div className="col grow" style={{ gap: 4, minWidth: 0 }}>
           {editing ? (
@@ -52,10 +62,11 @@ export function ProjectCard({ project: p, onDelete, onRename }: { project: Proje
           )}
           <span className="row wrap" style={{ gap: 6 }}>
             {p.task ? (
-              <span className={`badge ${p.task === "classification" ? "accent" : ""}`} style={p.task === "regression" ? { background: "rgba(191,90,242,.16)", color: "var(--accent-2)" } : undefined}>
-                {p.task === "classification" ? "Classification" : "Regression"}
+              <span className={`badge ${TASK_BADGE[p.task]?.cls ?? ""}`} style={TASK_BADGE[p.task]?.style}>
+                {TASK_BADGE[p.task] && !["classification", "regression"].includes(p.task) ? `${TASK_BADGE[p.task].icon} ` : ""}{TASK_BADGE[p.task]?.label ?? p.task}
               </span>
             ) : <span className="badge">No goal yet</span>}
+            {p.truth && <Tooltip content={`Hidden answer column “${p.truth}” — used only to check the result.`} width={200}><span className="badge">🙈 {p.truth}</span></Tooltip>}
             <span className={`badge ${p.dataset_id ? "success" : ""}`}>{p.dataset_id ? (p.modality === "image" ? "🖼️ Images" : "📊 Data") : "No data yet"}</span>
           </span>
         </div>
@@ -77,7 +88,7 @@ export function ProjectCard({ project: p, onDelete, onRename }: { project: Proje
             const isDone = stepDone(p, s.id);
             const current = s.id === p.step;
             return (
-              <Tooltip key={s.id} content={`${s.icon} ${s.label}${isDone ? " — done" : current ? " — you are here" : ""}`} width={150}>
+              <Tooltip key={s.id} content={`${s.icon} ${(p.task && STEP_RENAME[p.task]?.[s.id]?.[0]) || s.label}${isDone ? " — done" : current ? " — you are here" : ""}`} width={150}>
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}

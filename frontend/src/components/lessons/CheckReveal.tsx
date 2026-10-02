@@ -19,14 +19,17 @@ type Goal = ChallengeCheck["goals"][number] & {
 };
 
 /** Own-test metric comparable to each hidden-set goal (extends the shared map with the newer metrics). */
-const OWN: Record<string, string | undefined> = { ...OWN_METRIC, roc_auc: "roc_auc" };
-const SHORT: Record<string, string> = { ...SHORT_METRIC, roc_auc: "ROC-AUC", ece: "calibration error", estimate_gap: "estimate gap", mae_vs_baseline: "better than the baseline" };
+const OWN: Record<string, string | undefined> = { ...OWN_METRIC, roc_auc: "roc_auc", ari: "ari" };
+const SHORT: Record<string, string> = { ...SHORT_METRIC, roc_auc: "ROC-AUC", ece: "calibration error", estimate_gap: "estimate gap", mae_vs_baseline: "better than the baseline",
+  ari: "agreement with the hidden groups", silhouette: "silhouette" };
+/** 0…1 (or −1…1) scores shown as plain decimals. */
+const DECIMAL = new Set(["roc_auc", "ari", "nmi", "silhouette"]);
 const NAME = (m: string) => METRIC_LABELS[m] ?? SHORT[m] ?? m;
 
 /** Goal formatting: percentages for rates, "pts" for gaps, plain decimals for ROC-AUC and R². */
 function fmtG(metric: string, v: number | null | undefined) {
   if (v === null || v === undefined || !Number.isFinite(v)) return "—";
-  if (metric === "roc_auc") return v.toFixed(2);
+  if (DECIMAL.has(metric)) return v.toFixed(2);
   if (metric === "ece") return pct(v, 1);
   if (metric === "estimate_gap") return `${(v * 100).toFixed(1)} pts`;
   if (metric === "mae_vs_baseline") return pct(v, 0);
@@ -43,6 +46,16 @@ function contrast(check: ChallengeCheck) {
   const comparable = (g: Goal) => !!OWN[g.metric] && own[OWN[g.metric]!] !== undefined;
   const goal = goals.find((x) => !x.passed && (comparable(x) || special(x))) ?? goals.find((x) => !x.passed) ?? goals.find((x) => comparable(x) || special(x)) ?? goals[0];
   const hidden = `${check.n_hidden.toLocaleString()} hidden rows`;
+  if (goal?.metric === "ari") {
+    // clustering has no test score: the only number available without answers is silhouette (how crisp the groups look)
+    const sil = own.silhouette;
+    return {
+      goal, ownMetric: "silhouette", ownValue: sil, realValue: goal.value,
+      left: { eyebrow: "🧪 Your rows said", value: sil, format: (v: number) => fmtG("silhouette", v), caption: <>silhouette — how crisp the groups look (the only score possible without answers)</> } as Side,
+      right: { eyebrow: "🌍 The real world says", value: goal.value, format: (v: number) => fmtG("ari", v), caption: <>agreement with the hidden groups (ARI) on {hidden}</> } as Side,
+      chip: null,
+    };
+  }
   if (goal?.metric === "estimate_gap") {
     const of = goal.of ?? "accuracy";
     const mine = goal.your_test ?? own[of];
@@ -207,6 +220,8 @@ function GoalNote({ g, own }: { g: Goal; own?: number }) {
     text = `average miss ${fmt(g.mae, 3)} vs ${fmt(g.baseline_mae, 3)} for always-the-average`;
   } else if (g.metric === "ece" && g.predicted_cases !== undefined && g.actual_cases !== undefined) {
     text = `its probabilities add up to ${Math.round(g.predicted_cases).toLocaleString()} cases · ${g.actual_cases.toLocaleString()} really happened`;
+  } else if (g.metric === "ari") {
+    text = own !== undefined ? `agreement on your own rows: ${fmtG("ari", own)} · 1 = the hidden groups exactly, 0 = random` : "1 = matches the hidden groups exactly · 0 = no better than random grouping";
   } else if (own !== undefined) {
     text = `your test: ${fmtG(g.metric, own)}`;
   }
@@ -219,6 +234,13 @@ function verdict(check: ChallengeCheck, h: ReturnType<typeof contrast>, drop: nu
   const realTxt = `${fmtG(g.metric, g.value)} ${SHORT[g.metric] ?? g.metric}`;
   const T = (x: ReactNode) => <b style={{ color: "var(--text)" }}>{x}</b>;
   const B = (x: ReactNode) => <b style={{ color: BAD }}>{x}</b>;
+  if (g.metric === "ari") {
+    const sil = h.ownValue;
+    const crisp = sil !== undefined && sil >= 0.4;
+    return g.passed
+      ? <>{sil !== undefined ? <>Silhouette said {T(fmtG("silhouette", sil))} — and </> : null}the hidden groups agree: {T(`ARI ${fmtG("ari", g.value)}`)}. Your clusters aren't just tidy blobs, they're the real segments. Clustering has no test score, so a hidden truth like this is the only way to be sure.</>
+      : <>{sil !== undefined ? <>Silhouette said {T(fmtG("silhouette", sil))}{crisp ? " — the groups look crisp" : ""}. </> : null}But against the hidden groups the agreement is only {B(`ARI ${fmtG("ari", g.value)}`)} (goal ≥ {fmtG("ari", g.target)}). Clustering has no test score: silhouette rewards neat blobs, not meaningful ones — which is exactly why a hidden truth is so valuable. Look at the profiles: is one cluster really two kinds of rows?</>;
+  }
   if (g.metric === "estimate_gap" && h.ownValue !== undefined) {
     const of = g.of ?? "accuracy";
     return g.passed

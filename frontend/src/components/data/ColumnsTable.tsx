@@ -14,7 +14,7 @@ const ROLE: Record<ColumnSummary["role"], { label: string; cls: string; help: st
   datetime: { label: "date", cls: "accent", help: "Dates and times. Models can't use them raw — turn them into month, weekday or hour under Prepare → Create features." },
 };
 
-export function ColumnsTable({ dataset, target }: { dataset: DatasetSummary; target: string | null }) {
+export function ColumnsTable({ dataset, target, mark = "🎯" }: { dataset: DatasetSummary; target: string | null; /** icon for the highlighted column (🙈 = hidden truth) */ mark?: string }) {
   const n = dataset.n_rows || 1;
   return (
     <Glass animate_in>
@@ -35,7 +35,7 @@ export function ColumnsTable({ dataset, target }: { dataset: DatasetSummary; tar
               return (
                 <motion.tr key={c.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 20) * 0.02 }}
                   style={isT ? { background: "var(--accent-soft)" } : undefined}>
-                  <td style={{ fontWeight: 600, maxWidth: 200 }} className="truncate" title={c.name}>{isT && "🎯 "}{c.name}</td>
+                  <td style={{ fontWeight: 600, maxWidth: 200 }} className="truncate" title={c.name}>{isT && `${mark} `}{c.name}</td>
                   <td>
                     <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                       <Tooltip content={role.help}><span className={`badge ${role.cls}`}>{role.label}</span></Tooltip>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { spring } from "../../design/motion";
 import { api } from "../../lib/api";
 import { navigate } from "../../lib/router";
-import { toast, useProject } from "../../lib/store";
+import { isUnsupervised, toast, useProject } from "../../lib/store";
 import type { ChallengeCheck as Check } from "../../lib/types";
 import { Glass, InfoTip, Spinner, Tooltip } from "../glass";
 import { fmtMetric, metricLabel, primaryMetric } from "../train/util";
@@ -33,6 +33,7 @@ export function ChallengeCheck() {
   const metric = primaryMetric(result.task);
   const rows = [...result.leaderboard].filter((r) => !r.baseline && !result.models[r.key]?.baseline).sort((a, b) => a.rank - b.rank);
   const hints = lesson?.challenge.hints ?? [];
+  const unsup = isUnsupervised(result.task);
 
   const run = async (key: string) => {
     setBusy(key);
@@ -81,7 +82,9 @@ export function ChallengeCheck() {
       </div>
 
       <p className="small muted" style={{ lineHeight: 1.55, marginBottom: 12, maxWidth: 680 }}>
-        The leaderboard shows how each model did on <b>your</b> test split. Pick a model to see how it does on <b>hidden data from the real world</b> — the only score that decides the challenge.
+        {unsup
+          ? <>Without answers, the leaderboard can only say how <b>crisp</b> each model's groups look. Pick a model to see whether its groups match the <b>real, hidden groups</b> in fresh data — the only score that decides the challenge.</>
+          : <>The leaderboard shows how each model did on <b>your</b> test split. Pick a model to see how it does on <b>hidden data from the real world</b> — the only score that decides the challenge.</>}
       </p>
 
       <div className="col" style={{ gap: 6 }}>
@@ -102,7 +105,7 @@ export function ChallengeCheck() {
                 <span style={{ fontSize: 18 }}>{spec(m.model_id)?.emoji ?? "🤖"}</span>
                 <span className="col" style={{ gap: 0, minWidth: 0 }}>
                   <b className="truncate" style={{ fontSize: 13.5 }}>{m.label}</b>
-                  <span className="tiny faint">Your test: {metricLabel(metric)} {fmtMetric(metric, m.metrics.test?.[metric])}</span>
+                  <span className="tiny faint">{unsup ? "On your rows" : "Your test"}: {metricLabel(metric)} {fmtMetric(metric, m.metrics.test?.[metric])}</span>
                 </span>
               </span>
               {blocked ? (

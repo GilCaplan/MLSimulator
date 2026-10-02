@@ -43,6 +43,8 @@ SAMPLES = {
     "digits": {"label": "Handwritten digits", "task": "classification", "blurb": "1,797 tiny 8×8 images of digits 0–9. Try a CNN!", "emoji": "✍️"},
     "diabetes": {"label": "Diabetes progression", "task": "regression", "blurb": "442 patients, 10 measurements, disease progression.", "emoji": "💉"},
     "fraud": {"label": "Card fraud (imbalanced)", "task": "classification", "blurb": "Synthetic transactions where only ~4% are fraud. Great for SMOTE.", "emoji": "💳"},
+    "customers": {"label": "Shopping customers", "task": "clustering", "blurb": "1,200 shoppers with spending habits — find the natural segments. A hidden 'segment' column lets you check.", "emoji": "🛍️"},
+    "sensors": {"label": "Machine sensors", "task": "anomaly", "blurb": "3,000 sensor readings from a factory line; ~3% are faults. Can you spot them without labels?", "emoji": "🏭"},
     "housing": {"label": "House prices", "task": "regression", "blurb": "Synthetic homes with size, rooms, area and age → price.", "emoji": "🏡"},
 }
 
@@ -287,6 +289,32 @@ def load_sample(name: str, seed: int = 42) -> tuple[pd.DataFrame, dict]:
         df = pd.DataFrame({"amount": amount.round(2), "hour": hour, "distance_km": dist.round(1),
                            "account_age_days": age, "channel": channel, "foreign": foreign, "is_fraud": fraud})
         return df, {**meta, "target_hint": "is_fraud"}
+    if name == "customers":
+        segs = {"bargain hunters": ([30, 25, 4, 0.8, 20], 0.30), "families": ([42, 70, 6, 0.3, 45], 0.25),
+                "premium": ([48, 140, 2, 0.1, 30], 0.15), "students": ([21, 18, 10, 0.6, 70], 0.18), "occasional": ([55, 40, 1, 0.2, 10], 0.12)}
+        names = list(segs)
+        seg = rng.choice(len(names), 1200, p=[segs[k][1] for k in names])
+        base = np.array([segs[k][0] for k in names])[seg]
+        noise = rng.normal(0, 1, (1200, 5)) * np.array([5, 12, 1.5, 0.12, 8])
+        X = base + noise
+        df = pd.DataFrame({"age": X[:, 0].round().clip(16, 90), "avg_basket": X[:, 1].round(2).clip(3), "visits_per_month": X[:, 2].round(1).clip(0.2),
+                           "discount_share": X[:, 3].round(2).clip(0, 1), "online_share_pct": X[:, 4].round().clip(0, 100),
+                           "segment": np.asarray(names, dtype=object)[seg]})
+        return df, {**meta, "target_hint": None, "truth_hint": "segment"}
+    if name == "sensors":
+        n = 3000
+        temp = rng.normal(70, 4, n)
+        vib = 0.02 * (temp - 70) + rng.normal(1.0, 0.15, n)
+        pressure = 30 + 0.3 * (temp - 70) + rng.normal(0, 1.0, n)
+        rpm = rng.normal(1500, 40, n) + 8 * (vib - 1)
+        fault = rng.random(n) < 0.03
+        k = fault.sum()
+        temp[fault] += rng.choice([-1, 1], k) * rng.uniform(8, 16, k)
+        vib[fault] *= rng.uniform(1.6, 2.6, k)
+        pressure[fault] -= rng.uniform(3, 8, k)
+        df = pd.DataFrame({"temperature_c": temp.round(2), "vibration_g": vib.round(3), "pressure_bar": pressure.round(2), "rpm": rpm.round(),
+                           "status": np.where(fault, "fault", "normal")})
+        return df, {**meta, "target_hint": None, "truth_hint": "status"}
     if name == "housing":
         n = 1500
         size = rng.normal(140, 45, n).clip(35, 400)

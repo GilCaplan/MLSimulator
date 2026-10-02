@@ -4,12 +4,31 @@ import { EmptyState, Glass, Tooltip } from "../components/glass";
 import { LineupTray } from "../components/models/LineupTray";
 import { ModelCard } from "../components/models/ModelCard";
 import { ModelSettingsModal } from "../components/models/ModelSettingsModal";
-import { BEGINNER, BEGINNER_IMAGE, configsFor, FAMILIES, lineupLabels, modalityOf, specModalities, VISION_IDS } from "../components/models/meta";
+import { configsFor, FAMILIES, lineupLabels, modalityOf, specFits, specModalities, starterFor, VISION_IDS } from "../components/models/meta";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { navigate } from "../lib/router";
-import { modelConfigFor, toast, useProject } from "../lib/store";
+import { isUnsupervised, modelConfigFor, toast, useProject } from "../lib/store";
 import type { ModelSpec, Suggestion } from "../lib/types";
+
+const UNSUP_INTRO: Record<string, React.ReactNode> = {
+  clustering: <>There's <b>no answer column</b> here — the models have to find the groups on their own. That's called <b>unsupervised learning</b>.
+    <br /><br /><b>K-Means</b> looks for round blobs, <b>Gaussian Mixture</b> allows stretched ones, <b>DBSCAN</b> follows dense regions of any shape. Not sure? Hit <b>Starter set</b>.</>,
+  reduction: <>Your data may have many columns — far too many to draw. <b>Dimensionality reduction</b> squashes them onto a flat map while trying to keep similar rows close together.
+    <br /><br /><b>PCA</b> is quick and honest; <b>t-SNE</b> draws prettier clusters but can exaggerate gaps. Compare both!</>,
+  anomaly: <>Anomaly detectors never see an example of a fault — they learn what's <b>normal</b> and flag whatever doesn't fit.
+    <br /><br /><b>Isolation Forest</b> is a fast all-rounder, <b>Local Outlier Factor</b> compares each row with its neighbours, <b>One-Class SVM</b> draws a fence around normal. Hit <b>Starter set</b> to race all three.</>,
+};
+
+/** Line-up tips for unsupervised problems. */
+function unsupSuggestions(task: string, ids: string[]): Suggestion[] {
+  const out: Suggestion[] = [];
+  if (ids.length === 1) out.push({ id: "one", severity: "info", title: "Add a second opinion", why: "There's no right answer to score against, so comparing two algorithms is the best way to see whether a pattern is real or just one model's quirk." });
+  if (task === "clustering" && ids.length && !ids.includes("dbscan")) out.push({ id: "dbscan", severity: "info", title: "Try a shape-free clusterer", why: "K-Means and friends assume round-ish groups. DBSCAN follows dense regions of any shape and can leave loners out as noise.", action: { kind: "add_models", label: "Add DBSCAN", model_ids: ["dbscan"] } });
+  if (task === "reduction" && ids.includes("tsne") && !ids.includes("pca")) out.push({ id: "pca", severity: "info", title: "Add PCA as a reference", why: "t-SNE maps look great but can invent gaps. PCA is a faithful, straight-line view to compare against.", action: { kind: "add_models", label: "Add PCA", model_ids: ["pca"] } });
+  if (task === "anomaly" && ids.length === 1) out.push({ id: "more", severity: "info", title: "Race a few detectors", why: "Different detectors flag different rows. If several agree a row is odd, it probably is.", action: { kind: "add_models", label: "Add LOF + Isolation Forest", model_ids: ["lof", "isolation_forest"].filter((x) => !ids.includes(x)) } });
+  return out;
+}
 
 export function ModelsStep() {
   const project = useProject((s) => s.project);
@@ -25,9 +44,10 @@ export function ModelsStep() {
   const task = project?.task ?? null;
   const modality = modalityOf(project?.modality);
   const image = modality === "image";
+  const unsup = isUnsupervised(task);
   const models = project?.models ?? [];
   const available = useMemo(
-    () => registry.filter((s) => task && !s.hidden && s.tasks.includes(task) && specModalities(s).includes(modality)),
+    () => registry.filter((s) => task && !s.hidden && specFits(s, task) && specModalities(s).includes(modality)),
     [registry, task, modality],
   );
   const groups = useMemo(() => {
@@ -71,8 +91,17 @@ export function ModelsStep() {
     update((p) => ({ models: [...p.models, ...configsFor(missing, available)] }));
     toast.success(msg.replace("{n}", String(missing.length)));
   };
-  const starter = (image ? BEGINNER_IMAGE : BEGINNER)[task];
-  const picks: { label: string; icon: string; tip: string; run: () => void }[] = [
+  const starter = starterFor(task, image);
+  const starterNames = starter.map((id) => available.find((s) => s.id === id)?.label ?? id);
+  const picks: { label: string; icon: string; tip: string; run: () => void }[] = unsup ? [
+    { label: "Starter set", icon: "🌱", tip: `Replace the line-up with ${starterNames.join(", ")} — different ideas of what a ${task === "clustering" ? "group" : task === "reduction" ? "good map" : "weird row"} is.`, run: () => {
+      update((p) => ({ models: configsFor(starter, available, p.models) }));
+      toast.success(`Starter set ready — ${starterNames.join(", ")}.`);
+    } },
+    { label: "Add them all", icon: "📚", tip: "Add every algorithm for this problem and compare them side by side.", run: () =>
+      addIds(available.map((s) => s.id), "Added {n} models.") },
+    { label: "Clear", icon: "🧹", tip: "Remove everything from the line-up.", run: () => update({ models: [] }) },
+  ] : [
     { label: image ? "Vision starter" : "Beginner trio", icon: "🌱", tip: image
       ? "Replace the line-up with two vision networks and one classic baseline to beat."
       : "Replace the line-up with three easy, reliable starters.", run: () => {
@@ -91,7 +120,8 @@ export function ModelsStep() {
   ];
 
   const suggestions: Suggestion[] = [];
-  if (models.length === 1) suggestions.push({ id: "one", severity: "info", title: "Add a rival or two", why: "With a single model you can't tell whether its score is good. Two or three contenders make the comparison meaningful." });
+  if (unsup) suggestions.push(...unsupSuggestions(task, models.map((m) => m.model_id)));
+  else if (models.length === 1) suggestions.push({ id: "one", severity: "info", title: "Add a rival or two", why: "With a single model you can't tell whether its score is good. Two or three contenders make the comparison meaningful." });
   if (image && models.length && !models.some((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "novision", severity: "warn", title: "Add a vision network", why: "None of your models are built for pictures. Add the Image CNN or Tiny ResNet — they usually beat pixel-by-pixel models by a wide margin.", action: { kind: "add_models", label: "Add CNN + ResNet", model_ids: ["cnn2d", "tiny_resnet"] } });
   if (image && models.length && models.every((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "baseline", severity: "info", title: "Add a baseline to beat", why: "A classic model on raw pixels (like logistic regression) shows how much the vision networks actually add." });
   if (!image && counts.cnn2d && dataset && !dataset.image_shape) suggestions.push({ id: "img", severity: "warn", title: "The image CNN needs pictures", why: "Your dataset isn't image data, so the 2-D CNN won't be able to train. Try the handwritten-digits sample, or remove it." });
@@ -99,14 +129,18 @@ export function ModelsStep() {
 
   return (
     <StepLayout
-      title="Pick your contenders"
-      subtitle={image
+      title={unsup ? "Pick your explorers" : "Pick your contenders"}
+      subtitle={unsup
+        ? task === "clustering" ? "Each algorithm has its own idea of what a “group” is. Try a few and see which grouping makes the most sense."
+          : task === "reduction" ? "Each algorithm flattens your columns onto a 2-D map in its own way. Compare the maps side by side."
+          : "Each detector learns what “normal” looks like differently. Compare which rows they find suspicious."
+        : image
         ? "Choose a few algorithms to race on your pictures. Vision networks are built for images; the rest are a baseline to beat."
         : "Choose a few algorithms to race against each other. Tap a card to add it — you can tweak any of them later."}
       coach={
         <CoachPanel
           suggestions={suggestions}
-          intro={image
+          intro={unsup ? UNSUP_INTRO[task] : image
             ? <>Pictures are just grids of numbers — but the <b>arrangement</b> matters. <b>Vision networks</b> slide small filters over the image to find edges, then shapes, then objects.
               <br /><br />Classic models see the same pixels as an unordered list. Racing both shows <b>why convolutions changed computer vision</b>. Not sure? Hit <b>Vision starter</b>.</>
             : <>There's <b>no single best algorithm</b> — which one wins depends on your data. That's why the pros try several and compare.

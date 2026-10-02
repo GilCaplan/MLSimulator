@@ -6,10 +6,10 @@ import type { PipelineSpec } from "../../lib/types";
 import type { StageId } from "./StageCard";
 
 export const STAGE_ICONS: Record<StageId, string> = {
-  clean: "🧹", features: "🛠️", encode: "🔤", outliers: "🎯", split: "✂️", scale: "📏", select: "🔍", balance: "⚖️", target: "📈",
+  clean: "🧹", features: "🛠️", encode: "🔤", outliers: "🎯", split: "✂️", holdout: "🫙", scale: "📏", select: "🔍", reduce: "🗜️", balance: "⚖️", target: "📈",
 };
 export const STAGE_NAMES: Record<StageId, string> = {
-  clean: "Clean", features: "Features", encode: "Encode", outliers: "Outliers", split: "Split", scale: "Scale", select: "Select", balance: "Balance", target: "Target",
+  clean: "Clean", features: "Features", encode: "Encode", outliers: "Outliers", split: "Split", holdout: "Hold-out", scale: "Scale", select: "Select", reduce: "Reduce", balance: "Balance", target: "Target",
 };
 
 const IMPUTE_SHORT: Record<PipelineSpec["impute"]["numeric"], string> = { median: "median", mean: "mean", most_frequent: "most common", zero: "zero", drop_rows: "drop rows" };
@@ -32,6 +32,11 @@ export function stageState(id: StageId, spec: PipelineSpec, hasCategorical: bool
       const m = spec.split.method ?? "random";
       return `${m === "group" ? "👥 " : m === "time" ? "🕒 " : ""}${100 - te - va}/${va}/${te}`;
     }
+    case "holdout": {
+      const h = Math.round((spec.unsupervised?.holdout ?? 0) * 100);
+      return h ? `${h}% aside` : "use all";
+    }
+    case "reduce": return spec.reduce?.method === "pca" ? `PCA → ${spec.reduce.n_components}` : "off";
     case "scale": return SCALE_SHORT[spec.scale.method];
     case "select": {
       const f = spec.feature_select;
@@ -54,6 +59,8 @@ function stageActive(id: StageId, spec: PipelineSpec, hasCategorical: boolean) {
     case "outliers": return spec.outliers.enabled;
     case "scale": return spec.scale.method !== "none";
     case "select": return spec.feature_select.method !== "none";
+    case "holdout": return (spec.unsupervised?.holdout ?? 0) > 0;
+    case "reduce": return spec.reduce?.method === "pca";
     case "target": return spec.target_transform !== "none" || !!spec.target_filter?.enabled;
     case "balance": return spec.resample.mode !== "none" || spec.resample.clean !== "none";
     default: return true;
@@ -139,7 +146,7 @@ function Chip({ item, onClick, index, running }: { item: FlowItem; onClick: () =
       whileHover={{ y: -3 }}
       whileTap={{ scale: 0.95 }}
       className="glass thin"
-      style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 12px 7px", minWidth: 78, borderRadius: 16, cursor: "pointer", color: "inherit", opacity: active ? 1 : 0.66 }}
+      style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 10px 7px", minWidth: 70, borderRadius: 16, cursor: "pointer", color: "inherit", opacity: active ? 1 : 0.66 }}
       title={`Jump to ${name}`}
     >
       <span style={{ fontSize: 18, filter: active ? "none" : "grayscale(0.7)" }}>{icon}</span>

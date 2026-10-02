@@ -19,8 +19,10 @@ their trained model is auto-graded on a **hidden test set** that represents the 
 | 10 | `calibration` | Inflated probabilities | ICU after surgery | SMOTE (calibrating on SMOTE rows also fails) | train on the real class mix |
 | 11 | `shortcut` | Spurious correlation | Heart disease screening | model uses `clinic` | ignore `clinic` |
 | 12 | `fairness` | Label bias + proxy | Loans (Prosper) / recidivism | uses gender (+ proxy) | drop gender **and** `shopping_profile` |
-| 13 | `convolutions` | Pixels-as-a-table can't handle position | Shapes anywhere (SDSS-style morphology) | logistic / random forest on pixels | Image CNN (or Tiny ResNet) |
-| 14 | `augmentation` | Training photos too tidy | Centred, upright shapes → real ones anywhere at any angle | CNN without augmentation | rotation + shift augmentation |
+| 13 | `choosing_k` | Clustering finds the k you ask for | Shopper segments (5 hidden types) | k-means with k = 3 | k sweep → k = 5 |
+| 14 | `curse` | Noise dimensions swamp distances | 43 factory sensors, 3 informative | k-means on all channels | PCA keeping the standout component |
+| 15 | `convolutions` | Pixels-as-a-table can't handle position | Shapes anywhere (SDSS-style morphology) | logistic / random forest on pixels | Image CNN (or Tiny ResNet) |
+| 16 | `augmentation` | Training photos too tidy | Centred, upright shapes → real ones anywhere at any angle | CNN without augmentation | rotation + shift augmentation |
 
 ## How the hidden test works
 `mlp/lessons/generators.py` returns `(train_df, hidden_df)` per lesson (deterministic, seed 7 for the shipped data):
@@ -32,6 +34,8 @@ their trained model is auto-graded on a **hidden test set** that represents the 
 - **baselines** — graded on MAE improvement over always predicting the training mean.
 - **splits** — hidden set = brand-new patients; also graded on how close the learner's own test accuracy is to reality.
 - **calibration** — graded on expected calibration error of the positive-class probability + ROC-AUC.
+- **choosing_k / curse** (unsupervised) — the truth column is hidden from the models; the check assigns hidden rows to
+  clusters (`assign` worker op) and scores agreement with the truth (adjusted Rand index).
 - **convolutions / augmentation** (image lessons) — hidden photos with shapes anywhere and at any angle; generators
   return `ImageBundle(images, frame)` and the check runs the `predict_arrays` worker op. These lessons train PyTorch
   models, so the validator runs them in a separate interpreter (`--torch`, done automatically).

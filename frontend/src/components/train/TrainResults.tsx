@@ -8,19 +8,19 @@ import { Glass, Spinner } from "../glass";
 import { Leaderboard } from "./Leaderboard";
 import { ChallengeCheck } from "../lessons/ChallengeCheck";
 import { ModelDetail } from "./ModelDetail";
-import { boardRows, primaryMetric, realModels, startTraining } from "./util";
+import { boardRows, defaultMetric, realModels, startTraining } from "./util";
 
 /** Results view: dirty-banner, header actions, leaderboard and detail for the selected model. */
 export function TrainResults({ result, onOptions }: { result: RunResult; onOptions: () => void }) {
   const dirty = useProject((s) => s.dirtySinceTrain);
   const history = useProject((s) => s.project?.history ?? []);
   const busy = useJob((s) => s.status === "running");
-  const [metric, setMetric] = useState(primaryMetric(result.task));
+  const [metric, setMetric] = useState(() => defaultMetric(result));
   const [selected, setSelected] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   useEffect(() => {
-    setMetric(primaryMetric(result.task));
-    setSelected(boardRows(result, primaryMetric(result.task)).find((r) => !r.baseline)?.key ?? null);
+    setMetric(defaultMetric(result));
+    setSelected(boardRows(result, defaultMetric(result)).find((r) => !r.baseline)?.key ?? null);
   }, [result]);
   const model = selected ? result.models[selected] : undefined;
   const run = history.findIndex((h) => h.job_id === result.job_id);

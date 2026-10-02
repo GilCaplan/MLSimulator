@@ -3,7 +3,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { spring, stagger } from "../../design/motion";
 import { LOWER_IS_BETTER, METRIC_HELP, METRIC_LABELS, fmt, pct } from "../../lib/format";
 import { useProject } from "../../lib/store";
-import type { ModelSpec, SavedModel, Task } from "../../lib/types";
+import type { ModelSpec, SavedModel } from "../../lib/types";
+import { metricHelp, metricLabel, primaryMetric } from "../train/util";
 import { AnimatedNumber, InfoTip } from "../glass";
 
 /* ---------------------------------------------------------------- page frame (non-wizard pages) */
@@ -68,26 +69,44 @@ export const specFor = (registry: ModelSpec[], modelId: string) => registry.find
 export const emojiFor = (registry: ModelSpec[], m: Pick<SavedModel, "model_id" | "family">) =>
   specFor(registry, m.model_id)?.emoji ?? (m.family === "torch" ? "🧠" : "🌳");
 
-export const TASK_META: Record<Task, { label: string; icon: string; badge: string }> = {
+export const TASK_META: Record<string, { label: string; icon: string; badge: string }> = {
   classification: { label: "Classification", icon: "🏷️", badge: "accent" },
   regression: { label: "Regression", icon: "📈", badge: "success" },
+  clustering: { label: "Clustering", icon: "🫧", badge: "warning" },
+  reduction: { label: "Data map", icon: "🗺️", badge: "accent" },
+  anomaly: { label: "Anomaly detection", icon: "🚨", badge: "danger" },
 };
+export const taskMeta = (task: string) => TASK_META[task] ?? { label: task, icon: "🤖", badge: "" };
+
+/** Saved models of the clustering / map / anomaly kind (SavedModel.task is typed for supervised tasks only). */
+export const isUnsupModel = (m: Pick<SavedModel, "task">) => ["clustering", "reduction", "anomaly"].includes(m.task as string);
 
 /* ---------------------------------------------------------------- metrics */
 
-const RATIO = new Set(["accuracy", "balanced_accuracy", "precision", "recall", "f1", "f1_weighted", "roc_auc", "avg_precision", "r2", "explained_variance", "mape"]);
+const RATIO = new Set(["accuracy", "balanced_accuracy", "precision", "recall", "f1", "f1_weighted", "roc_auc", "avg_precision", "r2", "explained_variance", "mape",
+  "purity", "trustworthiness", "explained_2d", "explained_all", "flagged_share", "noise_share"]);
 
 export const isRatioMetric = (k: string) => RATIO.has(k);
 export const formatMetric = (k: string, v: number | null | undefined) => (v === null || v === undefined ? "—" : RATIO.has(k) ? pct(v, 1) : fmt(v, 3));
 
-/** The single number we lead with for a model: accuracy for classifiers, R² for regressors. */
-export function headline(m: Pick<SavedModel, "task" | "metrics">): { key: string; label: string; value: number | null } {
+/**
+ * The single number we lead with for a model: accuracy for classifiers, R² for regressors, the problem's primary metric
+ * for unsupervised models. `text` is display-ready, `ring` in 0…1 and `tone` a colour for the progress ring.
+ */
+export function headline(m: Pick<SavedModel, "task" | "metrics">): { key: string; label: string; value: number | null; text: string; ring: number; tone: string } {
   const test = m.metrics?.test ?? {};
-  const key = m.task === "classification" ? "accuracy" : "r2";
-  return { key, label: METRIC_LABELS[key], value: test[key] ?? null };
+  const task = m.task as string;
+  let key = primaryMetric(task);
+  if (task === "anomaly" && test[key] === undefined) key = "flagged_share";
+  const value = test[key] ?? null;
+  const ring = value === null ? 0 : Math.max(0, Math.min(1, value));
+  const [good, ok] = key === "silhouette" ? [0.5, 0.25] : key === "flagged_share" ? [2, 2] : [0.85, 0.6];
+  const tone = ring >= good ? "var(--success)" : ring >= ok ? "var(--accent)" : key === "flagged_share" ? "var(--accent-2)" : "var(--warning)";
+  return { key, label: METRIC_LABELS[key] ?? metricLabel(key), value, text: formatMetric(key, value), ring, tone };
 }
 
-const ORDER = ["accuracy", "balanced_accuracy", "f1", "roc_auc", "precision", "recall", "mcc", "log_loss", "r2", "mae", "rmse", "mape"];
+const ORDER = ["accuracy", "balanced_accuracy", "f1", "roc_auc", "precision", "recall", "mcc", "log_loss", "r2", "mae", "rmse", "mape",
+  "silhouette", "davies_bouldin", "ari", "nmi", "purity", "trustworthiness", "explained_2d", "avg_precision", "flagged_share"];
 
 /** Animated metric tiles with plain-language help and the training score for comparison. */
 export function MetricTiles({ metrics, train, limit = 6, minWidth = 140 }: { metrics: Record<string, number>; train?: Record<string, number>; limit?: number; minWidth?: number }) {
@@ -100,8 +119,8 @@ export function MetricTiles({ metrics, train, limit = 6, minWidth = 140 }: { met
         return (
           <motion.div key={k} variants={rise} className="inset" style={{ padding: "12px 14px" }}>
             <div className="row small muted" style={{ gap: 6 }}>
-              <span className="truncate">{METRIC_LABELS[k] ?? k}</span>
-              {METRIC_HELP[k] && <InfoTip text={METRIC_HELP[k]} />}
+              <span className="truncate">{METRIC_LABELS[k] ?? metricLabel(k)}</span>
+              {(METRIC_HELP[k] ?? metricHelp(k)) && <InfoTip text={METRIC_HELP[k] ?? metricHelp(k)} />}
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em", marginTop: 2 }}>
               <AnimatedNumber value={v} format={(x) => (ratio ? pct(x, 1) : fmt(x, 3))} />

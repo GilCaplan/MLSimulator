@@ -8,13 +8,17 @@ import { SamplesPanel } from "./SamplesPanel";
 import { panelSwap } from "./shared";
 import { UploadPanel } from "./UploadPanel";
 
+/** The designer always builds an answer column; discovery projects design groups (classification) and hide it as truth. */
+export const designTask = (task: string | null): Task => (task === "regression" ? "regression" : "classification");
+
 export type SourceMode = "samples" | "upload" | "generate" | "presets";
 
 export function SourcePicker({ mode, setMode, catalog, task, onLoaded, design, setDesign }: {
   mode: SourceMode;
   setMode: (m: SourceMode) => void;
   catalog: Catalog | null;
-  task: Task | null;
+  /** the project's task (supervised or unsupervised) */
+  task: string | null;
   onLoaded: (d: DatasetSummary) => void;
   design: DesignState;
   setDesign: (d: DesignState | ((d: DesignState) => DesignState)) => void;
@@ -47,7 +51,7 @@ export function SourcePicker({ mode, setMode, catalog, task, onLoaded, design, s
           ) : mode === "presets" ? (
             <PresetsPanel catalog={catalog} task={task} onLoaded={onLoaded} />
           ) : (
-            <Designer design={design} setDesign={setDesign} task={task ?? "classification"} catalog={catalog} onCreated={onLoaded} />
+            <Designer design={design} setDesign={setDesign} task={designTask(task)} catalog={catalog} onCreated={onLoaded} />
           )}
         </motion.div>
       </AnimatePresence>

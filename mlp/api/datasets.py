@@ -208,11 +208,14 @@ def prepare_dataset(did: str, body: dict = Body(...)):
     if meta.get("modality") == "image":
         from ..core.images import prepare_images
         prepared = prepare_images(datasets.images(did), df, spec, did)
+    elif spec.get("task") in ("clustering", "reduction", "anomaly"):
+        from ..core.unsupervised import prepare_unsupervised
+        prepared = prepare_unsupervised(df, spec, did)
     else:
         prepared = prepare(df, spec, did, image_shape=meta.get("image_shape"))
     prepared_store.put(prepared)
     report = dict(prepared.report)
-    report["coach"] = ([] if getattr(prepared, "modality", "tabular") != "tabular"
+    report["coach"] = ([] if getattr(prepared, "modality", "tabular") != "tabular" or prepared.task not in ("classification", "regression")
                        else coach.prepare_suggestions(report, prepared.spec, body.get("model_ids") or [], prepared.task))
     report["classes"] = prepared.classes
     report["task"] = prepared.task

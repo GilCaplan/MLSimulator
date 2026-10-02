@@ -1,13 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { EmptyState, Glass } from "../components/glass";
-import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
+import { CoachPanel, NextBar, StepLayout, useStepLabel } from "../components/shell/Wizard";
 import { LiveDashboard } from "../components/train/LiveDashboard";
 import { TrainResults } from "../components/train/TrainResults";
 import { TrainSetup } from "../components/train/TrainSetup";
 import { liveProjectId } from "../components/train/util";
 import { navigate } from "../lib/router";
-import { useJob, useProject } from "../lib/store";
+import { isUnsupervised, useJob, useProject } from "../lib/store";
 
 /** View transition; uses variant labels so children with `animate_in` (fadeUp) still receive "show". */
 const view = {
@@ -22,6 +22,7 @@ const view = {
 };
 
 export function TrainStep() {
+  const stepLabel = useStepLabel("train");
   const project = useProject((s) => s.project)!;
   const result = useProject((s) => s.result);
   const jobId = useJob((s) => s.jobId);
@@ -36,7 +37,23 @@ export function TrainStep() {
   const mode = live ? "live" : !result || showSetup ? (project.prepared_id ? "setup" : "cta") : "results";
 
   const img = project.modality === "image";
-  const intro = img ? {
+  const unsup = isUnsupervised(project.task);
+  const intro = unsup ? {
+    cta: <>Before exploring, your data needs to be prepared — cleaned and scaled so every column speaks the same language. (There's nothing to predict, so no test split is needed.)</>,
+    setup: project.task === "clustering"
+      ? <>No answers this time: each model looks at the rows and tries to find <b>natural groups</b> on its own. If you kept a hidden <b>truth</b> column, we'll peek at it afterwards to see how well the groups match reality.</>
+      : project.task === "anomaly"
+        ? <>Each detector studies all the rows to learn what <b>normal</b> looks like, then gives every row an <b>unusualness score</b>. The highest scores get flagged.</>
+        : <>Each model squashes all your columns onto a flat <b>2-D map</b>. Good maps keep rows that are similar close together — so you can <i>see</i> the shape of your data.</>,
+    live: project.task === "clustering"
+      ? <>Watch <b>k-means walk</b>: every point joins its nearest centre, then each centre moves to the middle of its points. Repeat until nothing moves any more. The <b>inertia</b> line shows the groups getting tighter.</>
+      : <>The models are exploring your data. These ones work in one go, so there's no step-by-step curve to watch — the results are worth the wait.</>,
+    results: project.task === "clustering"
+      ? <>Open a model's <b>Map</b> to see its groups, <b>Profiles</b> to learn what makes each group different, and <b>Truth check</b> to compare them with the real categories you hid. A high silhouette means crisp groups — not necessarily meaningful ones.</>
+      : project.task === "anomaly"
+        ? <>Look at the <b>Scores</b> histogram: real anomalies should pile up to the right of the threshold. Then check the <b>Top anomalies</b> — do they look genuinely strange?</>
+        : <>Explore each <b>Map</b>. Colours (from your hidden truth column) that form clean islands mean the structure survived the squashing. For PCA, the <b>Scree</b> plot shows how many directions really matter.</>,
+  }[mode] : img ? {
     cta: <>Before training, your pictures need to be prepared — resized to one size, split into practice and test pictures, and (optionally) augmented.</>,
     setup: <>Each model studies the <b>training pictures</b>, then sits an exam on <b>test pictures</b> it has never seen. Classic models see the picture as a long list of pixel numbers; <b>convolutional networks</b> slide little pattern detectors over it — watch which approach wins.</>,
     live: <>Watch them learn! <b>Loss</b> is how wrong a model currently is, so you want those lines heading <b>down</b>. Image networks need more epochs than table models — they're inventing their own edge and shape detectors from scratch.</>,
@@ -50,12 +67,12 @@ export function TrainStep() {
 
   return (
     <StepLayout
-      title="Train"
-      subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : "Send your models off to learn from the data — and watch it happen live."}
+      title={stepLabel}
+      subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
       coach={<CoachPanel intro={intro} suggestions={mode === "results" ? result?.coach ?? [] : []} />}
       footer={
-        <NextBar back="prepare" next="improve" nextLabel="Improve" nextDisabled={!result}
-          status={live ? "Training in progress…" : result ? undefined : "Train once to unlock the Improve step."} />
+        <NextBar back="prepare" next="improve" nextLabel={unsup ? "Refine" : "Improve"} nextDisabled={!result}
+          status={live ? (unsup ? "Exploring…" : "Training in progress…") : result ? undefined : unsup ? "Run once to unlock the Refine step." : "Train once to unlock the Improve step."} />
       }
     >
       <AnimatePresence mode="wait">

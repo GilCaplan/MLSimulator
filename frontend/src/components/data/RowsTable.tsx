@@ -17,7 +17,7 @@ const cell = (v: any) => {
 };
 
 /** Paged raw-data table with a sticky header and horizontal scroll. */
-export function RowsTable({ datasetId, target }: { datasetId: string; target: string | null }) {
+export function RowsTable({ datasetId, target, mark = "🎯" }: { datasetId: string; target: string | null; mark?: string }) {
   const [offset, setOffset] = useState(0);
   const { data, loading, error } = useLatest<RowsResp>(`${datasetId}:${offset}`, () => api.rows(datasetId, offset, PAGE));
   const total = data?.total ?? 0;
@@ -40,7 +40,7 @@ export function RowsTable({ datasetId, target }: { datasetId: string; target: st
             <thead>
               <tr>
                 <th className="faint" style={{ width: 50 }}>#</th>
-                {data.columns.map((c, i) => <th key={c} style={i === tIdx ? { color: "var(--accent)" } : undefined}>{i === tIdx && "🎯 "}{c}</th>)}
+                {data.columns.map((c, i) => <th key={c} style={i === tIdx ? { color: "var(--accent)" } : undefined}>{i === tIdx && `${mark} `}{c}</th>)}
               </tr>
             </thead>
             <motion.tbody key={data.offset} initial={{ opacity: 0 }} animate={{ opacity: loading ? 0.6 : 1 }} transition={{ duration: 0.2 }}>
