@@ -14,6 +14,7 @@ ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dir) DIR="$2"; shift 2 ;;
+    -h|--help) sed -n '2,10p' "$0" 2>/dev/null || echo "Options: --dir PATH --no-launch --no-shortcuts --gpu"; exit 0 ;;
     *) ARGS+=("$1"); shift ;;
   esac
 done
@@ -26,13 +27,13 @@ git_ok() {
 }
 
 if [[ -d "$DIR/.git" ]] && git_ok; then
-  say "Updating $DIR…"
+  say "Updating ${DIR}..."
   git -C "$DIR" pull --ff-only
 elif [[ ! -e "$DIR" ]] && git_ok; then
-  say "Downloading ML Playground into $DIR…"
+  say "Downloading ML Playground into ${DIR}..."
   git clone --depth 1 -b "$BRANCH" "https://github.com/$REPO.git" "$DIR"
 else
-  say "Downloading ML Playground into $DIR…"
+  say "Downloading ML Playground into ${DIR}..."
   mkdir -p "$DIR"
   curl -fsSL "https://github.com/$REPO/archive/refs/heads/$BRANCH.tar.gz" | tar -xz -C "$DIR" --strip-components 1
 fi
