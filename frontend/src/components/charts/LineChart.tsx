@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { extent, linear, niceTicks, tickFmt, useSize } from "./util";
 
 export interface Series { name: string; color: string; points: { x: number; y: number | null | undefined }[]; dashed?: boolean; width?: number }
@@ -16,6 +17,7 @@ export function LineChart({ series, height = 220, xLabel, yLabel, yDomain, marke
   showLegend?: boolean;
   diagonal?: boolean;
 }) {
+  const [drawn, setDrawn] = useState(false);
   const [ref, { width }] = useSize<HTMLDivElement>();
   const m = { l: 44, r: 12, t: 10, b: xLabel ? 34 : 22 };
   const all = series.flatMap((s) => s.points.filter((p) => p.y !== null && p.y !== undefined && isFinite(p.y as number)));
@@ -70,8 +72,16 @@ export function LineChart({ series, height = 220, xLabel, yLabel, yDomain, marke
                   {area && (
                     <path d={`${d}L${sx(s.points[s.points.length - 1].x)},${height - m.b}L${sx(s.points[0].x)},${height - m.b}Z`} fill={s.color} opacity={0.1} />
                   )}
-                  <motion.path d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2.2} strokeLinecap="round" strokeLinejoin="round"
-                    strokeDasharray={s.dashed ? "5 4" : undefined} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: "easeOut" }} />
+                  {drawn || s.dashed ? (
+                    // after the first draw-in, a plain path: framer's pathLength would otherwise freeze the length at mount
+                    // (lines that keep growing get clipped) and override the dash pattern
+                    <path d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2.2} strokeLinecap="round" strokeLinejoin="round"
+                      strokeDasharray={s.dashed ? "5 4" : undefined} />
+                  ) : (
+                    <motion.path d={d} fill="none" stroke={s.color} strokeWidth={s.width ?? 2.2} strokeLinecap="round" strokeLinejoin="round"
+                      initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: "easeOut" }}
+                      onAnimationComplete={() => setDrawn(true)} />
+                  )}
                 </g>
               );
             })}

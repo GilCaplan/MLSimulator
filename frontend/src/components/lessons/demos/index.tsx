@@ -12,6 +12,7 @@ import { FeaturesDemo } from "./FeaturesDemo";
 import { ImbalanceDemo } from "./ImbalanceDemo";
 import { LeakageDemo } from "./LeakageDemo";
 import { MissingDemo } from "./MissingDemo";
+import { NoPeekingDemo } from "./NoPeekingDemo";
 import { OutliersDemo } from "./OutliersDemo";
 import { OverfittingDemo } from "./OverfittingDemo";
 import { PopularityBiasDemo } from "./PopularityBiasDemo";
@@ -52,4 +53,5 @@ export const DEMOS: Record<string, ComponentType<DemoProps>> = {
   regularization: RegularizationDemo,
   regression_metrics: RegressionMetricsDemo,
   thresholds: ThresholdsDemo,
+  no_peeking: NoPeekingDemo,
 };

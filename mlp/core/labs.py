@@ -99,7 +99,10 @@ def run_gan(p: dict, emit, cancel, seed=42) -> dict:
                   "fake": [[r(a, 3), r(b, 3)] for a, b in pts], "d_grid": [[r(v, 3) for v in row] for row in dg],
                   "secs": r(time.time() - t0, 2)}
             frames.append(fr)
-            emit("lab.frame", fr)
+            if step == 1:  # the first frame also carries what the live view needs to draw the target and axes
+                emit("lab.frame", {**fr, "real": [[r(a, 3), r(b, 3)] for a, b in real_show], "extent": r(ext, 3), "grid_x": [r(v, 3) for v in gx]})
+            else:
+                emit("lab.frame", fr)
     fake = np.asarray(frames[-1]["fake"])
     # how well the forgeries cover the target: share of real points with a fake point nearby, and vice versa
     from scipy.spatial import cKDTree

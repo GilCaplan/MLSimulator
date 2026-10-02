@@ -9,6 +9,7 @@ import { MeshBackground, Spinner, Toasts } from "../glass";
 const NAV = [
   { path: "/", label: "Projects", match: ["home", "wizard"] },
   { path: "/lessons", label: "Lessons", match: ["lessons", "lesson"] },
+  { path: "/labs", label: "Labs", match: ["labs", "lab"] },
   { path: "/library", label: "Model Library", match: ["library", "model"] },
   { path: "/settings", label: "Settings", match: ["settings"] },
 ];

@@ -257,6 +257,9 @@ export interface DatasetSummary {
   warnings?: string[];
   task_hint?: Task;
   target_hint?: string;
+  /** time-series datasets: suggested known-in-advance extra columns and forecast horizon */
+  exog?: string[];
+  horizon?: number;
   /** samples for unsupervised problems: the hidden comparison column */
   truth_hint?: string;
   /** text datasets: the column holding the text */
@@ -762,13 +765,15 @@ export interface ChallengeCheck {
   your_test: Record<string, number>;
   checked_at: number;
   solution?: string;
+  /** forecasting lessons: error metrics of the forecast past the end of the learner's data */
+  real_world?: { mae?: number; mase?: number; smape?: number; rmse?: number };
 }
 
 /* ---- Labs (mlp/core/labs.py, mlp/api/labs.py) */
 export interface LabInfo { label: string; emoji: string; blurb: string; kind: "server" | "client"; params?: Record<string, any> }
 export interface LabsCatalog { labs: Record<string, LabInfo>; gan_targets: Record<string, string> }
 /** `lab.frame` event payloads */
-export interface GanFrame { step: number; steps: number; g_loss: number; d_loss: number; fake: [number, number][]; d_grid: number[][]; secs: number }
+export interface GanFrame { step: number; steps: number; g_loss: number; d_loss: number; fake: [number, number][]; d_grid: number[][]; secs: number; /** first frame only */ real?: [number, number][]; extent?: number; grid_x?: number[] }
 export interface VaeFrame { epoch: number; epochs: number; recon: number; kl: number; points: [number, number, number][]; secs: number }
 export interface TransferFrame { run: "scratch" | "frozen" | "finetune"; epoch: number; epochs: number; loss: number; test_acc: number }
 export interface GanResult {
