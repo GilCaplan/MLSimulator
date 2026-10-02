@@ -10,6 +10,8 @@ import { Tuner } from "../components/improve/Tuner";
 import { UnsupWays } from "../components/improve/UnsupWays";
 import { WaysToImprove } from "../components/improve/WaysToImprove";
 import { CoachPanel, NextBar, StepLayout, useStepLabel } from "../components/shell/Wizard";
+import { SaveModelButton } from "../components/train/save/SaveEntry";
+import { useSavedSync } from "../components/train/save/savedSync";
 import { navigate } from "../lib/router";
 import { isUnsupervised, useProject } from "../lib/store";
 import type { Project, RunResult } from "../lib/types";
@@ -23,6 +25,18 @@ function Section({ icon, title, help, sub, children, sectionRef }: { icon: strin
       </div>
       {children}
     </Glass>
+  );
+}
+
+/** Footer for every Improve variant: back, save a model (always possible once a run exists), open the library. */
+function ImproveFooter({ result }: { result: RunResult | null }) {
+  useSavedSync(result?.job_id);
+  return (
+    <>
+      <NextBar back="train" />
+      {result && <SaveModelButton result={result} className="btn">💾 Save a model</SaveModelButton>}
+      <NextBar next={() => navigate("/library")} nextLabel="Open library" />
+    </>
   );
 }
 
@@ -64,7 +78,7 @@ function RefineStep() {
       title={title}
       subtitle={copy.sub}
       coach={<CoachPanel intro={copy.intro} suggestions={(result?.coach ?? []).filter((s) => !(s.action?.kind === "goto" && s.action.step === "improve"))} />}
-      footer={<NextBar back="train" next={() => navigate("/library")} nextLabel="Open library" />}
+      footer={<ImproveFooter result={result} />}
     >
       {!result ? (
         <Glass animate_in>
@@ -117,7 +131,7 @@ function RecommendImprove() {
           suggestions={(result?.coach ?? []).filter((s) => !(s.action?.kind === "goto" && s.action.step === "improve"))}
         />
       }
-      footer={<NextBar back="train" next={() => navigate("/library")} nextLabel="Open library" />}
+      footer={<ImproveFooter result={result} />}
     >
       {!result ? (
         <Glass animate_in>
@@ -161,7 +175,7 @@ function ForecastImprove() {
           suggestions={(result?.coach ?? []).filter((s) => !(s.action?.kind === "goto" && s.action.step === "improve"))}
         />
       }
-      footer={<NextBar back="train" next={() => navigate("/library")} nextLabel="Open library" />}
+      footer={<ImproveFooter result={result} />}
     >
       {!result ? (
         <Glass animate_in>
@@ -211,7 +225,7 @@ function SupervisedImprove() {
           suggestions={result?.coach ?? []}
         />
       }
-      footer={<NextBar back="train" next={() => navigate("/library")} nextLabel="Open library" />}
+      footer={<ImproveFooter result={result} />}
     >
       {!result ? (
         <Glass animate_in>

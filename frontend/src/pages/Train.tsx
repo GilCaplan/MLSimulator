@@ -5,6 +5,7 @@ import { CoachPanel, NextBar, StepLayout, useStepLabel } from "../components/she
 import { LiveDashboard } from "../components/train/LiveDashboard";
 import { TrainResults } from "../components/train/TrainResults";
 import { TrainSetup } from "../components/train/TrainSetup";
+import { SaveHint, SaveModelButton, SaveStrip } from "../components/train/save/SaveEntry";
 import { isForecast, isRecsys, liveProjectId } from "../components/train/util";
 import { navigate } from "../lib/router";
 import { isUnsupervised, useJob, useProject } from "../lib/store";
@@ -88,10 +89,16 @@ export function TrainStep() {
     <StepLayout
       title={stepLabel}
       subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : fc ? "Teach your models the rhythm of the series — then see whose forecast of the hidden future comes closest." : rec ? "Teach your models who likes what — then see whose top-10 lists hit the mark." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
-      coach={<CoachPanel intro={intro} suggestions={mode === "results" ? result?.coach ?? [] : []} />}
+      coach={<CoachPanel intro={intro} suggestions={mode === "results" ? result?.coach ?? [] : []} extra={mode === "results" ? <SaveHint result={result} /> : undefined} />}
       footer={
-        <NextBar back="prepare" next="improve" nextLabel={nextLabel} nextDisabled={!result}
-          status={live ? (unsup ? "Exploring…" : "Training in progress…") : result ? undefined : unsup ? `Run once to unlock the ${nextLabel} step.` : `Train once to unlock the ${nextLabel} step.`} />
+        <>
+          <NextBar back="prepare"
+            status={live ? (unsup ? "Exploring…" : "Training in progress…") : result ? undefined : unsup ? `Run once to unlock the ${nextLabel} step.` : `Train once to unlock the ${nextLabel} step.`} />
+          {result && !live && (
+            <SaveModelButton result={result} className="btn" finish title="Save a model to your library and stop here — improving is optional">💾 Save & finish</SaveModelButton>
+          )}
+          <NextBar next="improve" nextLabel={nextLabel} nextDisabled={!result} />
+        </>
       }
     >
       <AnimatePresence mode="wait">
@@ -114,7 +121,8 @@ export function TrainStep() {
           </motion.div>
         )}
         {mode === "results" && result && (
-          <motion.div key="results" {...view}>
+          <motion.div key="results" {...view} className="col" style={{ gap: 16 }}>
+            <SaveStrip result={result} />
             <TrainResults result={result} onOptions={() => setShowSetup(true)} />
           </motion.div>
         )}

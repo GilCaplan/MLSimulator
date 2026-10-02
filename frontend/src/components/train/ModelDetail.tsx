@@ -11,7 +11,9 @@ import { BarList, ConfusionMatrix, DecisionSurface, Histogram, LineChart, Residu
 import { Calibration } from "./Calibration";
 import { ErrorAnalysis } from "./Mistakes";
 import { ModelSettings as Settings } from "./ModelSettings";
-import { SaveModal } from "./SaveModal";
+import { SaveModelModal } from "./save/SaveModelModal";
+import { useSavedSync } from "./save/savedSync";
+import { TryPanel } from "./try/TryPanel";
 import { UnsupDetail } from "./unsup/UnsupDetail";
 import { RecsysDetail } from "./recsys/RecsysDetail";
 import { ForecastDetail } from "./forecast/ForecastDetail";
@@ -23,7 +25,7 @@ import { ClassChip, ExplainedSentence } from "./textKit";
 import { baselineOf, fmtMetric, isForecast, isRecsys, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
 
 type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters"
-  | "text_mistakes" | "words" | "explain";
+  | "text_mistakes" | "words" | "explain" | "try";
 
 const OVERVIEW: Record<string, string[]> = {
   classification: ["accuracy", "balanced_accuracy", "f1", "precision", "recall", "roc_auc"],
@@ -51,7 +53,9 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
   const [saving, setSaving] = useState(false);
   const spec = useProject((s) => s.registry.find((r) => r.id === model.model_id));
   const savedId = useSaved((s) => s.saved[`${result.job_id}:${model.key}`]);
+  useSavedSync(result.job_id);
   const isBase = !!model.baseline;
+  const tryTab = { value: "try" as Tab, label: "🧪 Try it" };
   const cls = result.task === "classification";
   const vision = model.vision;
   const isImage = !!vision || useProject.getState().project?.modality === "image";
@@ -60,6 +64,7 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
   const tabs: { value: Tab; label: string; disabled?: boolean }[] = isBase ? [{ value: "overview", label: "Overview" }] : isText ? [
     // text models: words instead of columns — no decision map, feature table or row mistakes
     { value: "overview", label: "Overview" },
+    tryTab,
     { value: "text_mistakes", label: "💬 Mistakes", disabled: !text },
     { value: "words", label: "🔤 Words", disabled: !text },
     { value: "explain", label: "🔍 Explanations", disabled: !text?.examples?.length },
@@ -70,6 +75,7 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
   ] : isImage ? [
     // image models: the tabular views (decision map, feature table, row mistakes, slices) don't apply
     { value: "overview", label: "Overview" },
+    tryTab,
     { value: "gallery", label: "🖼️ Gallery", disabled: !vision?.mistakes?.length && !vision?.correct?.length },
     { value: "looks", label: "👀 What it looks at", disabled: !vision?.saliency?.length && !vision?.pixel_importance },
     ...(model.family === "torch" ? [{ value: "filters" as Tab, label: "🔬 Filters", disabled: !vision?.filters?.length }] : []),
@@ -79,6 +85,7 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
     { value: "settings", label: "Settings" },
   ] : [
     { value: "overview", label: "Overview" },
+    tryTab,
     { value: "surface", label: "Decision map", disabled: !model.surface },
     { value: "errors", label: "Errors", disabled: !model.confusion && !model.residuals },
     { value: "mistakes", label: "Mistakes", disabled: !model.mistakes?.rows?.length && !model.slices?.length },
@@ -111,17 +118,22 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
           <div className="row" style={{ gap: 8 }}>
             <span className="badge success">✓ Saved</span>
             <button className="btn sm" onClick={() => navigate(`/library/${savedId}`)}>View in library →</button>
+            <button className="btn sm ghost" onClick={() => setSaving(true)} title="Save another copy (e.g. with different notes)">💾</button>
           </div>
         ) : (
-          <button className="btn primary" onClick={() => setSaving(true)}>💾 Save to library</button>
+          <div className="row" style={{ gap: 8 }}>
+            {tab !== "try" && <button className="btn sm" onClick={() => setTab("try")}>🧪 Try it</button>}
+            <button className="btn primary" onClick={() => setSaving(true)}>💾 Save to library</button>
+          </div>
         )}
       </div>
       <div style={{ overflowX: "auto", marginBottom: 16 }}>
-        <Segmented value={tab} onChange={setTab} options={tabs} size="sm" />
+        <Segmented value={tab} onChange={setTab} options={tabs} size="sm" allow={["segmented", "chips", "dropdown"]} />
       </div>
       <AnimatePresence mode="wait">
         <motion.div key={`${model.key}-${tab}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
           {tab === "overview" && <Overview result={result} model={model} />}
+          {tab === "try" && !isBase && <TryPanel result={result} model={model} />}
           {tab === "surface" && model.surface && (
             <div className="col" style={{ gap: 10 }}>
               <p className="small muted" style={{ lineHeight: 1.55 }}>
@@ -160,7 +172,7 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
           {tab === "settings" && <Settings model={model} />}
         </motion.div>
       </AnimatePresence>
-      {!isBase && <SaveModal open={saving} onClose={() => setSaving(false)} jobId={result.job_id} model={model} />}
+      {!isBase && <SaveModelModal open={saving} onClose={() => setSaving(false)} result={result} preselect={model.key} />}
     </Glass>
   );
 }

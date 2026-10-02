@@ -1,54 +1,18 @@
-import { useEffect, useState } from "react";
-import { api } from "../../lib/api";
-import { useProject, toast } from "../../lib/store";
-import type { ModelResult } from "../../lib/types";
-import { Field, Modal, Spinner } from "../glass";
-import { useSaved } from "./util";
+import { useMemo } from "react";
+import { useProject } from "../../lib/store";
+import type { ModelResult, RunResult } from "../../lib/types";
+import { SaveModelModal } from "./save/SaveModelModal";
 
-/** "Save to library" dialog for one trained model. */
+/**
+ * Per-model "Save to library" dialog (used by the unsupervised / recommender / forecasting detail views).
+ * It is the shared "Save a model" dialog (save/SaveModelModal.tsx), opened with this model preselected.
+ */
 export function SaveModal({ open, onClose, jobId, model }: { open: boolean; onClose: () => void; jobId: string; model: ModelResult }) {
-  const project = useProject((s) => s.project);
-  const [name, setName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (open) {
-      setName(`${model.label} · ${project?.name ?? "project"}`);
-      setNotes("");
-    }
-  }, [open, model.label, project?.name]);
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      const saved = await api.saveModel({ job_id: jobId, key: model.key, name: name.trim() || model.label, notes, project_id: project?.id });
-      useSaved.getState().mark(jobId, model.key, saved.id);
-      toast.success(`“${saved.name}” is in your library — open it with “View in library”.`);
-      onClose();
-    } catch (e) {
-      toast.error(e);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} title="💾 Save to library"
-      footer={<>
-        <button className="btn" onClick={onClose}>Cancel</button>
-        <button className="btn primary" onClick={save} disabled={busy}>{busy && <Spinner size={14} />} Save model</button>
-      </>}>
-      <div className="col" style={{ gap: 16 }}>
-        <p className="small muted" style={{ lineHeight: 1.55 }}>
-          Saving keeps the trained model together with its data-preparation recipe, so you can make predictions on new rows later — no retraining needed.
-        </p>
-        <Field label="Name">
-          <input className="input" value={name} autoFocus onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
-        </Field>
-        <Field label="Notes" help="Anything you want to remember: what you changed, why it's good…">
-          <textarea className="input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
-        </Field>
-      </div>
-    </Modal>
-  );
+  const current = useProject((s) => s.result);
+  const result = useMemo<RunResult>(() => current?.job_id === jobId && current.models[model.key] ? current : {
+    // not the project's latest run: a one-model stand-in is enough for the dialog
+    job_id: jobId, task: (current?.task ?? "classification"), prepared_id: current?.prepared_id ?? "", models: { [model.key]: model },
+    failures: {}, leaderboard: [], coach: [], classes: current?.classes ?? null, feature_names: [], options: current?.options ?? { cv_folds: 0, seed: 42 },
+  } as RunResult, [current, jobId, model]);
+  return <SaveModelModal open={open} onClose={onClose} result={result} preselect={model.key} />;
 }
