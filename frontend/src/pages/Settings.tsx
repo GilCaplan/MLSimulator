@@ -26,14 +26,27 @@ function AboutCard() {
   );
 }
 
+// Inside an iframe (e.g. CaplanCamp's CS section) the host owns where the server runs, so moving
+// or quitting the server from here would strand the embedding page. The host keeps these panels
+// for admins/local development by passing `?dev=1` (captured in main.tsx).
+function serverControlsAllowed(): boolean {
+  if (window.self === window.top) return true;
+  try {
+    return sessionStorage.getItem("mlp:embed-dev") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function SettingsPage() {
+  const serverControls = serverControlsAllowed();
   return (
     <PageFrame maxWidth={1180}>
       <PageHeader eyebrow="Preferences" title="Settings" subtitle="Where the app runs, how it looks, and what's under the hood." />
       <motion.div variants={stagger(0.07)} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 18, alignItems: "start" }}>
         <AppearancePanel />
-        <PortPanel />
-        <QuitPanel />
+        {serverControls && <PortPanel />}
+        {serverControls && <QuitPanel />}
         <SystemPanel />
         <AboutCard />
       </motion.div>
