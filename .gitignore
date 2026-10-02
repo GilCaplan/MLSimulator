@@ -1,5 +1,5 @@
 .venv/
-data/
+/data/
 frontend/node_modules/
 frontend/dist/
 launcher/build/
