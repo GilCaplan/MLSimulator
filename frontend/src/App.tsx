@@ -18,6 +18,7 @@ import { LibraryPage } from "./pages/Library";
 import { ModelPage } from "./pages/ModelDetail";
 import { SettingsPage } from "./pages/Settings";
 import { LessonsPage } from "./pages/Lessons";
+import { LabPage, LabsPage } from "./pages/Labs";
 import { LessonPage } from "./pages/Lesson";
 
 const STEP_PAGES: Record<StepId, ComponentType> = {
@@ -61,6 +62,8 @@ export function App() {
     case "settings": page = <SettingsPage />; break;
     case "lessons": page = <LessonsPage />; break;
     case "lesson": page = <LessonPage lessonId={route.lessonId} />; break;
+    case "labs": page = <LabsPage />; break;
+    case "lab": page = <LabPage labId={route.labId} />; break;
     default: page = <HomePage />;
   }
   return (

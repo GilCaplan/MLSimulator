@@ -27,6 +27,10 @@ def train_entry(payload: dict, q, cancel):
     from .train_classic import Cancelled
     emit = lambda t, d: q.put(("event", t, d))  # noqa: E731
     try:
+        if payload.get("op") == "lab":
+            from .labs import run_lab
+            q.put(("result", run_lab(payload, emit, cancel)))
+            return
         prepared = prepared_store.get(payload["prepared_id"])
         if payload.get("op") == "tune":
             from .tune import run_tune
@@ -155,6 +159,11 @@ def serve_entry(conn, family: str):
         if op == "validate_arch":
             from .nn.builder import summarize
             return summarize(kw["arch"], kw["n_features"], kw["n_out"], kw.get("image_shape"))
+        if op == "lab_decode":
+            from pathlib import Path
+
+            from .labs import vae_decode
+            return {"images": vae_decode(Path(kw["run_dir"]), kw["z"])}
         pp, est = load(kw["model_dir"])
         if op == "recommend":
             idx = pp

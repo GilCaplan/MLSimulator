@@ -23,13 +23,15 @@ It runs entirely on your computer. Nothing is uploaded anywhere.
 | **Discover (unsupervised).** Clustering (k-means with a live animation, Gaussian mixtures, DBSCAN, hierarchical), maps of your data (PCA with scree and loadings, t-SNE) and anomaly detection (Isolation Forest, One-Class SVM, Local Outlier Factor). Cluster profiles explain each group, an optional hidden "truth" column shows whether the groups make sense, and a k sweep helps choose the number of clusters. | ![Lessons](docs/images/lessons.jpg) |
 | **Language (NLP).** Text classification from built-in sets (product reviews with negations, support tickets, SMS spam) or your own CSV: bag-of-words models (TF-IDF with words or word pairs) next to word embeddings, a GRU and a tiny Transformer. See the words that drive each class, word-by-word explanations of predictions, and type your own sentences in the playground. | ![Lessons](docs/images/lessons.jpg) |
 | **Recommendations.** User–item–rating data (a built-in movie-ratings set or your own CSV): most-popular, item- and user-similarity, SVD and matrix factorisation. Ranking metrics (recall/NDCG@10, coverage, novelty), the long tail, a taste map, and a playground where you rate a few films as a new viewer and get live recommendations with "because you liked…". | ![Lessons](docs/images/lessons.jpg) |
-| **Lessons.** 19 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
+| **Forecasting.** Time series (shop sales with promotions, hourly electricity demand, airline passengers, website visits, or your own CSV): lag, rolling-average and calendar features, an honest time split, "same as last season" and exponential-smoothing baselines, trees and linear models on lags, and a GRU. Recursive multi-step forecasts with uncertainty bands, error growth by horizon, and a playground for "what if we run a promotion next week?". | ![Lessons](docs/images/lessons.jpg) |
+| **Labs.** Free-play experiments: a GAN forging 2-D shapes, a clickable autoencoder map of handwritten digits, transfer learning with a pre-trained network, slot machines (explore vs exploit) and a maze robot learning by Q-learning. | ![Lessons](docs/images/lessons.jpg) |
+| **Lessons.** 20 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
 
 ### Lessons
 
 Baselines · Missing values · Outliers & skewed targets · Data leakage · Feature engineering · Honest splits (groups &
 time) · Feature scaling · Class imbalance · Overfitting · Calibration & error analysis · Spurious shortcuts · Fairness
-& proxy bias · Choosing k · The curse of dimensionality · Bag of words · Popularity bias · Cold start · Convolutions · Data augmentation.
+& proxy bias · Choosing k · The curse of dimensionality · Bag of words · Popularity bias · Cold start · No peeking at the future · Convolutions · Data augmentation.
 
 ![Your test vs the real world](docs/images/lesson-check.jpg)
 
@@ -64,7 +66,7 @@ Then open <http://localhost:8765>.
 - **[Architecture](docs/ARCHITECTURE.md)**: how the app is built.
 - **[Contributing](CONTRIBUTING.md)**: development setup and the workflow guides in [`docs/workflows/`](docs/workflows/)
   (adding models, datasets and lessons, releases).
-- **[Roadmap](docs/expansion_plan.md)**: vision, unsupervised learning, NLP and recommenders have landed; forecasting is next.
+- **[Roadmap](docs/expansion_plan.md)**: vision, unsupervised learning, NLP, recommenders, forecasting and Labs have landed.
 
 ## Where things are stored
 Projects, datasets, trained models and logs live in `data/` inside the project folder. Back it up to keep your work;

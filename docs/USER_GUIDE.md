@@ -15,9 +15,17 @@ any time. Your work is saved automatically.
   its card.
 
 ## 1. Problem
-Choose **classification** (the answer is a category, like *spam / not spam* or *which species*) or **regression**
-(the answer is a number, like *price* or *minutes of delay*). Not sure? Ask yourself: "Is the answer a label or an
-amount?"
+Problems are grouped by what you want to do:
+- **Predict**: **classification** (the answer is a category, like *spam / not spam*) or **regression** (the answer is
+  a number, like *price*). Not sure? Ask yourself: "Is the answer a label or an amount?"
+- **Vision**: image classification ("what is in this picture?") and image regression ("what number does it show?").
+- **Language**: text classification (reviews, support tickets, spam).
+- **Discover**: clustering (natural groups), *Map my data* (2-D maps with PCA / t-SNE) and anomaly detection. These
+  have no answer column; an optional hidden "truth" column is used only to check the result.
+- **Recommend**: user–item–rating data → "what will this person like next?".
+- **Forecast**: a value over time (sales, demand, visits) → "what happens next?".
+
+Some steps are renamed to fit the problem (for example *Images*, *Texts*, *Ratings* or *Series* instead of *Data*).
 
 ## 2. Models
 Click cards to add models to your line-up. You can compare several at once; there is no single best algorithm.
@@ -105,8 +113,27 @@ Most tips have a one-click fix. In lesson challenges the tips are hidden behind 
   - **How it performed** and **Recipe**: the full configuration and data-preparation steps.
   - **Export (.zip)**: the trained model plus its preprocessing.
 
+## Forecasting in short
+- **Series step**: pick a built-in series (shop sales, electricity demand, airline passengers, website visits) or upload
+  a CSV/Excel file, then say which column is the **time**, which is the **value**, and (optionally) which column
+  separates several **series** (e.g. one per shop). Charts show the rhythm of your data (e.g. Mon…Sun) and how much
+  each value resembles the one *k* steps earlier.
+- **Prepare**: choose the **horizon** (how far ahead to forecast), the **split** (*last stretch of time* is honest;
+  *random rows* lets the model peek at the future), lags, rolling averages, calendar flags, a trend counter,
+  differencing, a log transform and the extra columns that are **known in advance** (planned promotions, a weather
+  forecast). Columns that are only known afterwards (number of customers…) leak the answer.
+- **Train**: every run is compared with "same as last season". With a time split the score is a genuine multi-step
+  forecast: each guess feeds the next. **MASE** below 1 means you beat "same as last season".
+- **Library**: forecast any series up to 4× the horizon and try *what-ifs* for the extra columns ("what if we run a
+  promotion next week?").
+
+## Labs
+Free-play experiments outside the wizard: a **GAN** that learns to forge 2-D shapes, an **autoencoder map** of
+handwritten digits you can click to decode, **transfer learning** (re-using a pre-trained network when you have only a
+few labels), **slot machines** (explore vs exploit) and a **robot in a maze** that learns by Q-learning.
+
 ## Lessons
-12 lessons in pipeline order, each **Learn → Try it → Quiz → Practice**.
+20 lessons in pipeline order, each **Learn → Try it → Quiz → Practice**.
 - **Practice** creates a challenge project with the problem baked in.
 - Work through the normal steps. On the Train results press **Check against the real world**: your model is graded
   on a hidden test set that represents real use. You'll see your own test score next to the real-world score;

@@ -21,7 +21,7 @@ export const DEFAULT_OPTIONS: TrainOptions = { cv_folds: 0, seed: 42 };
 
 export const UNSUPERVISED = new Set(["clustering", "reduction", "anomaly"]);
 /** problems without a target column chosen by the learner */
-export const NO_TARGET = new Set(["clustering", "reduction", "anomaly", "recommendation"]);
+export const NO_TARGET = new Set(["clustering", "reduction", "anomaly", "recommendation", "forecasting"]);
 export const isUnsupervised = (task?: string | null) => !!task && UNSUPERVISED.has(task);
 
 export function defaultPipeline(target: string, task: PipelineSpec["task"]): PipelineSpec {
@@ -64,6 +64,10 @@ export function fullPipeline(p: Project): PipelineSpec | null {
   if (p.modality && p.modality !== "tabular") out.modality = p.modality;
   if (saved.columns) out.columns = { ...saved.columns };
   if (p.modality === "ratings") out.recsys = { min_user: 5, min_item: 2, positive: 4, test_k: 3, split: "leave_last_out", ...(saved.recsys || {}) };
+  if (p.modality === "timeseries") {
+    out.forecast = { horizon: 14, lags: null, windows: null, calendar: true, trend: false, diff: false, log: false, exog: [], ...(saved.forecast || {}) };
+    out.split = { ...out.split, method: saved.split?.method === "random" ? "random" : "time" };
+  }
   if (p.modality === "text") out.text = { text_column: null, ngram_max: 1, max_features: 3000, min_df: 2, max_len: 40, ...(saved.text || {}) };
   return out;
 }

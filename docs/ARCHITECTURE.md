@@ -42,6 +42,13 @@ heavy training, lets **Stop** terminate a stuck fit, and keeps a crash in one mo
 | `core/coach.py` | Rule-based suggestions with one-click actions |
 | `core/library.py` | Saving, predicting, what-if curves, batch predictions, export |
 | `core/ports.py` | Free-port scan and live port hand-off |
+| `core/problems.py` | Problem catalogue (task × modality), step labels, primary metric and direction |
+| `core/images.py`, `core/vision_eval.py` | Image sets, ZIP upload, image preprocessing/augmentation, saliency/filters |
+| `core/text.py`, `core/text_eval.py` | Text sets, tokenizer, TF-IDF / token sequences, word attributions |
+| `core/unsupervised.py` | Clustering, maps (PCA/t-SNE), anomaly detection, k sweep |
+| `core/recsys.py` | Ratings data, popularity / kNN / SVD / ALS recommenders, ranking metrics |
+| `core/forecast.py` | Time series: causal features, time vs random split, baselines, Holt-Winters, regressors on lags, GRU, recursive forecasts |
+| `core/labs.py` | Labs: 2-D GAN, autoencoder/VAE map, transfer learning (torch worker); bandit and gridworld run in the browser |
 | `lessons/` | Lesson content, synthetic challenge generators, hidden-test grading |
 
 ## Frontend (`frontend/src/`)

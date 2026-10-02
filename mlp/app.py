@@ -48,8 +48,8 @@ def create_app() -> FastAPI:
     async def http_exc(_req: Request, exc: HTTPException):
         return JSONResponse({"error": exc.detail, "detail": exc.detail}, status_code=exc.status_code)
 
-    from .api import datasets, lessons, library, media, projects, system, train
-    for r in (system.router, projects.router, media.router, datasets.router, train.router, library.router, lessons.router):
+    from .api import datasets, labs, lessons, library, media, projects, system, train
+    for r in (system.router, projects.router, media.router, datasets.router, train.router, library.router, lessons.router, labs.router):
         app.include_router(r, prefix="/api")
 
     if (FRONTEND_DIST / "assets").exists():

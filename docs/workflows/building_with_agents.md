@@ -19,3 +19,5 @@ How large features in this repo are built with Claude Code.
 - **Verify centrally.** After helpers report, the main session runs `tsc`, the build, the smoke tests, the lesson
   validator, the process-isolation test and a headless-browser pass, then commits.
 - **Checkpoint.** `docs/PROGRESS.md` is updated after each milestone so a new session can resume after a usage limit.
+- **Usage limits.** If a helper stops on a usage limit, check `git status` for partial edits, then *resume* the same
+  helper (it keeps the context it has read) instead of starting a new one. Still never more than 2 at a time.

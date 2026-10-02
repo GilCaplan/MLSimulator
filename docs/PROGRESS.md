@@ -69,6 +69,40 @@ _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
 - **Hidden until the UI lands:** `problems.py` forecasting `enabled: False` and `no_peeking` not in `ORDER` (catalog.py).
   Re-enable both when the forecasting UI is merged.
 
+## Phase 5 UI — PAUSED mid-way (session 4)
+Agent B (train/library/home/check) — done: `components/train/util.ts` (forecasting ranks by MAE, `isForecast()`, labels,
+lower-is-better MASE/sMAPE/one-step, toast fix), new `components/train/forecast/` (`fcKit.ts`, `ForecastChart.tsx`,
+`ForecastViews.tsx`, `ForecastDetail.tsx`) — complete but NOT wired. Left: route forecasting in
+`train/ModelDetail.tsx`; TrainSetup (hide CV/calibration, explain exam), Train intro, LiveModelCard MAE+MASE, Leaderboard
+(baseline-to-beat, random-split banner, MASE column); Improve forecasting branch (no tuner, "what to try next";
+`ProgressOverRuns` picks best with max — wrong for lower-is-better); Library `ForecastPlayground.tsx` (promo what-if),
+performance/recipe/card badge/filter, `library/shared.tsx` TASK_META; Home "Shop sales forecast" template + ⏱️ badges;
+lesson check (`error_ratio`/`mase` formatting, Forecast stage tint, `real_world` — add to `ChallengeCheck` type);
+browser checks. Seed data/script: scratchpad `agentB_data`, `agentB/seed.py`.
+Agent A (problem/models/series/prepare) — done: Series step `components/data/timeseries/` (`tsData.ts`, `viz.tsx`,
+`TsSetsPanel`, `TsUploadPanel`, `TsHeader`, `TsInsights`, `TimeseriesDataStep`) + dispatch in `pages/Data.tsx`.
+Note: series "none" is saved as `"none"` (backend merges dataset columns underneath). Started, unwired:
+`components/prepare/timeseries/{tsPrepState.ts,HorizonCard.tsx}`. Left: `TimeseriesPrepareStep` (mirror
+RatingsPrepareStep; show backend 400 as an error card) + split card + clues card (cap lags < n/3) + report + Prepare
+dispatch line; Problem page (forecast tile look, guard chooseProblem modality, default models HW+GBM+linear); Models
+(`meta.ts` FAMILIES for 4 forecast families, `starterFor`, forecasting branch in `pages/Models.tsx`); browser checks.
+Foundation gaps: add `exog`/`horizon` to `DatasetSummary`; `fullPipeline` defaults `forecast.exog` to [] (overrides
+dataset suggestion); add `real_world` to `ChallengeCheck`.
+**To resume:** resume both agents (or new ones with this list), keep max 2 at a time; then re-enable forecasting
+(`problems.py` enabled True, `no_peeking` in catalog ORDER) and the Labs nav tab (`AppShell.tsx` NAV), verify, push.
+
+## Phase 6 (Labs) — backend DONE, UI queued (session 4)
+- `mlp/core/labs.py`: `gan` (2-D targets ring8/moons/spiral/circle/grid9, frames with fake points + 25×25 discriminator
+  grid, coverage/precision), `vae` (sklearn digits 8×8 → 2-D map, vae|ae mode, decoded grid, reconstructions, model
+  saved to `data/labs/<job>/vae.pt`), `transfer` (CNN pre-trained once on synthetic shapes+arrows, cached in
+  `data/labs/_cache`; scratch vs frozen vs fine-tune on N digits per class). Client-side labs: `bandit`, `gridworld`.
+- API `mlp/api/labs.py`: `GET /labs`, `POST /labs/{lab}/run` (job kind "lab", `lab.frame` events, torch worker op
+  "lab"), `POST /labs/vae/decode` (server op "lab_decode"). Smoke: `scripts/smoke_labs.py PORT`.
+- Frontend foundation: routes `/labs`, `/labs/:id`, nav tab, stub `pages/Labs.tsx`, types `Labs*`/`Gan*`/`Vae*`/
+  `Transfer*`, `api.labs/runLab/labResult/vaeDecode`.
+- Queue (max 2 agents): Labs UI (gallery + GAN/VAE/transfer pages) and client labs (bandit, gridworld) + the
+  `no_peeking` lesson demo; after the forecasting UI agents report.
+
 ## Next
 - Vision UI is complete (problem picker, image Data/Prepare, results tabs, playground, 14 lessons incl. 2 vision demos);
   pushed to GitHub, CI green (CI validates tabular lessons; image lessons need `validate_lessons.py --torch` locally).

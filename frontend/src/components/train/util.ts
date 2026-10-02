@@ -11,10 +11,13 @@ export const REG_METRICS = ["r2", "rmse", "mae"];
 
 /** Ranking metric per task (mirrors mlp/core/problems.py primary_metric). */
 export const primaryMetric = (task: string | null | undefined) =>
-  task === "regression" ? "r2" : task === "recommendation" ? "ndcg_at_10" : task === "clustering" ? "silhouette" : task === "reduction" ? "trustworthiness" : task === "anomaly" ? "roc_auc" : "accuracy";
+  task === "regression" ? "r2" : task === "forecasting" ? "mae" : task === "recommendation" ? "ndcg_at_10" : task === "clustering" ? "silhouette" : task === "reduction" ? "trustworthiness" : task === "anomaly" ? "roc_auc" : "accuracy";
 
 /** Recommendation runs (mlp/core/recsys.py): ranked top-10 lists instead of answers. */
 export const isRecsys = (task: string | null | undefined) => task === "recommendation";
+
+/** Forecasting runs (mlp/core/forecast.py): a time series, scored on a multi-step forecast of its last stretch. */
+export const isForecast = (task: string | null | undefined) => task === "forecasting";
 
 /* ---- unsupervised metrics (mlp/core/unsupervised.py) */
 
@@ -24,6 +27,8 @@ export const UNSUP_METRICS: Record<UnsupervisedTask, string[]> = {
   reduction: ["trustworthiness", "explained_2d", "explained_all"],
   anomaly: ["roc_auc", "avg_precision", "precision", "recall", "flagged_share"],
   recommendation: ["ndcg_at_10", "recall_at_10", "precision_at_10", "hit_rate", "coverage", "novelty", "rmse", "mae"],
+  // bias (signed) is shown on the cards, never ranked by
+  forecasting: ["mae", "rmse", "mase", "smape", "one_step_mae"],
 };
 
 /** Metrics that need the hidden "truth" column (absent when the project has none). */
@@ -54,6 +59,10 @@ export const UNSUP_LABELS: Record<string, string> = {
   coverage: "Coverage",
   novelty: "Novelty",
   users_evaluated: "Viewers tested",
+  mase: "MASE",
+  smape: "sMAPE",
+  bias: "Bias",
+  one_step_mae: "One-step MAE",
 };
 
 export const UNSUP_HELP: Record<string, string> = {
@@ -82,6 +91,16 @@ export const UNSUP_HELP: Record<string, string> = {
   users_evaluated: "How many viewers had a held-out favourite to test the top-10 list against.",
 };
 
+/** Forecast errors are in the series' own units (sales, visits, kWh…). */
+const FORECAST_HELP: Record<string, string> = {
+  mae: "We hid the last stretch of the series and asked the model to forecast it, one step after another — each guess feeding the next. MAE is how far off those forecasts were on average, in the series' own units. Lower is better.",
+  rmse: "Like MAE, but big misses count extra (errors are squared before averaging). Lower is better.",
+  mase: "The forecast's error divided by the typical error of “same as last season” (e.g. next Monday = last Monday). Below 1 = it beats that simple rule; 0.7 means 30% smaller errors. Above 1 = the simple rule does better.",
+  smape: "Average error as a share of the values (symmetric percentage error). Handy for comparing series of different sizes. Lower is better.",
+  bias: "Average signed error: positive = forecasts run too high, negative = too low. Close to 0 is best — a consistent bias usually means a trend the model can't follow.",
+  one_step_mae: "The error if the model always knew yesterday's real value and only had to guess one step ahead. It's always easier than a real multi-step forecast — the gap shows how much errors snowball.",
+};
+
 /** Rating-prediction errors read differently for recommenders (stars, not target units). */
 const RECSYS_HELP: Record<string, string> = {
   rmse: "Rating prediction: how many stars off the model's guessed rating is, on the held-out ratings (big misses count extra). Lower is better — but a great star-guesser can still make a dull top-10 list.",
@@ -95,9 +114,9 @@ const ANOMALY_HELP: Record<string, string> = {
   recall: "Of the real anomalies, how many did it flag? Low recall = faults slipping through.",
 };
 
-const UNSUP_LOWER = new Set(["davies_bouldin", "inertia", "bic", "kl_divergence"]);
+const UNSUP_LOWER = new Set(["davies_bouldin", "inertia", "bic", "kl_divergence", "mase", "smape", "one_step_mae"]);
 /** Unsupervised metrics shown as plain decimals rather than percentages. */
-const DECIMAL = new Set(["ndcg_at_10", "users_evaluated", "silhouette", "davies_bouldin", "calinski_harabasz", "ari", "nmi", "inertia", "bic", "n_clusters", "threshold", "n_components", "kl_divergence"]);
+const DECIMAL = new Set(["bias", "ndcg_at_10", "users_evaluated", "silhouette", "davies_bouldin", "calinski_harabasz", "ari", "nmi", "inertia", "bic", "n_clusters", "threshold", "n_components", "kl_divergence"]);
 
 export const lowerBetter = (metric: string) => LOWER_IS_BETTER.has(metric) || UNSUP_LOWER.has(metric);
 
@@ -105,13 +124,13 @@ export const lowerBetter = (metric: string) => LOWER_IS_BETTER.has(metric) || UN
 export const isUnit = (metric: string) => !lowerBetter(metric) && metric !== "r2" && metric !== "mcc" && !DECIMAL.has(metric);
 
 export const fmtMetric = (metric: string, v: number | null | undefined) =>
-  v === null || v === undefined ? "—" : metric === "n_clusters" || metric === "n_components" || metric === "users_evaluated" ? String(Math.round(v)) : isUnit(metric) ? pct(v, 1) : fmt(v, 3);
+  v === null || v === undefined ? "—" : metric === "smape" ? pct(v, 1) : metric === "mase" ? v.toFixed(2) : metric === "n_clusters" || metric === "n_components" || metric === "users_evaluated" ? String(Math.round(v)) : isUnit(metric) ? pct(v, 1) : fmt(v, 3);
 
 export const metricLabel = (m: string) => METRIC_LABELS[m] ?? UNSUP_LABELS[m] ?? m;
 
 /** Plain-language help for a metric (anomaly metrics are phrased for flagged rows). */
 export const metricHelp = (m: string, task?: string | null): string | undefined =>
-  (task === "anomaly" ? ANOMALY_HELP[m] : task === "recommendation" ? RECSYS_HELP[m] : undefined) ?? UNSUP_HELP[m] ?? METRIC_HELP[m];
+  (task === "anomaly" ? ANOMALY_HELP[m] : task === "recommendation" ? RECSYS_HELP[m] : task === "forecasting" ? FORECAST_HELP[m] : undefined) ?? UNSUP_HELP[m] ?? METRIC_HELP[m];
 
 /** Is `a` a better score than `b` for this metric? */
 export const better = (metric: string, a: number, b: number) => (lowerBetter(metric) ? a < b : a > b);
@@ -215,7 +234,7 @@ export function attachTrainJob(job_id: string, projectId: string, models: { key:
         cur.update((p) => ({ last_job_id: job_id, history: [...(p.history || []), { job_id, at: Date.now() / 1000, leaderboard: result.leaderboard }] }));
         const best = result.leaderboard.find((r) => !r.baseline);
         const base = result.leaderboard.find((r) => r.baseline);
-        const beat = best && base && best.score !== null && base.score !== null ? best.score > base.score : true;
+        const beat = best && base && best.score !== null && base.score !== null ? better(best.metric || primaryMetric(result.task), best.score, base.score) : true;
         toast.success(best ? (beat ? `Training done — ${best.label} came out on top!` : `Training done — but none of the models beat the baseline. Take a look!`) : "Training finished.");
       } catch (e) {
         toast.error(e);

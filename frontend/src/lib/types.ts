@@ -1,7 +1,7 @@
 /* Shapes mirrored from the Python backend (mlp/). Keep in sync. */
 
 export type Task = "classification" | "regression";
-export type UnsupervisedTask = "clustering" | "reduction" | "anomaly" | "recommendation";
+export type UnsupervisedTask = "clustering" | "reduction" | "anomaly" | "recommendation" | "forecasting";
 export type Modality = "tabular" | "image" | "text" | "ratings" | "timeseries";
 
 /** A problem type from GET /api/problems (task × modality), mirrored from mlp/core/problems.py */
@@ -83,6 +83,50 @@ export interface RecsysResult {
 }
 export interface RecommendResponse { user_kind: "known" | "new"; n_rated: number; fallback_used: boolean; items: RecItem[]; history: RecItem[] }
 export interface RatingsSetInfo { label: string; emoji: string; blurb: string; params: Record<string, number> }
+
+/** Forecasting (mlp/core/forecast.py). Times are ISO strings ("YYYY-MM-DD" or "YYYY-MM-DD HH:MM") or step numbers. */
+export interface TsPoint { t: string | number; y: number }
+export interface TsBandPoint extends TsPoint { lo: number; hi: number }
+export interface TimeseriesSetInfo {
+  label: string; emoji: string; blurb: string; horizon: number;
+  columns: { time: string; value: string; series?: string }; exog: string[];
+}
+export interface ForecastSeriesResult {
+  series: string;
+  /** MASE denominator for this series (mean error of 'same as last season' in the history) */
+  scale: number;
+  /** time split: the steps just before the test block; random split: the whole series (downsampled) */
+  history: TsPoint[];
+  /** time split: what really happened in the test block (empty for a random split) */
+  actual: TsPoint[];
+  /** time split: the recursive multi-step forecast over the test block; random split: a forecast past the end of the data.
+   *  lo/hi = an ~80% band that widens with the horizon */
+  forecast: TsBandPoint[];
+  /** one-step-ahead predictions at the test steps (random split: also `actual`) */
+  one_step: (TsPoint & { actual?: number })[];
+}
+export interface ForecastResult {
+  split: "time" | "random";
+  horizon: number;
+  /** "day" | "hour" | "month" | "week" | "quarter" | "year" | "step" */
+  unit: string;
+  season: number;
+  series: ForecastSeriesResult[];
+  /** time split: MASE at forecast step 1…horizon (errors grow as guesses feed into later guesses) */
+  mase_by_step: number[];
+  /** linear / tree models: share of importance per feature (lag_7, dow_Sat, promo, series_Store A…) */
+  importance: { feature: string; importance: number }[];
+  /** naive | seasonal_naive | moving_average | holt_winters | linear | random_forest | gbm | gru */
+  kind: string;
+  value_name: string;
+}
+export interface ForecastResponse {
+  series: string; series_names: string[]; freq: string; unit: string; season: number; horizon: number; value_name: string;
+  history: TsPoint[];
+  forecast: TsBandPoint[];
+  /** extra (known-in-advance) columns: planned values over the forecast (editable what-ifs) and recent history */
+  exog: { name: string; binary: boolean; values: number[]; recent: number[] }[];
+}
 
 export interface SweepResult {
   model_id: string;
@@ -197,7 +241,7 @@ export interface ColumnSummary {
 export interface DatasetSummary {
   id: string;
   name: string;
-  source: "upload" | "synthetic" | "preset" | "sample" | "composed" | "image_set" | "text_set" | "ratings_set" | "lesson";
+  source: "upload" | "synthetic" | "preset" | "sample" | "composed" | "image_set" | "text_set" | "ratings_set" | "timeseries_set" | "lesson";
   n_rows: number;
   n_cols: number;
   columns: ColumnSummary[];
@@ -265,6 +309,28 @@ export interface DatasetProfile {
   per_user_edges?: number[];
   long_tail?: number[];
   top_items?: { item: string; ratings: number; title?: string; genre?: string }[];
+  /** time-series datasets (modality=timeseries). columns_roles then holds { time, value, series } */
+  columns?: { name: string; numeric: boolean; n_unique: number }[];
+  /** numeric columns that could be used as known-in-advance extra inputs; `exog` = the dataset's suggestion */
+  exog_candidates?: string[];
+  exog?: string[];
+  horizon_default?: number;
+  freq?: string;
+  unit?: string;
+  season?: number;
+  season_name?: string | null;
+  n_series?: number;
+  series_names?: string[];
+  filled?: number;
+  /** autocorrelation of the (first) series with itself k steps earlier */
+  acf?: { lag: number; r: number }[];
+  /** average (scaled) value at each position of the season, e.g. Mon…Sun */
+  seasonal_profile?: { labels: string[]; values: number[]; name: string } | null;
+  timeline?: { series: string; points: TsPoint[] }[];
+  series?: { name: string; n: number; start: string; end: string; mean: number; min: number; max: number }[];
+  value_stats?: { min: number; max: number; mean: number; missing: number };
+  /** set when the chosen columns can't be prepared (e.g. series too short) */
+  error?: string;
 }
 
 export interface Distribution { label: string; params: Record<string, any> }
@@ -349,8 +415,12 @@ export interface PipelineSpec {
   target_transform: "none" | "log1p";
   /** data modality (the backend dispatches image/text/ratings preparation on it) */
   modality?: Modality;
-  /** ratings datasets: which columns hold user / item / rating / time */
-  columns?: { user?: string | null; item?: string | null; rating?: string | null; time?: string | null };
+  /** ratings datasets: which columns hold user / item / rating / time; time series: time / value / series */
+  columns?: { user?: string | null; item?: string | null; rating?: string | null; time?: string | null; value?: string | null; series?: string | null };
+  /** forecasting: horizon (steps ahead), lag steps, rolling-mean windows, calendar flags, trend counter, differencing,
+   *  log transform, known-in-advance extra columns. lags/windows null = automatic (1,2,3,season,2×season / season).
+   *  The split uses split.method "time" (last stretch = test) or "random" (the leak). */
+  forecast?: { horizon: number; lags: number[] | null; windows: number[] | null; calendar: boolean; trend: boolean; diff: boolean; log: boolean; exog: string[] };
   /** recommenders: filters, what counts as "liked", and how many recent ratings per user are held out */
   recsys?: { min_user: number; min_item: number; positive: number; test_k: number; split: "leave_last_out" | "random" };
   /** text datasets: which column holds the text, bag-of-words settings (ngram_max 1 = words, 2 = words + pairs),
@@ -424,6 +494,24 @@ export interface PrepareReport {
   /** image datasets: original + augmented variants (data URIs) for a few training images */
   augment_preview?: { i: number; original: string; variants: string[] }[];
   sample_images?: number[];
+  /** time series (forecasting) */
+  freq?: string;
+  unit?: string;
+  season?: number;
+  season_name?: string | null;
+  horizon?: number;
+  lags_needed?: number;
+  n_series?: number;
+  series_names?: string[];
+  n_steps?: number;
+  filled?: number;
+  forecast_config?: { lags: number[]; windows: number[]; calendar: boolean; trend: boolean; diff: boolean; log: boolean; exog: string[] };
+  /** each series with every point tagged train / val / test (train part downsampled) */
+  timeline?: { series: string; points: (TsPoint & { part: "train" | "val" | "test" })[] }[];
+  acf?: { lag: number; r: number }[];
+  seasonal_profile?: { labels: string[]; values: number[]; name: string } | null;
+  /** plain-language meaning of each feature (calendar flags summarised in one row) */
+  features_explained?: { name: string; explain: string }[];
   /** ratings datasets */
   n_users?: number;
   n_items?: number;
@@ -485,6 +573,7 @@ export interface ModelResult {
   anomaly?: AnomalyResult | null;
   text?: TextResult | null;
   recsys?: RecsysResult | null;
+  forecast?: ForecastResult | null;
   fit_time_s: number;
   n_params?: number | null;
 }
@@ -664,4 +753,34 @@ export interface ChallengeCheck {
   your_test: Record<string, number>;
   checked_at: number;
   solution?: string;
+}
+
+/* ---- Labs (mlp/core/labs.py, mlp/api/labs.py) */
+export interface LabInfo { label: string; emoji: string; blurb: string; kind: "server" | "client"; params?: Record<string, any> }
+export interface LabsCatalog { labs: Record<string, LabInfo>; gan_targets: Record<string, string> }
+/** `lab.frame` event payloads */
+export interface GanFrame { step: number; steps: number; g_loss: number; d_loss: number; fake: [number, number][]; d_grid: number[][]; secs: number }
+export interface VaeFrame { epoch: number; epochs: number; recon: number; kl: number; points: [number, number, number][]; secs: number }
+export interface TransferFrame { run: "scratch" | "frozen" | "finetune"; epoch: number; epochs: number; loss: number; test_acc: number }
+export interface GanResult {
+  lab: "gan"; run_id: string; target: string; extent: number;
+  /** x (= y) coordinates of the 25×25 discriminator grid; d_grid rows go from y = -extent (row 0) upward */
+  grid_x: number[];
+  real: [number, number][]; frames: GanFrame[];
+  /** share of real points with a forged point nearby / forged points near real ones */
+  coverage: number; precision: number;
+}
+export interface VaeResult {
+  lab: "vae"; run_id: string; mode: "vae" | "ae"; frames: VaeFrame[];
+  extent: { x: [number, number]; y: [number, number] };
+  /** n×n decoded images over the map (row 0 = top = high y); each image = 64 values 0–1 (8×8, row-major) */
+  grid: { n: number; images: number[][] };
+  reconstructions: { digit: number; original: number[]; rebuilt: number[] }[];
+}
+export interface TransferRun { curve: { epoch: number; loss: number; test_acc: number }[]; final_acc: number; best_acc: number; trainable: number; examples: number[] }
+export interface TransferResult {
+  lab: "transfer"; run_id: string; per_class: number; n_train: number; n_test: number;
+  runs: Record<"scratch" | "frozen" | "finetune", TransferRun>;
+  /** test images with true labels; runs[x].examples[i] = that run's prediction for examples[i] */
+  examples: { image: string; label: number }[];
 }

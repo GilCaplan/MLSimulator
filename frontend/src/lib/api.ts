@@ -1,7 +1,7 @@
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, TimeseriesSetInfo, ForecastResponse, LabsCatalog, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
@@ -72,12 +72,15 @@ export const api = {
   rows: (id: string, offset = 0, limit = 100) =>
     get<{ columns: string[]; rows: any[][]; total: number; offset: number }>(`/datasets/${id}/rows?offset=${offset}&limit=${limit}`),
   profile: (id: string, target?: string | null, task?: string | null,
-    extra: { modality?: string; text_column?: string | null; user_col?: string | null; item_col?: string | null; rating_col?: string | null } = {}) =>
+    extra: { modality?: string; text_column?: string | null; user_col?: string | null; item_col?: string | null; rating_col?: string | null;
+      time_col?: string | null; value_col?: string | null; series_col?: string | null } = {}) =>
     get<DatasetProfile>(`/datasets/${id}/profile?${new URLSearchParams({
       ...(target ? { target } : {}), ...(task ? { task } : {}), ...(extra.modality ? { modality: extra.modality } : {}),
       ...(extra.text_column ? { text_column: extra.text_column } : {}),
       ...(extra.user_col ? { user_col: extra.user_col } : {}), ...(extra.item_col ? { item_col: extra.item_col } : {}),
       ...(extra.rating_col ? { rating_col: extra.rating_col } : {}),
+      ...(extra.time_col ? { time_col: extra.time_col } : {}), ...(extra.value_col ? { value_col: extra.value_col } : {}),
+      ...(extra.series_col ? { series_col: extra.series_col } : {}),
     })}`),
   previewFeatures: (id: string, steps: FeatureStep[]) =>
     post<{ ok: boolean; error?: string; columns: ColumnSummary[] }>(`/datasets/${id}/features/preview`, { steps }),
@@ -97,6 +100,8 @@ export const api = {
   },
   ratingsSets: () => get<Record<string, RatingsSetInfo>>("/datasets/ratings-sets"),
   createRatingsSet: (name = "movies", params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/ratings-set", { name, params, seed }),
+  timeseriesSets: () => get<Record<string, TimeseriesSetInfo>>("/datasets/timeseries-sets"),
+  createTimeseriesSet: (name = "store_sales", params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/timeseries-set", { name, params, seed }),
   textSets: () => get<Record<string, TextSetInfo>>("/datasets/text-sets"),
   createTextSet: (name: string, params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/text-set", { name, params, seed }),
   /** thumbnail URL for one image of an image dataset (use in <img src>) */
@@ -117,6 +122,14 @@ export const api = {
   result: (id: string) => get<RunResult>(`/jobs/${id}/result`),
   tuneResult: (id: string) => get<TuneResult>(`/jobs/${id}/result`),
 
+  // labs
+  labs: () => get<LabsCatalog>("/labs"),
+  /** start a server lab (gan | vae | transfer) → job streaming `lab.frame` events; result via api.result-like GET /jobs/{id}/result */
+  runLab: (lab: string, params: Record<string, any> = {}) => post<{ job_id: string }>(`/labs/${lab}/run`, { params }),
+  labResult: <T,>(jobId: string) => get<T>(`/jobs/${jobId}/result`),
+  /** decode map points of a finished autoencoder-map run → 8×8 images (64 values 0–1) */
+  vaeDecode: (run_id: string, z: [number, number][]) => post<{ images: number[][] }>("/labs/vae/decode", { run_id, z }),
+
   // library
   saveModel: (body: { job_id: string; key: string; name: string; notes?: string; project_id?: string }) => post<SavedModel>("/library/save", body),
   library: () => get<SavedModel[]>("/library"),
@@ -128,6 +141,8 @@ export const api = {
   /** recommenders: top-k for a known user, or for a new user described by item → stars */
   recommend: (id: string, body: { user?: string; ratings?: Record<string, number>; k?: number }) => post<RecommendResponse>(`/library/${id}/recommend`, body),
   libraryCatalog: (id: string, q = "", limit = 60) => get<{ items: RecItem[]; users: string[] }>(`/library/${id}/catalog?q=${encodeURIComponent(q)}&limit=${limit}`),
+  /** forecasters: the next `horizon` steps of one series, with optional planned values for extra columns */
+  forecast: (id: string, body: { series?: string; horizon?: number; exog?: Record<string, number[]> }) => post<ForecastResponse>(`/library/${id}/forecast`, body),
   predictText: (id: string, texts: string[]) => post<TextPredictResponse>(`/library/${id}/predict-text`, { texts }),
   assign: (id: string, rows: Record<string, any>[]) => post<AssignResponse>(`/library/${id}/assign`, { rows }),
   predictImage: (id: string, images: string[]) => post<ImagePredictResponse>(`/library/${id}/predict-image`, { images }),

@@ -14,6 +14,7 @@ const SOURCE: Record<DatasetSummary["source"], { label: string; icon: string; cl
   image_set: { label: "Image set", icon: "🖼️", cls: "success" },
   text_set: { label: "Text set", icon: "💬", cls: "success" },
   ratings_set: { label: "Ratings set", icon: "🎬", cls: "success" },
+  timeseries_set: { label: "Time series", icon: "⏱️", cls: "success" },
   lesson: { label: "Lesson data", icon: "🎓", cls: "accent" },
 };
 

@@ -147,3 +147,17 @@ def run_sweep_job(job):
     if out[0] == "error":
         raise RuntimeError(out[1])
     return out[1]
+
+
+def run_lab_job(job):
+    """Labs (GAN / VAE / transfer) run in the torch worker; frames stream as `lab.frame` events."""
+    req = job.request
+    run_dir = DATA_DIR / "labs" / job.id
+    payload = {"family": "torch", "op": "lab", "lab": req["lab"], "params": req.get("params") or {},
+               "out_dir": str(run_dir), "cache_dir": str(DATA_DIR / "labs" / "_cache")}
+    out = run_in_process(payload, lambda t, d: manager.emit(job, t, d), job.cancel, f"lab {req['lab']}")
+    if out[0] == "cancelled":
+        raise Cancelled()
+    if out[0] == "error":
+        raise RuntimeError(out[1])
+    return {**out[1], "run_id": job.id}
