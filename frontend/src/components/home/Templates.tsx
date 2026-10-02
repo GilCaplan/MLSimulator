@@ -49,6 +49,7 @@ export function Templates() {
                 <span className="row" style={{ gap: 4 }}>
                 {t.modality === "image" && <span className="badge" title="Learns from pictures" style={{ padding: "0 7px" }}>🖼️</span>}
                 {t.modality === "text" && <span className="badge" title="Learns from text" style={{ padding: "0 7px" }}>💬</span>}
+                {t.modality === "ratings" && <span className="badge" title="Learns from star ratings" style={{ padding: "0 7px" }}>⭐</span>}
                 <span className={`badge ${TASK_BADGE[t.task]?.cls ?? ""}`} style={TASK_BADGE[t.task]?.style}>
                   {TASK_BADGE[t.task]?.label ?? t.task}
                 </span>
@@ -58,7 +59,7 @@ export function Templates() {
             <b style={{ fontSize: 15, letterSpacing: "-0.01em" }}>{t.title}</b>
             <span className="small muted" style={{ lineHeight: 1.45 }}>{t.blurb}</span>
             <div className="grow" />
-            <span className="tiny faint">{busy === t.id ? (t.imageSet ? "Drawing the pictures…" : t.textSet ? "Writing the messages…" : "Setting things up…") : `${t.models.length} models${t.truth ? " · hidden answers to check" : ""} · opens on Models →`}</span>
+            <span className="tiny faint">{busy === t.id ? (t.imageSet ? "Drawing the pictures…" : t.textSet ? "Writing the messages…" : t.ratingsSet ? "Collecting the ratings…" : "Setting things up…") : `${t.models.length} models${t.truth ? " · hidden answers to check" : ""} · opens on Models →`}</span>
           </motion.button>
         ))}
       </motion.div>

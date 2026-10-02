@@ -2,13 +2,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatedNumber, EmptyState, Glass, Modal, Segmented, Spinner } from "../components/glass";
 import { CardSkeleton, ModelCard } from "../components/library/ModelCard";
-import { PageFrame, PageHeader, emojiFor, isTextModel, rise, useRegistry } from "../components/library/shared";
+import { PageFrame, PageHeader, emojiFor, isRecsysModel, isTextModel, rise, useRegistry } from "../components/library/shared";
 import { api } from "../lib/api";
 import { navigate } from "../lib/router";
 import { toast } from "../lib/store";
 import type { SavedModel, Task } from "../lib/types";
 
-type Filter = "all" | Task | "image" | "text" | "discover";
+type Filter = "all" | Task | "image" | "text" | "discover" | "recommend";
 const UNSUP = ["clustering", "reduction", "anomaly"];
 
 export function LibraryPage() {
@@ -26,8 +26,8 @@ export function LibraryPage() {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (models ?? []).filter((m) =>
-      (filter === "all" || m.task === filter || (filter === "image" && m.modality === "image") || (filter === "text" && isTextModel(m)) || (filter === "discover" && UNSUP.includes(m.task))) &&
-      (!q || [m.name, m.label, m.dataset?.name, m.target, m.notes, m.task, m.modality === "image" ? "image picture" : isTextModel(m) ? "text words nlp" : ""].some((s) => s && s.toLowerCase().includes(q))));
+      (filter === "all" || m.task === filter || (filter === "image" && m.modality === "image") || (filter === "text" && isTextModel(m)) || (filter === "discover" && UNSUP.includes(m.task)) || (filter === "recommend" && isRecsysModel(m))) &&
+      (!q || [m.name, m.label, m.dataset?.name, m.target, m.notes, m.task, m.modality === "image" ? "image picture" : isTextModel(m) ? "text words nlp" : isRecsysModel(m) ? "recommender recommendation movies ratings" : ""].some((s) => s && s.toLowerCase().includes(q))));
   }, [models, query, filter]);
 
   const counts = useMemo(() => ({
@@ -36,6 +36,7 @@ export function LibraryPage() {
     image: (models ?? []).filter((m) => m.modality === "image").length,
     text: (models ?? []).filter((m) => isTextModel(m)).length,
     discover: (models ?? []).filter((m) => UNSUP.includes(m.task)).length,
+    recommend: (models ?? []).filter((m) => isRecsysModel(m)).length,
   }), [models]);
 
   const rename = async (m: SavedModel, name: string) => {
@@ -102,6 +103,7 @@ export function LibraryPage() {
               ...(counts.image ? [{ value: "image" as Filter, label: `🖼️ Images · ${counts.image}` }] : []),
               ...(counts.text ? [{ value: "text" as Filter, label: `💬 Text · ${counts.text}` }] : []),
               ...(counts.discover ? [{ value: "discover" as Filter, label: `🫧 Discover · ${counts.discover}` }] : []),
+              ...(counts.recommend ? [{ value: "recommend" as Filter, label: `🎬 Recommenders · ${counts.recommend}` }] : []),
             ]}
           />
         </motion.div>

@@ -1,7 +1,7 @@
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
@@ -71,10 +71,13 @@ export const api = {
   dataset: (id: string) => get<DatasetSummary>(`/datasets/${id}`),
   rows: (id: string, offset = 0, limit = 100) =>
     get<{ columns: string[]; rows: any[][]; total: number; offset: number }>(`/datasets/${id}/rows?offset=${offset}&limit=${limit}`),
-  profile: (id: string, target?: string | null, task?: string | null, extra: { modality?: string; text_column?: string | null } = {}) =>
+  profile: (id: string, target?: string | null, task?: string | null,
+    extra: { modality?: string; text_column?: string | null; user_col?: string | null; item_col?: string | null; rating_col?: string | null } = {}) =>
     get<DatasetProfile>(`/datasets/${id}/profile?${new URLSearchParams({
       ...(target ? { target } : {}), ...(task ? { task } : {}), ...(extra.modality ? { modality: extra.modality } : {}),
       ...(extra.text_column ? { text_column: extra.text_column } : {}),
+      ...(extra.user_col ? { user_col: extra.user_col } : {}), ...(extra.item_col ? { item_col: extra.item_col } : {}),
+      ...(extra.rating_col ? { rating_col: extra.rating_col } : {}),
     })}`),
   previewFeatures: (id: string, steps: FeatureStep[]) =>
     post<{ ok: boolean; error?: string; columns: ColumnSummary[] }>(`/datasets/${id}/features/preview`, { steps }),
@@ -92,6 +95,8 @@ export const api = {
     fd.append("file", file);
     return req<DatasetSummary>("POST", "/datasets/upload-images", fd);
   },
+  ratingsSets: () => get<Record<string, RatingsSetInfo>>("/datasets/ratings-sets"),
+  createRatingsSet: (name = "movies", params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/ratings-set", { name, params, seed }),
   textSets: () => get<Record<string, TextSetInfo>>("/datasets/text-sets"),
   createTextSet: (name: string, params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/text-set", { name, params, seed }),
   /** thumbnail URL for one image of an image dataset (use in <img src>) */
@@ -120,6 +125,9 @@ export const api = {
   deleteModel: (id: string) => req("DELETE", `/library/${id}`),
   warm: (family: "torch" | "classic") => post("/library/warm", { family }),
   predict: (id: string, rows: Record<string, any>[]) => post<PredictResponse>(`/library/${id}/predict`, { rows }),
+  /** recommenders: top-k for a known user, or for a new user described by item → stars */
+  recommend: (id: string, body: { user?: string; ratings?: Record<string, number>; k?: number }) => post<RecommendResponse>(`/library/${id}/recommend`, body),
+  libraryCatalog: (id: string, q = "", limit = 60) => get<{ items: RecItem[]; users: string[] }>(`/library/${id}/catalog?q=${encodeURIComponent(q)}&limit=${limit}`),
   predictText: (id: string, texts: string[]) => post<TextPredictResponse>(`/library/${id}/predict-text`, { texts }),
   assign: (id: string, rows: Record<string, any>[]) => post<AssignResponse>(`/library/${id}/assign`, { rows }),
   predictImage: (id: string, images: string[]) => post<ImagePredictResponse>(`/library/${id}/predict-image`, { images }),

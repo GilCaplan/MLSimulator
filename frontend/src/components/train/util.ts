@@ -11,7 +11,10 @@ export const REG_METRICS = ["r2", "rmse", "mae"];
 
 /** Ranking metric per task (mirrors mlp/core/problems.py primary_metric). */
 export const primaryMetric = (task: string | null | undefined) =>
-  task === "regression" ? "r2" : task === "clustering" ? "silhouette" : task === "reduction" ? "trustworthiness" : task === "anomaly" ? "roc_auc" : "accuracy";
+  task === "regression" ? "r2" : task === "recommendation" ? "ndcg_at_10" : task === "clustering" ? "silhouette" : task === "reduction" ? "trustworthiness" : task === "anomaly" ? "roc_auc" : "accuracy";
+
+/** Recommendation runs (mlp/core/recsys.py): ranked top-10 lists instead of answers. */
+export const isRecsys = (task: string | null | undefined) => task === "recommendation";
 
 /* ---- unsupervised metrics (mlp/core/unsupervised.py) */
 
@@ -20,6 +23,7 @@ export const UNSUP_METRICS: Record<UnsupervisedTask, string[]> = {
   clustering: ["silhouette", "davies_bouldin", "calinski_harabasz", "ari", "nmi", "purity"],
   reduction: ["trustworthiness", "explained_2d", "explained_all"],
   anomaly: ["roc_auc", "avg_precision", "precision", "recall", "flagged_share"],
+  recommendation: ["ndcg_at_10", "recall_at_10", "precision_at_10", "hit_rate", "coverage", "novelty", "rmse", "mae"],
 };
 
 /** Metrics that need the hidden "truth" column (absent when the project has none). */
@@ -43,6 +47,13 @@ export const UNSUP_LABELS: Record<string, string> = {
   flagged_share: "Rows flagged",
   threshold: "Score threshold",
   kl_divergence: "KL divergence",
+  ndcg_at_10: "NDCG@10",
+  recall_at_10: "Recall@10",
+  precision_at_10: "Precision@10",
+  hit_rate: "Hit rate",
+  coverage: "Coverage",
+  novelty: "Novelty",
+  users_evaluated: "Viewers tested",
 };
 
 export const UNSUP_HELP: Record<string, string> = {
@@ -62,6 +73,19 @@ export const UNSUP_HELP: Record<string, string> = {
   flagged_share: "Share of rows the detector flags as unusual (set by the expected share of anomalies).",
   threshold: "Anomaly scores above this line are flagged.",
   kl_divergence: "How far t-SNE's map is from the real neighbourhood structure (lower is better). Only comparable between runs on the same data.",
+  ndcg_at_10: "Like recall@10, but a hit at the top of the list counts more than one at number 10 — people mostly look at the first few picks. 1 = their favourites always come first.",
+  recall_at_10: "Of the films they later liked, how many were in their top 10? We hid each viewer's most recent ratings, asked for 10 picks, and counted how many of their real favourites made the list.",
+  precision_at_10: "Of the 10 picks, how many did the viewer really go on to like? Low by nature: we only hid a few ratings per viewer, so even a perfect list can't score 100%.",
+  hit_rate: "Share of viewers who got at least one real favourite in their top 10 — “did the list work at all for this person?”",
+  coverage: "Share of the whole catalogue that ends up in anyone's top 10. Low coverage = everyone sees the same few blockbusters and most films are never shown.",
+  novelty: "How niche the recommendations are, on average: 0% = only the biggest blockbusters, 100% = only the most obscure titles. Neither extreme is the goal — a bit of discovery is.",
+  users_evaluated: "How many viewers had a held-out favourite to test the top-10 list against.",
+};
+
+/** Rating-prediction errors read differently for recommenders (stars, not target units). */
+const RECSYS_HELP: Record<string, string> = {
+  rmse: "Rating prediction: how many stars off the model's guessed rating is, on the held-out ratings (big misses count extra). Lower is better — but a great star-guesser can still make a dull top-10 list.",
+  mae: "Rating prediction: the average number of stars the guessed rating is off by. Lower is better.",
 };
 
 const ANOMALY_HELP: Record<string, string> = {
@@ -73,7 +97,7 @@ const ANOMALY_HELP: Record<string, string> = {
 
 const UNSUP_LOWER = new Set(["davies_bouldin", "inertia", "bic", "kl_divergence"]);
 /** Unsupervised metrics shown as plain decimals rather than percentages. */
-const DECIMAL = new Set(["silhouette", "davies_bouldin", "calinski_harabasz", "ari", "nmi", "inertia", "bic", "n_clusters", "threshold", "n_components", "kl_divergence"]);
+const DECIMAL = new Set(["ndcg_at_10", "users_evaluated", "silhouette", "davies_bouldin", "calinski_harabasz", "ari", "nmi", "inertia", "bic", "n_clusters", "threshold", "n_components", "kl_divergence"]);
 
 export const lowerBetter = (metric: string) => LOWER_IS_BETTER.has(metric) || UNSUP_LOWER.has(metric);
 
@@ -81,13 +105,13 @@ export const lowerBetter = (metric: string) => LOWER_IS_BETTER.has(metric) || UN
 export const isUnit = (metric: string) => !lowerBetter(metric) && metric !== "r2" && metric !== "mcc" && !DECIMAL.has(metric);
 
 export const fmtMetric = (metric: string, v: number | null | undefined) =>
-  v === null || v === undefined ? "—" : metric === "n_clusters" || metric === "n_components" ? String(Math.round(v)) : isUnit(metric) ? pct(v, 1) : fmt(v, 3);
+  v === null || v === undefined ? "—" : metric === "n_clusters" || metric === "n_components" || metric === "users_evaluated" ? String(Math.round(v)) : isUnit(metric) ? pct(v, 1) : fmt(v, 3);
 
 export const metricLabel = (m: string) => METRIC_LABELS[m] ?? UNSUP_LABELS[m] ?? m;
 
 /** Plain-language help for a metric (anomaly metrics are phrased for flagged rows). */
 export const metricHelp = (m: string, task?: string | null): string | undefined =>
-  (task === "anomaly" ? ANOMALY_HELP[m] : undefined) ?? UNSUP_HELP[m] ?? METRIC_HELP[m];
+  (task === "anomaly" ? ANOMALY_HELP[m] : task === "recommendation" ? RECSYS_HELP[m] : undefined) ?? UNSUP_HELP[m] ?? METRIC_HELP[m];
 
 /** Is `a` a better score than `b` for this metric? */
 export const better = (metric: string, a: number, b: number) => (lowerBetter(metric) ? a < b : a > b);
@@ -95,7 +119,7 @@ export const better = (metric: string, a: number, b: number) => (lowerBetter(met
 /** Metrics offered in the leaderboard's "Rank by" menu for this run (only those some model actually has). */
 export function rankMetrics(result: RunResult): string[] {
   const task = result.task as string;
-  const pool = isUnsupervised(task) ? UNSUP_METRICS[task as UnsupervisedTask] : task === "regression" ? REG_METRICS : CLS_METRICS;
+  const pool = isUnsupervised(task) || isRecsys(task) ? UNSUP_METRICS[task as UnsupervisedTask] : task === "regression" ? REG_METRICS : CLS_METRICS;
   return pool.filter((m) => Object.values(result.models).some((r) => !r.baseline && r.metrics.test?.[m] !== undefined && r.metrics.test?.[m] !== null));
 }
 

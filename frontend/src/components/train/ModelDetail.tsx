@@ -13,12 +13,13 @@ import { ErrorAnalysis } from "./Mistakes";
 import { ModelSettings as Settings } from "./ModelSettings";
 import { SaveModal } from "./SaveModal";
 import { UnsupDetail } from "./unsup/UnsupDetail";
+import { RecsysDetail } from "./recsys/RecsysDetail";
 import { VisionFilters } from "./VisionFilters";
 import { VisionGallery } from "./VisionGallery";
 import { VisionLooks } from "./VisionLooks";
 import { TextExplain, TextMistakes, TextWords } from "./TextViews";
 import { ClassChip, ExplainedSentence } from "./textKit";
-import { baselineOf, fmtMetric, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
+import { baselineOf, fmtMetric, isRecsys, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
 
 type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters"
   | "text_mistakes" | "words" | "explain";
@@ -39,6 +40,7 @@ const turnOnCalibration = () => {
 /** Full report for one trained model, with tabs. */
 export function ModelDetail({ result, model }: { result: RunResult; model: ModelResult }) {
   if (isUnsupervised(result.task)) return <UnsupDetail result={result} model={model} />;
+  if (isRecsys(result.task) || model.recsys) return <RecsysDetail result={result} model={model} />;
   return <SupervisedDetail result={result} model={model} />;
 }
 

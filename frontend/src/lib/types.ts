@@ -1,7 +1,7 @@
 /* Shapes mirrored from the Python backend (mlp/). Keep in sync. */
 
 export type Task = "classification" | "regression";
-export type UnsupervisedTask = "clustering" | "reduction" | "anomaly";
+export type UnsupervisedTask = "clustering" | "reduction" | "anomaly" | "recommendation";
 export type Modality = "tabular" | "image" | "text" | "ratings" | "timeseries";
 
 /** A problem type from GET /api/problems (task × modality), mirrored from mlp/core/problems.py */
@@ -70,6 +70,19 @@ export interface TextPredictResponse extends PredictResponse {
   /** influence of each word of the first text on the predicted class */
   tokens: { t: string; w: number }[];
 }
+
+/** Recommenders (mlp/core/recsys.py) */
+export interface RecItem { item: string; title?: string; genre?: string; popularity: number; score?: number; hit?: boolean; because?: string | null; rating?: number }
+export interface RecsysResult {
+  /** sample users: what they liked (training) and their top-10 (hit = it was in their held-out favourites) */
+  examples: { user: string; liked: RecItem[]; recs: RecItem[] }[];
+  /** factor models: 2-D map of item taste vectors (most popular 300 items) */
+  item_map?: (RecItem & { x: number; y: number })[];
+  /** items sorted by popularity: how often each was liked vs how often it got recommended (first 400 users) */
+  long_tail: { popularity: number[]; recommended: number[] };
+}
+export interface RecommendResponse { user_kind: "known" | "new"; n_rated: number; fallback_used: boolean; items: RecItem[]; history: RecItem[] }
+export interface RatingsSetInfo { label: string; emoji: string; blurb: string; params: Record<string, number> }
 
 export interface SweepResult {
   model_id: string;
@@ -184,7 +197,7 @@ export interface ColumnSummary {
 export interface DatasetSummary {
   id: string;
   name: string;
-  source: "upload" | "synthetic" | "preset" | "sample" | "composed";
+  source: "upload" | "synthetic" | "preset" | "sample" | "composed" | "image_set" | "text_set" | "ratings_set" | "lesson";
   n_rows: number;
   n_cols: number;
   columns: ColumnSummary[];
@@ -242,6 +255,16 @@ export interface DatasetProfile {
   length_hist?: Histogram;
   top_words?: { class: string; words: { t: string; w: number }[] }[];
   examples?: Record<string, string[]>;
+  /** ratings datasets */
+  columns_roles?: { user?: string; item?: string; rating?: string; time?: string };
+  n_users?: number;
+  n_items?: number;
+  sparsity?: number;
+  rating_hist?: TopValues;
+  per_user?: number[];
+  per_user_edges?: number[];
+  long_tail?: number[];
+  top_items?: { item: string; ratings: number; title?: string; genre?: string }[];
 }
 
 export interface Distribution { label: string; params: Record<string, any> }
@@ -324,8 +347,12 @@ export interface PipelineSpec {
     k_neighbors: number;
   };
   target_transform: "none" | "log1p";
-  /** data modality (the backend dispatches image/text preparation on it) */
+  /** data modality (the backend dispatches image/text/ratings preparation on it) */
   modality?: Modality;
+  /** ratings datasets: which columns hold user / item / rating / time */
+  columns?: { user?: string | null; item?: string | null; rating?: string | null; time?: string | null };
+  /** recommenders: filters, what counts as "liked", and how many recent ratings per user are held out */
+  recsys?: { min_user: number; min_item: number; positive: number; test_k: number; split: "leave_last_out" | "random" };
   /** text datasets: which column holds the text, bag-of-words settings (ngram_max 1 = words, 2 = words + pairs),
    *  and the token sequence length used by neural text models */
   text?: { text_column: string | null; ngram_max: 1 | 2; max_features: number; min_df: number; max_len: number };
@@ -397,6 +424,15 @@ export interface PrepareReport {
   /** image datasets: original + augmented variants (data URIs) for a few training images */
   augment_preview?: { i: number; original: string; variants: string[] }[];
   sample_images?: number[];
+  /** ratings datasets */
+  n_users?: number;
+  n_items?: number;
+  sparsity?: number;
+  rating_hist?: TopValues;
+  long_tail?: number[];
+  per_user_hist?: number[];
+  positive?: number;
+  test_k?: number;
   /** text datasets */
   text_column?: string;
   vocab_size?: number;
@@ -448,6 +484,7 @@ export interface ModelResult {
   reduction?: ReductionResult | null;
   anomaly?: AnomalyResult | null;
   text?: TextResult | null;
+  recsys?: RecsysResult | null;
   fit_time_s: number;
   n_params?: number | null;
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { EmptyState, Glass, InfoTip } from "../components/glass";
 import { KSweep } from "../components/improve/KSweep";
 import { ProgressOverRuns } from "../components/improve/ProgressOverRuns";
+import { BaselineRace, RecWays } from "../components/improve/RecWays";
 import { ThresholdTuner } from "../components/improve/ThresholdTuner";
 import { Tuner } from "../components/improve/Tuner";
 import { UnsupWays } from "../components/improve/UnsupWays";
@@ -25,8 +26,8 @@ function Section({ icon, title, help, sub, children, sectionRef }: { icon: strin
 }
 
 export function ImproveStep() {
-  const unsup = useProject((s) => isUnsupervised(s.project?.task));
-  return unsup ? <RefineStep /> : <SupervisedImprove />;
+  const task = useProject((s) => s.project?.task);
+  return task === "recommendation" ? <RecommendImprove /> : isUnsupervised(task) ? <RefineStep /> : <SupervisedImprove />;
 }
 
 const REFINE_COPY: Record<string, { sub: string; intro: React.ReactNode }> = {
@@ -95,6 +96,49 @@ function RefineSections({ project, result, task, sweepRef }: { project: Project;
       </Section>
       <motion.div style={{ height: 8 }} />
     </>
+  );
+}
+
+/** Recommendation projects: progress over runs, this run vs the popularity baseline, and ways to improve. */
+function RecommendImprove() {
+  const project = useProject((s) => s.project)!;
+  const result = useProject((s) => s.result);
+  const title = useStepLabel("improve");
+  useEffect(() => { useProject.getState().ensureRegistry().catch(() => {}); }, []);
+  return (
+    <StepLayout
+      title={title}
+      subtitle="Better suggestions, step by step: beat the popularity baseline, personalise, and look after brand-new users."
+      coach={
+        <CoachPanel
+          intro={<>A recommender is judged on its <b>top-10 lists</b>: did the things a person went on to like show up near the top? That's what <b>NDCG@10</b> measures (1 = perfect order).
+            <br /><br />Always compare against <b>Most popular</b> — a personal model that can't beat it hasn't learned anyone's taste. Then change <b>one thing at a time</b>, train again, and watch the chart below.</>}
+          suggestions={(result?.coach ?? []).filter((s) => !(s.action?.kind === "goto" && s.action.step === "improve"))}
+        />
+      }
+      footer={<NextBar back="train" next={() => navigate("/library")} nextLabel="Open library" />}
+    >
+      {!result ? (
+        <Glass animate_in>
+          <EmptyState icon="🎬" title="Train some recommenders first" text="Once your models have made their top-10 lists, this page helps you make them better."
+            action={<button className="btn primary" onClick={() => navigate(`/p/${project.id}/train`)}>Go to Train →</button>} />
+        </Glass>
+      ) : (
+        <>
+          <Section icon="📈" title="Progress over runs" sub="The best ranking score from each time you trained — the dashed line is Most popular.">
+            <ProgressOverRuns project={project} baselineModel="popularity" baselineLabel="🔥 Most popular (baseline)" />
+          </Section>
+          <Section icon="🏁" title="Beat the baseline" help="Each model's ranking score on the hidden ratings, next to the popularity recommender. Personal models should clear the dashed line — and recommend a much wider slice of the catalogue."
+            sub="How far each model gets past “just recommend the blockbusters”.">
+            <BaselineRace result={result} />
+          </Section>
+          <Section icon="💡" title="Ways to improve" sub="Classic moves for better recommendations. Click one to apply it or jump to the right step.">
+            <RecWays projectId={project.id} />
+          </Section>
+          <motion.div style={{ height: 8 }} />
+        </>
+      )}
+    </StepLayout>
   );
 }
 

@@ -4,6 +4,7 @@ import { BagOfWordsDemo } from "./BagOfWordsDemo";
 import { BaselinesDemo } from "./BaselinesDemo";
 import { CalibrationDemo } from "./CalibrationDemo";
 import { ChoosingKDemo } from "./ChoosingKDemo";
+import { ColdStartDemo } from "./ColdStartDemo";
 import { ConvolutionsDemo } from "./ConvolutionsDemo";
 import { CurseDemo } from "./CurseDemo";
 import { FairnessDemo } from "./FairnessDemo";
@@ -13,6 +14,7 @@ import { LeakageDemo } from "./LeakageDemo";
 import { MissingDemo } from "./MissingDemo";
 import { OutliersDemo } from "./OutliersDemo";
 import { OverfittingDemo } from "./OverfittingDemo";
+import { PopularityBiasDemo } from "./PopularityBiasDemo";
 import { ScalingDemo } from "./ScalingDemo";
 import { ShortcutDemo } from "./ShortcutDemo";
 import { SplitsDemo } from "./SplitsDemo";
@@ -40,6 +42,8 @@ export const DEMOS: Record<string, ComponentType<DemoProps>> = {
   choosing_k: ChoosingKDemo,
   curse: CurseDemo,
   bag_of_words: BagOfWordsDemo,
+  popularity_bias: PopularityBiasDemo,
+  cold_start: ColdStartDemo,
   convolutions: ConvolutionsDemo,
   augmentation: AugmentationDemo,
 };

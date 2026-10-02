@@ -4,7 +4,7 @@ import { secs } from "../../lib/format";
 import { isUnsupervised, useProject } from "../../lib/store";
 import type { ModelResult, RunResult } from "../../lib/types";
 import { Glass, InfoTip, Select, Tooltip } from "../glass";
-import { type BoardRow, boardRows, fmtMetric, isUnit, lowerBetter, metricHelp, metricLabel, rankMetrics, useSaved, vsBaseline } from "./util";
+import { type BoardRow, boardRows, fmtMetric, isRecsys, isUnit, lowerBetter, metricHelp, metricLabel, rankMetrics, useSaved, vsBaseline } from "./util";
 
 /** Unsupervised runs have no train/test gap to show — a short fact about what each model found instead. */
 function sideFact(task: string, m: ModelResult): { text: string; tip: string } {
@@ -13,6 +13,10 @@ function sideFact(task: string, m: ModelResult): { text: string; tip: string } {
     const n = t.n_clusters;
     const noise = t.noise_share ? ` · ${Math.round(t.noise_share * 100)}% noise` : "";
     return { text: n === undefined ? "—" : `${n} group${n === 1 ? "" : "s"}${noise}`, tip: "How many groups it found (DBSCAN can also leave sparse points ungrouped as noise)." };
+  }
+  if (task === "recommendation") {
+    const c = t.coverage, nov = t.novelty;
+    return { text: c === undefined ? "—" : `${Math.round(c * 100)}% of films`, tip: `Coverage: share of the catalogue that lands in anyone's top 10.${nov !== undefined ? ` Novelty ${Math.round(nov * 100)}% (0% = only blockbusters, 100% = only niche titles).` : ""}` };
   }
   if (task === "anomaly") return { text: t.flagged_share === undefined ? "—" : `${Math.round(t.flagged_share * 100)}% flagged`, tip: "Share of rows it marks as unusual." };
   return { text: t.explained_2d !== undefined ? `${Math.round(t.explained_2d * 100)}% kept` : "neighbours only", tip: "PCA: share of the data's variation its 2-D map keeps. t-SNE doesn't keep variation — it only tries to keep neighbours together." };
@@ -37,12 +41,13 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
     return cfg ? spec(cfg.model_id)?.label ?? cfg.model_id : k;
   };
   const task = result.task as string;
-  const unsup = isUnsupervised(task);
+  const rec = isRecsys(task);
+  const unsup = isUnsupervised(task) || rec;
   const available = rankMetrics(result);
   const rows = boardRows(result, metric);
   const lower = lowerBetter(metric);
   const help = metricHelp(metric, task);
-  const noTruth = unsup && task !== "reduction" && !Object.values(result.models).some((r) => r.metrics.test?.[task === "anomaly" ? "roc_auc" : "ari"] !== undefined);
+  const noTruth = unsup && !rec && task !== "reduction" && !Object.values(result.models).some((r) => r.metrics.test?.[task === "anomaly" ? "roc_auc" : "ari"] !== undefined);
   const scores = rows.map((r) => r.score).filter((s): s is number => s !== null);
   const best = scores.length ? (lower ? Math.min(...scores) : Math.max(...scores)) : 0;
   const worst = scores.length ? (lower ? Math.max(...scores) : Math.min(...scores)) : 0;
@@ -54,10 +59,12 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
     const lo = Math.min(0, worst);
     return Math.max(0.02, (v - lo) / (Math.max(1, best) - lo || 1));
   };
-  const base = rows.find((r) => r.baseline);
+  // recommenders have no automatic baseline row: "Most popular" (same list for everyone) is the baseline to beat
+  const popRow = rec ? rows.find((r) => r.model_id === "popularity" && !r.baseline) : undefined;
+  const base = rows.find((r) => r.baseline) ?? popRow;
   const baseScore = base?.score ?? null;
   const baseBar = baseScore !== null ? barOf(baseScore) : null;
-  const real = rows.filter((r) => !r.baseline && r.score !== null);
+  const real = rows.filter((r) => !r.baseline && r !== popRow && r.score !== null);
   const beaten = baseScore === null ? real.length : real.filter((r) => (lower ? r.score! < baseScore : r.score! > baseScore)).length;
   // medals go to real models only, in ranking order
   const realRank: Record<string, number> = {};
@@ -70,7 +77,8 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         <div className="col" style={{ gap: 2 }}>
           <h3>🏆 Leaderboard</h3>
           <span className="small muted">
-            {unsup
+            {rec ? <>Each model wrote a top-10 list for every viewer; it scores when the films they rated (and liked) most recently — hidden from it — show up. Click a row to see real lists.</>
+              : unsup
               ? task === "clustering" ? "No answer key here — models are ranked by how crisp and well-separated their groups are. Click a row to see the groups." : task === "anomaly" ? "Ranked by how well the most unusual scores line up with the real anomalies you hid. Click a row to see what got flagged." : "Ranked by how honestly each map keeps real neighbours together. Click a row to explore the map."
               : <>Scored on test {project?.modality === "image" ? "pictures" : project?.modality === "text" ? "texts" : "rows"} none of the models saw while learning. Click a row for the full report.</>}
           </span>
@@ -89,13 +97,18 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
             borderColor: beaten === real.length ? "rgba(48,209,88,.3)" : beaten === 0 ? "rgba(255,69,58,.3)" : "rgba(255,159,10,.3)" }}>
           <span style={{ fontSize: 18 }}>{beaten === real.length ? "✅" : beaten === 0 ? "🚨" : "🎯"}</span>
           <span className="small" style={{ lineHeight: 1.5 }}>
-            {beaten === real.length
+            {rec ? (beaten === real.length
+              ? <><b>Every personal model beats “Most popular”</b> <span className="muted">on {metricLabel(metric)} — they learned real tastes, not just “show everyone the hits”.</span></>
+              : beaten === 0
+                ? <><b>Nothing beats “Most popular” on {metricLabel(metric)}.</b> <span className="muted">Showing everyone the same blockbusters does at least as well here.{metric === "coverage" || metric === "novelty" ? "" : " Try ranking by coverage too — the hits list is easy to beat there."}</span></>
+                : <><b>{beaten} of {real.length} models beat “Most popular”.</b> <span className="muted">Anything ranked below it does worse than giving everyone the same hits list.</span></>)
+            : beaten === real.length
               ? <><b>Every model beats the baseline</b> <span className="muted">— they learned something real, not just {result.task === "regression" ? "“always guess the average”" : "“always say the most common answer”"}.</span></>
               : beaten === 0
                 ? <><b>No model beats the baseline on {metricLabel(metric)}.</b> <span className="muted">Always guessing the same answer does at least as well — so the score isn't showing real learning.{!lower && metric === "accuracy" ? " If one answer is very common, accuracy flatters lazy guessing: try ranking by balanced accuracy." : " Look at the data and features again."}</span></>
                 : <><b>{beaten} of {real.length} models beat the baseline.</b> <span className="muted">Anything ranked below the 🎯 line is worse than always giving the same answer.</span></>}
           </span>
-          <InfoTip text="A baseline is the simplest possible “model”: it ignores every input and always predicts the most common class (classification) or the average (regression). A real model has to beat it to be worth anything." />
+          <InfoTip text={rec ? "“Most popular” recommends the most-liked films to everyone — no personalisation at all. It's surprisingly hard to beat on hits, and terrible at showing the rest of the catalogue. A personal recommender has to beat it to be worth the effort." : "A baseline is the simplest possible “model”: it ignores every input and always predicts the most common class (classification) or the average (regression). A real model has to beat it to be worth anything."} />
         </motion.div>
       )}
 
@@ -117,7 +130,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         <span style={{ width: 30 }} />
         <span style={{ flex: "0 0 180px" }}>Model</span>
         <span className="grow">{unsup ? metricLabel(metric) : `Test ${metricLabel(metric)}`}{lower ? " · lower is better" : ""}</span>
-        <span style={{ width: 120, textAlign: "right" }}>{unsup ? (task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
+        <span style={{ width: 120, textAlign: "right" }}>{unsup ? (rec ? "Catalogue shown" : task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
         <span style={{ width: 64, textAlign: "right" }}>Fit time</span>
       </div>
 
@@ -129,12 +142,14 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
               return <BaselineRow key={r.key} r={r} i={i} metric={metric} sel={selected === r.key} onSelect={onSelect} bar={barOf(r.score)} />;
             }
             const below = passedBase && r.score !== null && baseScore !== null;
+            const isPop = r === popRow;
+            if (isPop) passedBase = true;
             const ri = realRank[r.key] ?? i;
             const gap = r.train !== null && r.score !== null && !lower ? r.train - r.score : 0;
             const overfit = gap > 0.08;
             const sel = selected === r.key;
             const isSaved = !!saved[`${result.job_id}:${r.key}`];
-            const vs = vsBaseline(metric, r.score, baseScore);
+            const vs = isPop ? null : vsBaseline(metric, r.score, baseScore);
             const top = ri === 0 && !below;
             return (
               <motion.button
@@ -163,17 +178,19 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                     {vs && (
                       <motion.span key={`${metric}-vs`} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.25 + i * 0.05 }}
                         className="tiny num" style={{ color: vs.delta > 0 ? "var(--success)" : "var(--danger)", fontWeight: 600 }}>
-                        {vs.delta > 0 ? "▲" : "▼"} {vs.text} vs baseline
+                        {vs.delta > 0 ? "▲" : "▼"} {vs.text} vs {rec ? "most popular" : "baseline"}
                       </motion.span>
                     )}
+                    {isPop && <span className="tiny" style={{ color: "var(--text-2)", fontWeight: 600 }}>🎯 the baseline to beat</span>}
+                    {rec && r.model.params?.cold_start === "popularity" && <span className="tiny" title="Viewers with very few ratings get the popular list" style={{ color: "var(--warning)", fontWeight: 600 }}>🛟 new-viewer fallback</span>}
                     {isSaved && <span className="tiny" style={{ color: "var(--success)" }}>✓ saved to library</span>}
                   </span>
                 </span>
                 <span className="row grow" style={{ gap: 10 }}>
                   <span style={{ flex: 1, height: 12, borderRadius: 6, background: "var(--fill-2)", overflow: "hidden", position: "relative" }}>
-                    <motion.span style={{ display: "block", height: "100%", borderRadius: 6, background: below ? "var(--danger)" : top ? "var(--grad)" : "var(--accent)", opacity: top ? 1 : 0.6 }}
+                    <motion.span style={{ display: "block", height: "100%", borderRadius: 6, background: isPop && !top ? "repeating-linear-gradient(135deg, var(--text-3) 0 5px, transparent 5px 9px)" : below ? "var(--danger)" : top ? "var(--grad)" : "var(--accent)", opacity: top ? 1 : isPop ? 0.8 : 0.6 }}
                       initial={{ width: 0 }} animate={{ width: `${barOf(r.score) * 100}%` }} transition={{ ...spring.gentle, delay: 0.1 + i * 0.05 }} />
-                    {baseBar !== null && (
+                    {baseBar !== null && !isPop && (
                       <motion.span aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1, left: `${baseBar * 100}%` }} transition={{ ...spring.gentle, delay: 0.3 }}
                         title="Baseline" style={{ position: "absolute", top: -2, bottom: -2, width: 0, borderLeft: "2px dashed var(--text-2)", marginLeft: -1 }} />
                     )}

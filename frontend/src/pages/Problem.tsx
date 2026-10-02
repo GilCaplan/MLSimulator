@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Glass } from "../components/glass";
 import { CheckDot } from "../components/models/ModelCard";
-import { AnomalyArt, ClassificationArt, ClusteringArt, ImageClassifyArt, ImageNumberArt, MapArt, RegressionArt, TextClassifyArt } from "../components/models/TaskArt";
+import { AnomalyArt, ClassificationArt, ClusteringArt, ImageClassifyArt, ImageNumberArt, MapArt, RecommendArt, RegressionArt, TextClassifyArt } from "../components/models/TaskArt";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { api } from "../lib/api";
@@ -52,6 +52,11 @@ const LOOK: Record<string, { examples: string[]; art?: (active: boolean) => Reac
     art: (a) => <MapArt active={a} />,
     tint: "linear-gradient(135deg, rgba(191,90,242,.13), rgba(255,159,10,.11))",
   },
+  recommendation: {
+    examples: ["🎬 Films a viewer will love", "🛒 \u201cCustomers also bought…\u201d", "🎧 The next song in a playlist"],
+    art: (a) => <RecommendArt active={a} />,
+    tint: "linear-gradient(135deg, rgba(255,214,10,.15), rgba(255,55,95,.11))",
+  },
   anomaly: {
     examples: ["💳 Odd card transactions", "🏭 Machines about to fail", "🧾 Data-entry mistakes"],
     art: (a) => <AnomalyArt active={a} />,
@@ -75,7 +80,13 @@ function chooseProblem(taskIn: string, modality: Modality) {
   const st = useProject.getState();
   const p = st.project;
   if (!p) return;
-  // pictures are always supervised (an unsupervised task falls back to image classification); text is classification only
+  // pictures are always supervised (an unsupervised task falls back to image classification); text is classification only;
+  // ratings tables are always recommendation, and recommendation needs a ratings table
+  if (taskIn === "recommendation" && modality !== "ratings") taskIn = "classification";
+  if (modality === "ratings" && taskIn !== "recommendation") {
+    if (taskIn === "classification" || taskIn === "regression" || isUnsupervised(taskIn)) modality = "tabular";
+    else taskIn = "recommendation";
+  }
   const task = ((modality === "image" && isUnsupervised(taskIn)) || modality === "text" ? "classification" : taskIn) as NonNullable<Project["task"]>;
   if (modality === "text" && taskIn !== "classification") toast.info("Text projects sort messages into categories — predicting numbers from text is coming later.");
   const sameTask = p.task === task;
@@ -126,7 +137,9 @@ export function ProblemStep() {
 
   const current = problems.find((p) => p.task === task && p.modality === modality);
   const status = current
-    ? current.unsupervised
+    ? current.task === "recommendation"
+      ? <>Great — we'll learn people's <b>tastes</b> and suggest what they'll like next.</>
+      : current.unsupervised
       ? <>Great — no answers needed. We'll explore: <b>{current.question.replace(/\?$/, "").toLowerCase()}?</b></>
       : <>Great — we'll build {/^[aeiou]/i.test(current.label) ? "an" : "a"} <b>{current.label.toLowerCase()}</b> model.</>
     : "Choose one to continue";
@@ -141,7 +154,8 @@ export function ProblemStep() {
           intro={<>A model learns from examples where the answer is already known, then guesses the answer for new ones.
             <br /><br />The first big choice is <b>what kind of answer</b> it gives: a <b>category</b> (classification) or a <b>number</b> (regression).
             <br /><br />The second is <b>what the examples are</b>: rows in a table, <b>pictures</b>, or <b>sentences</b>. Together they decide which algorithms and scores make sense later on.
-            <br /><br />No answer column at all? That's <b>unsupervised learning</b> — the <b>Discover</b> problems find groups, draw a map of your data or flag the odd rows out, all without being told what's right.</>}
+            <br /><br />No answer column at all? That's <b>unsupervised learning</b> — the <b>Discover</b> problems find groups, draw a map of your data or flag the odd rows out, all without being told what's right.
+            <br /><br />Got <b>people</b> and the <b>things they rated or bought</b>? That's a <b>recommender</b> — it learns tastes and fills in the blanks: what would this person rate highly that they haven't seen yet?</>}
         />
       }
       footer={<NextBar next="models" nextDisabled={!task} status={status} />}
@@ -152,7 +166,7 @@ export function ProblemStep() {
             <h3>{g.group}</h3>
             <span className="small muted">{GROUP_BLURB[g.group]}</span>
           </motion.div>
-          <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 18 }}>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 18 }}>
             {g.items.map((p) => (
               <ProblemTile key={p.id} problem={p} selected={task === p.task && modality === p.modality} dim={!!task} />
             ))}
@@ -192,6 +206,7 @@ export function ProblemStep() {
           </div>
           <TextQuestion on={modality === "text" && !!task} />
           <DiscoverQuestion problems={discover} task={task} />
+          <RecommendQuestion on={task === "recommendation"} available={problems.some((p) => p.id === "recommendation" && p.enabled)} />
         </div>
       </Glass>
     </StepLayout>
@@ -215,6 +230,31 @@ function TextQuestion({ on }: { on: boolean }) {
         ))}
         <div className="row" style={{ marginLeft: "auto", minWidth: 150 }}><PictureButton on={on} onClick={() => chooseProblem("classification", "text")}>💬 Yes, text</PictureButton></div>
       </div>
+    </div>
+  );
+}
+
+/** "People + things they rated or bought? → Recommend". */
+function RecommendQuestion({ on, available }: { on: boolean; available: boolean }) {
+  if (!available) return null;
+  return (
+    <div className="inset row wrap" style={{ padding: 14, gap: 14, flex: "1 1 100%", transition: "border-color .2s", borderColor: on ? "var(--accent)" : undefined }}>
+      <div className="col" style={{ gap: 6, flex: "2 1 300px" }}>
+        <span className="small" style={{ fontWeight: 650 }}>5 · Do you have people + things they rated or bought?</span>
+        <span className="tiny muted" style={{ lineHeight: 1.55 }}>
+          A list of <b>who</b> liked <b>what</b> — viewers and films, shoppers and products, listeners and songs → <b>Recommend</b>.
+          The model fills in the blanks of a huge, mostly-empty grid.
+        </span>
+      </div>
+      <div className="row" style={{ gap: 6, alignItems: "center" }}>
+        {[["👤", "🎬", "★★★★★"], ["👤", "🛒", "bought"], ["👤", "🎧", "★★★★"]].map(([who, what, how], i) => (
+          <motion.span key={i} className="badge" animate={{ y: [0, -2, 0] }} transition={{ duration: 2.6, repeat: Infinity, delay: i * 0.35 }}
+            style={{ height: 24, fontSize: 11, gap: 4, background: on ? "var(--accent-soft)" : "var(--glass-strong)", color: on ? "var(--accent)" : "var(--text-2)" }}>
+            {who}<span className="faint">→</span>{what}<span style={{ color: "#FFB800", fontWeight: 700 }}>{how}</span>
+          </motion.span>
+        ))}
+      </div>
+      <div className="row" style={{ minWidth: 170 }}><PictureButton on={on} onClick={() => chooseProblem("recommendation", "ratings")}>🎬 Yes → Recommend</PictureButton></div>
     </div>
   );
 }

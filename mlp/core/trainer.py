@@ -29,6 +29,20 @@ def run_baseline(prepared) -> dict:
             "baseline": True, "fit_time_s": round(time.time() - t0, 4), "curve": None, "notes": {}, "cv": None}
 
 
+def run_forecast_baseline(prepared) -> dict:
+    """'Same as last season' — the reference every forecast should beat (numpy only, runs in the API process)."""
+    import time
+
+    from .forecast import SEASON_NAME, evaluate_forecast, fit_forecast
+    t0 = time.time()
+    est = fit_forecast("fc_seasonal_naive", {}, prepared, lambda t, d: None, None, "baseline")
+    res = evaluate_forecast(est, prepared)
+    idx = prepared.preprocessor
+    what = f"repeat last {SEASON_NAME[idx.freq]}" if idx.season > 1 and idx.freq in SEASON_NAME else "repeat the last value"
+    return {**res, "key": "baseline", "model_id": "fc_seasonal_naive", "label": f"Baseline · {what}", "params": {}, "nn_arch": None,
+            "family": "classic", "baseline": True, "fit_time_s": round(time.time() - t0, 4), "notes": {}, "cv": None}
+
+
 def leaderboard(results: dict, task: str, modality: str = "tabular") -> list[dict]:
     from .problems import problem_for
     prob = problem_for(task, modality) or {}
@@ -85,9 +99,15 @@ def run_train(job):
     if not results:
         raise RuntimeError("Every model failed: " + "; ".join(f"{k}: {v}" for k, v in failures.items()))
     from .unsupervised import UNSUPERVISED_TASKS
-    unsup = prepared.task in UNSUPERVISED_TASKS
+    unsup = prepared.task in UNSUPERVISED_TASKS or prepared.task == "recommendation"
     try:
         if unsup:
+            raise StopIteration
+        if prepared.task == "forecasting":
+            if any(r["model_id"] == "fc_seasonal_naive" for r in results.values()):
+                raise StopIteration  # the learner already trains the reference model
+            results["baseline"] = run_forecast_baseline(prepared)
+            manager.emit(job, "log", {"level": "info", "message": "Added the seasonal-naive baseline for comparison."})
             raise StopIteration
         results["baseline"] = run_baseline(prepared)
         manager.emit(job, "log", {"level": "info", "message": "Added the baseline (always guessing) for comparison."})
@@ -96,7 +116,9 @@ def run_train(job):
     except Exception as e:  # noqa: BLE001
         print("baseline failed:", e)
     lb = leaderboard(results, prepared.task, getattr(prepared, "modality", "tabular"))
-    suggestions = (coach.unsupervised_suggestions(results, prepared) if unsup
+    suggestions = (coach.recsys_suggestions(results, prepared) if prepared.task == "recommendation"
+                   else coach.forecast_suggestions(results, prepared) if prepared.task == "forecasting"
+                   else coach.unsupervised_suggestions(results, prepared) if unsup
                    else coach.results_suggestions(results, lb, prepared, req.get("models"), options))
     return {"job_id": job.id, "task": prepared.task, "prepared_id": prepared.id, "models": results, "failures": failures,
             "leaderboard": lb, "coach": suggestions, "classes": prepared.classes,

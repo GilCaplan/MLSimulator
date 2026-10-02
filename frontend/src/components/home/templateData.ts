@@ -17,6 +17,8 @@ export interface Template {
   imageSet?: string;
   /** synthetic text set (POST /datasets/text-set) — makes this a text project */
   textSet?: string;
+  /** synthetic ratings set (POST /datasets/ratings-set) — makes this a recommendation project */
+  ratingsSet?: string;
   modality?: Modality;
   /** target column (defaults to the dataset's hint) */
   target?: string;
@@ -45,6 +47,8 @@ export const TEMPLATES: Template[] = [
     sample: "customers", truth: "segment", models: ["kmeans", "gmm", "dbscan"], tint: "rgba(255,214,10,.2)" },
   { id: "faults", emoji: "🏭", title: "Factory faults", blurb: "Learn what a healthy machine looks like and flag the sensor readings that don't fit.", task: "anomaly",
     sample: "sensors", truth: "status", models: ["isolation_forest", "lof", "one_class_svm"], tint: "rgba(255,69,58,.14)" },
+  { id: "movies", emoji: "🎬", title: "Movie night (recommendations)", blurb: "800 viewers, 400 films, thousands of star ratings. Build a recommender that knows what you'll want to watch next.", task: "recommendation",
+    ratingsSet: "movies", modality: "ratings", models: ["popularity", "item_knn", "mf_als"], tint: "rgba(94,92,230,.18)" },
   { id: "moons", emoji: "🌙", title: "Two moons playground", blurb: "Two interlocking crescents — watch each model draw its own boundary.", task: "classification", preset: "moons",
     models: ["svm", "mlp", "decision_tree"], tint: "rgba(191,90,242,.16)" },
 ];
@@ -54,7 +58,8 @@ export async function createFromTemplate(t: Template): Promise<Project> {
   const st = useProject.getState();
   const registry = await st.ensureRegistry();
   let dataset;
-  if (t.imageSet) dataset = await api.createImageSet(t.imageSet);
+  if (t.ratingsSet) dataset = await api.createRatingsSet(t.ratingsSet);
+  else if (t.imageSet) dataset = await api.createImageSet(t.imageSet);
   else if (t.textSet) dataset = await api.createTextSet(t.textSet);
   else if (t.sample) dataset = await api.sample(t.sample);
   else {
@@ -68,14 +73,17 @@ export async function createFromTemplate(t: Template): Promise<Project> {
   const modality: Modality = t.modality ?? "tabular";
   const created = await api.createProject({ name: t.title, task: t.task, emoji: t.emoji, modality });
   const unsup = isUnsupervised(t.task);
+  const noTarget = unsup || t.task === "recommendation";
   return api.saveProject({
     ...created,
     task: t.task,
     emoji: t.emoji,
     modality,
     dataset_id: dataset.id,
-    target: unsup ? null : t.target ?? dataset.target_hint ?? null,
+    target: noTarget ? null : t.target ?? dataset.target_hint ?? null,
     ...(unsup ? { truth: t.truth ?? dataset.truth_hint ?? null } : {}),
+    // the synthetic ratings set always has these roles; the Data step can still change them
+    ...(t.ratingsSet ? { pipeline: { modality: "ratings" as const, columns: { user: "user", item: "item", rating: "rating", time: "day" } } } : {}),
     models,
     step: "models",
   });
@@ -88,4 +96,5 @@ export const TASK_BADGE: Record<string, { label: string; icon: string; cls?: str
   clustering: { label: "Clustering", icon: "🫧", cls: "warning" },
   reduction: { label: "Data map", icon: "🗺️", cls: "success" },
   anomaly: { label: "Anomaly", icon: "🚨", cls: "danger" },
+  recommendation: { label: "Recommender", icon: "🎬", style: { background: "rgba(94,92,230,.16)", color: "#5E5CE6" } },
 };

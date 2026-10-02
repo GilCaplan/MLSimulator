@@ -494,8 +494,99 @@ NEW_LESSONS.update({
     },
 })
 
+NEW_LESSONS.update({
+    "popularity_bias": {
+        "id": "popularity_bias", "stage": "Recommend", "emoji": "🔥", "title": "Popularity bias",
+        "tagline": "Recommending the hits looks safe — and buries everything else.",
+        "modeled_on": "Movie ratings / recommendation projects (MovieLens-style)",
+        "learn": [
+            {"icon": "📋", "heading": "The top-10 list", "body": "A recommender ranks items for each person; we judge it by how many of the things they later liked appear in their **top 10** (**recall@10**)."},
+            {"icon": "🔥", "heading": "Popularity is a strong baseline", "body": "Recommending the most-liked items to everyone is simple and not terrible — blockbusters are popular for a reason."},
+            {"icon": "🕳️", "heading": "…but it starves the long tail", "body": "Everyone gets the same list, so most of the catalogue is never shown (**coverage**). Niche films that a particular viewer would love never surface, and their creators never get discovered."},
+            {"icon": "🧲", "heading": "Personalise", "body": "**Item-kNN** recommends neighbours of what *you* liked ('people who liked this also liked…'); **matrix factorisation** learns taste vectors. Both spread attention across the catalogue while finding more of what each person actually likes."},
+        ],
+        "demo": "popularity_bias",
+        "demo_caption": "Slide between 'everyone gets the hits' and 'fully personal' and watch recall and catalogue coverage trade places.",
+        "quiz": [
+            {"q": "What does a low coverage score mean?",
+             "options": ["Recommendations are slow", "Only a small part of the catalogue is ever recommended", "Users rated few items", "The model overfits"],
+             "answer": 1, "explain": "Coverage = share of items that appear in anyone's recommendations."},
+            {"q": "Why is popularity a good baseline but a poor final recommender?",
+             "options": ["It can't be computed", "It ignores each person's taste and hides niche items", "It needs a GPU", "It only works for movies"],
+             "answer": 1, "explain": "It's the same list for everybody."},
+        ],
+        "challenge": {
+            "title": "Beyond the blockbusters", "dataset_name": "Movie ratings (practice)",
+            "story": "A streaming service shows everyone the same 'Top picks' — the most popular films. Viewers find a few hits, but 90% of the catalogue is never shown.",
+            "task": "Recommend films viewers go on to like (recall@10 ≥ 22%) while showing at least 40% of the catalogue.",
+            "hints": ["Train and compare recall@10 and coverage on the leaderboard.", "Add a personal model on the Models step — 'Similar items' or 'Similar people'.", "Train again and check both goals."],
+            "solution": "Popularity finds ≈13% of what viewers liked next while covering 10% of films. Item-kNN finds ≈30% and covers ≈54% of the catalogue.",
+        },
+    },
+    "cold_start": {
+        "id": "cold_start", "stage": "Recommend", "emoji": "🧊", "title": "Cold start",
+        "tagline": "A brand-new user has told you almost nothing. Now what?",
+        "modeled_on": "Recommendation systems for new users (MovieLens-style)",
+        "learn": [
+            {"icon": "🆕", "heading": "New users have no history", "body": "Collaborative filtering learns from what you rated. A newcomer with two ratings gives the model almost nothing to go on — the **cold-start problem**."},
+            {"icon": "🧩", "heading": "Factor models struggle most", "body": "Matrix factorisation must estimate a whole taste vector from two numbers. With so little evidence it guesses wildly."},
+            {"icon": "🛟", "heading": "Fallbacks and neighbours", "body": "Common fixes: show **popular items** until a user has rated a handful (a hybrid), or use **item-kNN**, which works directly from 'items similar to the two you liked'."},
+            {"icon": "🔁", "heading": "Then hand over", "body": "As ratings arrive, switch to the personal model. Many products also ask newcomers to pick favourites during sign-up for exactly this reason."},
+        ],
+        "demo": "cold_start",
+        "demo_caption": "Give a new user 0, 1, 2… ratings and watch how each recommender's list improves — and when the popularity fallback should step aside.",
+        "quiz": [
+            {"q": "Why does matrix factorisation do badly for a user with 2 ratings?",
+             "options": ["It deletes new users", "It must estimate a full taste vector from almost no data", "It only recommends popular items", "It needs timestamps"],
+             "answer": 1, "explain": "Two ratings can't pin down many taste dimensions."},
+            {"q": "A common cold-start fix is…",
+             "options": ["Recommend nothing", "Fall back to popular items until the user has rated a few", "Retrain every second", "Use a bigger model"],
+             "answer": 1, "explain": "A hybrid that trusts the personal model only once it has enough ratings."},
+        ],
+        "challenge": {
+            "title": "Welcome, newcomer", "dataset_name": "Movie ratings (practice)",
+            "story": "The service uses matrix factorisation. It works for regulars, but **300 new viewers** have rated just two films each — and their recommendations are poor.",
+            "task": "Recommend well for brand-new viewers who've rated only 2 films (recall@10 ≥ 12%).",
+            "hints": ["The hidden test is all newcomers — what does the factor model know about them?", "Open the matrix factorisation settings: there's a **new-user fallback**.", "Or try 'Similar items', which works from the two films they liked."],
+            "solution": "Matrix factorisation alone finds ≈7.5% of what newcomers like. A popularity fallback for users with fewer than 5 ratings (≈18%) or item-kNN (≈19%) more than doubles it.",
+        },
+    },
+})
+
+NEW_LESSONS.update({
+    "no_peeking": {
+        "id": "no_peeking", "stage": "Forecast", "emoji": "🔮", "title": "No peeking at the future",
+        "tagline": "A forecast can only use what you'd actually know on the day you make it.",
+        "modeled_on": "Store-sales forecasting (Rossmann-style), where the 'customers' column famously isn't known in advance",
+        "learn": [
+            {"icon": "⏳", "heading": "Forecasting is predicting the future", "body": "On Monday you forecast the next 4 weeks. You know everything up to Sunday — and **nothing** after. Any feature that sneaks in information from later is cheating."},
+            {"icon": "🔀", "heading": "Random splits peek", "body": "Shuffle the rows and every test day sits between training days, scored one step ahead with the true recent values. Real forecasts run weeks ahead on their own guesses. Test on the **last stretch of time** instead."},
+            {"icon": "🕵️", "heading": "Some columns only exist afterwards", "body": "Number of customers, the weekly total, the weather that *actually* happened: they're recorded once the day is over. A model that leans on them aces every test and falls apart on the real future, when they aren't known yet."},
+            {"icon": "✅", "heading": "The honest setup", "body": "Use only columns you'd **know in advance** (planned promotions, holidays, a weather *forecast*), build features from the past (lags, rolling averages), and test with a **time split** so your score is a real multi-step forecast."},
+        ],
+        "demo": "no_peeking",
+        "demo_caption": "Drag the 'today' line, toggle a leaky column and the split type, and watch your test score and the real-world score drift apart.",
+        "quiz": [
+            {"q": "Why does a random split flatter a forecasting model?",
+             "options": ["It uses less data", "Test days sit between training days and are scored with true recent values", "It removes outliers", "It changes the units"],
+             "answer": 1, "explain": "The model effectively interpolates instead of forecasting ahead."},
+            {"q": "Which column can you safely use to forecast next month's sales?",
+             "options": ["Number of customers each day", "Next month's planned promotion days", "The weekly sales total", "Tomorrow's actual temperature"],
+             "answer": 1, "explain": "Promotions are planned in advance; the others are only known after the fact."},
+        ],
+        "challenge": {
+            "title": "Four weeks ahead", "dataset_name": "Shop sales (practice)",
+            "story": "A shop wants a 4-week sales forecast for staffing. The analyst's model scores brilliantly in testing — but the forecasts it sends each Monday are way off.",
+            "task": "Forecast the next 28 days so the real-world error is at most 2× your own test error, with real-world MASE ≤ 1.2.",
+            "hints": ["Train and compare your test score with what you'd expect — does it look too good?", "On **Prepare**, look at the extra columns: which one is only known after the day is over?", "Untick **customers**, switch the split to **Last stretch of time**, and train again."],
+            "solution": "With `customers` the model is off by 3–6× more in the real future than its test promised (real MASE ≈ 1.5–2). Without it, and with a time split, the test is honest (ratio ≈ 1.1) and MASE ≈ 0.6–0.9.",
+        },
+    },
+})
+
 ORDER = ["baselines", "missing", "outliers", "leakage", "features", "splits", "scaling", "imbalance", "overfitting",
-         "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "convolutions", "augmentation"]
+         "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "popularity_bias", "cold_start",
+         "convolutions", "augmentation"]
 _by_id = {l["id"]: l for l in LESSONS} | NEW_LESSONS
 LESSONS = [{**_by_id[i], "order": n + 1} for n, i in enumerate(ORDER)]
 LESSON_INDEX = {l["id"]: l for l in LESSONS}

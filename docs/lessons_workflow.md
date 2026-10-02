@@ -22,8 +22,10 @@ their trained model is auto-graded on a **hidden test set** that represents the 
 | 13 | `choosing_k` | Clustering finds the k you ask for | Shopper segments (5 hidden types) | k-means with k = 3 | k sweep → k = 5 |
 | 14 | `curse` | Noise dimensions swamp distances | 43 factory sensors, 3 informative | k-means on all channels | PCA keeping the standout component |
 | 15 | `bag_of_words` | Linear word counts ignore negation | Product reviews (a third negated) | unigram logistic / naive Bayes | bigrams (or a GRU / Transformer) |
-| 16 | `convolutions` | Pixels-as-a-table can't handle position | Shapes anywhere (SDSS-style morphology) | logistic / random forest on pixels | Image CNN (or Tiny ResNet) |
-| 17 | `augmentation` | Training photos too tidy | Centred, upright shapes → real ones anywhere at any angle | CNN without augmentation | rotation + shift augmentation |
+| 16 | `popularity_bias` | Same hits for everyone | Movie ratings (MovieLens-style) | most-popular recommender | item-kNN (personal) |
+| 17 | `cold_start` | New users with 2 ratings | 300 brand-new viewers | matrix factorisation alone | popularity fallback (or item-kNN) |
+| 18 | `convolutions` | Pixels-as-a-table can't handle position | Shapes anywhere (SDSS-style morphology) | logistic / random forest on pixels | Image CNN (or Tiny ResNet) |
+| 19 | `augmentation` | Training photos too tidy | Centred, upright shapes → real ones anywhere at any angle | CNN without augmentation | rotation + shift augmentation |
 
 ## How the hidden test works
 `mlp/lessons/generators.py` returns `(train_df, hidden_df)` per lesson (deterministic, seed 7 for the shipped data):
@@ -39,6 +41,8 @@ their trained model is auto-graded on a **hidden test set** that represents the 
   clusters (`assign` worker op) and scores agreement with the truth (adjusted Rand index).
 - **bag_of_words** (text) — hidden reviews from the same distribution; the check runs the `predict_text` worker op on
   the review texts. The saved preprocessor matches the model (token ids for neural text models, TF-IDF otherwise).
+- **popularity_bias / cold_start** (recommenders) — hidden = each viewer's most recent ratings, or brand-new viewers
+  described by 2 seed ratings; the worker's `lesson_eval` op computes recall@10 / coverage, graded by `grade_metrics`.
 - **convolutions / augmentation** (image lessons) — hidden photos with shapes anywhere and at any angle; generators
   return `ImageBundle(images, frame)` and the check runs the `predict_arrays` worker op. These lessons train PyTorch
   models, so the validator runs them in a separate interpreter (`--torch`, done automatically).

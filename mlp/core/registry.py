@@ -144,6 +144,67 @@ _UNSUP = [
 ]
 MODELS.extend(_UNSUP)
 
+_COLD = [P("cold_start", "New-user fallback", "choice", "none",
+           "For users with very few ratings, recommend popular items instead of trusting the model.", options=["none", "popularity"]),
+         P("cold_start_min", "…for users with fewer than", "int", 5, "How many ratings a user needs before we trust the model.", min=1, max=20)]
+_RECSYS = [
+    {"id": "popularity", "label": "Most popular", "family": "Recommender", "tasks": ["recommendation"], "emoji": "🔥", "trainer": "recsys",
+     "modalities": ["ratings"], "description": "Recommends what most people liked. A strong, simple baseline — but everyone gets the same list.",
+     "params": []},
+    {"id": "item_knn", "label": "Similar items (item-kNN)", "family": "Recommender", "tasks": ["recommendation"], "emoji": "🧲", "trainer": "recsys",
+     "modalities": ["ratings"], "description": "'People who liked this also liked…' — finds items rated alike by the same people and recommends neighbours of what you liked.",
+     "params": [P("k_neighbors", "Neighbours per item", "int", 30, "How many similar items each item keeps.", min=5, max=200),
+                P("shrink", "Shrink rare overlaps", "float", 10.0, "Trust similarities less when few people rated both items.", min=0.0, max=100.0, step=1.0)] + _COLD},
+    {"id": "user_knn", "label": "Similar people (user-kNN)", "family": "Recommender", "tasks": ["recommendation"], "emoji": "👯", "trainer": "recsys",
+     "modalities": ["ratings"], "description": "Finds people with similar taste and recommends what they liked.",
+     "params": [P("k_neighbors", "Similar people", "int", 40, "How many look-alike users to listen to.", min=5, max=300)] + _COLD},
+    {"id": "svd", "label": "SVD (taste factors)", "family": "Recommender", "tasks": ["recommendation"], "emoji": "🧮", "trainer": "recsys",
+     "modalities": ["ratings"], "description": "Compresses the ratings table into a few hidden 'taste factors' per person and item.",
+     "params": [P("factors", "Taste factors", "int", 16, "How many hidden dimensions describe tastes.", min=2, max=100)] + _COLD},
+    {"id": "mf_als", "label": "Matrix factorisation (ALS)", "family": "Recommender", "tasks": ["recommendation"], "emoji": "🧩", "trainer": "recsys",
+     "modalities": ["ratings"], "description": "Learns a taste vector for every person and item so that their dot product predicts the rating — the Netflix-prize classic.",
+     "params": [P("factors", "Taste factors", "int", 16, "Size of each taste vector.", min=2, max=100),
+                P("reg", "Regularisation", "float", 0.1, "Keeps taste vectors small so they don't memorise.", min=0.001, max=2.0, log=True),
+                P("iterations", "Iterations", "int", 12, "Alternating least-squares passes.", min=2, max=50)] + _COLD},
+]
+MODELS.extend(_RECSYS)
+
+_FC = {"tasks": ["forecasting"], "modalities": ["timeseries"], "trainer": "forecast"}
+_FORECAST = [
+    {"id": "fc_naive", "label": "Last value (naive)", "family": "Forecast baseline", "emoji": "🪞", **_FC,
+     "description": "Tomorrow will be like today. Surprisingly hard to beat for a step or two — hopeless further out.", "params": []},
+    {"id": "fc_seasonal_naive", "label": "Same as last season", "family": "Forecast baseline", "emoji": "🔁", **_FC,
+     "description": "Repeats the last full cycle: next Monday looks like last Monday. The baseline every forecast should beat.", "params": []},
+    {"id": "fc_moving_average", "label": "Moving average", "family": "Forecast baseline", "emoji": "〰️", **_FC,
+     "description": "The average of the last few steps. Smooths out noise, but flattens every rhythm and lags behind trends.",
+     "params": [P("window", "Window", "int", 7, "How many recent steps to average.", min=2, max=120)]},
+    {"id": "fc_holt_winters", "label": "Exponential smoothing (Holt-Winters)", "family": "Statistical", "emoji": "🌊", **_FC,
+     "description": "Keeps a running level, trend and seasonal pattern, updating each a little with every new value. A classic workhorse.",
+     "params": [P("trend", "Trend", "choice", "damped", "none = flat; additive = keeps climbing; damped = climbs but levels off (safer far ahead).",
+                  options=["none", "additive", "damped"]),
+                P("seasonal", "Seasonality", "choice", "additive", "Learn a repeating pattern (week, day…) or not.", options=["additive", "none"])]},
+    {"id": "fc_linear", "label": "Linear model on lags", "family": "Regression on lags", "emoji": "📏", **_FC,
+     "description": "Weighs recent values, calendar flags and extra columns with straight-line weights. Fast, readable, extrapolates trends.",
+     "params": [P("alpha", "Regularisation", "float", 1.0, "Higher = smaller weights, steadier forecasts.", min=0.001, max=100.0, log=True)]},
+    {"id": "fc_random_forest", "label": "Random forest on lags", "family": "Regression on lags", "emoji": "🌲", **_FC,
+     "description": "Many decision trees vote using the lag and calendar features. Catches interactions — but can't predict values beyond what it has seen.",
+     "params": [N_EST, P("max_depth", "Max depth (0 = unlimited)", "int", 12, "Deeper trees capture more detail but can memorise noise.", min=0, max=40),
+                P("min_samples_leaf", "Min rows per leaf", "int", 3, "Larger = smoother predictions.", min=1, max=50)]},
+    {"id": "fc_gbm", "label": "Gradient boosting on lags", "family": "Regression on lags", "emoji": "🚀", **_FC,
+     "description": "Trees added one at a time, each fixing the last one's mistakes — the go-to model in forecasting competitions.",
+     "params": [P("learning_rate", "Learning rate", "float", 0.08, "Smaller = more careful steps (needs more rounds).", min=0.005, max=0.5, log=True),
+                P("max_iter", "Boosting rounds", "int", 300, "How many trees to add.", min=20, max=2000, step=10),
+                P("max_depth", "Max depth (0 = unlimited)", "int", 6, "Depth of each tree.", min=0, max=20)]},
+    {"id": "fc_gru", "label": "GRU (recurrent network)", "family": "Neural network", "emoji": "🧠", "torch": True, **_FC,
+     "description": "Reads the recent window step by step, keeping a memory of what came before, then predicts the next value.",
+     "params": [P("window", "Look-back window", "int", 28, "How many recent steps the network reads.", min=4, max=168),
+                P("hidden", "Memory size", "int", 32, "Size of the GRU's hidden state.", min=4, max=256),
+                P("epochs", "Epochs", "int", 60, "Maximum passes over the training rows.", min=5, max=400),
+                P("learning_rate", "Learning rate", "float", 0.003, "Step size of the optimiser.", min=0.0001, max=0.05, log=True),
+                P("patience", "Early-stopping patience", "int", 10, "Stop after this many epochs without validation improvement.", min=2, max=50)]},
+]
+MODELS.extend(_FORECAST)
+
 MODEL_INDEX = {m["id"]: m for m in MODELS}
 
 
@@ -340,6 +401,10 @@ MODEL_INDEX["cnn2d"]["description"] = ("The classic image network: small filters
 
 def is_nn(model_id: str) -> bool:
     return bool(MODEL_INDEX.get(model_id, {}).get("nn"))
+
+
+def uses_torch(model_id: str) -> bool:
+    return is_nn(model_id) or bool(MODEL_INDEX.get(model_id, {}).get("torch"))
 
 
 def modalities_of(m: dict) -> list[str]:

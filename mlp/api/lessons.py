@@ -15,8 +15,8 @@ from ..core.jobs import manager
 from ..core.registry import MODEL_INDEX, defaults
 from ..core.store import datasets, new_id, prepared_store, projects
 from ..lessons.catalog import LESSON_INDEX, LESSONS
-from ..lessons.generators import GENERATORS, IMAGE_LESSONS, TEXT_LESSONS, UNSUPERVISED_LESSONS
-from ..lessons.grading import CHALLENGES, goal_label, grade
+from ..lessons.generators import FORECAST_LESSONS, GENERATORS, IMAGE_LESSONS, RECSYS_LESSONS, TEXT_LESSONS, UNSUPERVISED_LESSONS
+from ..lessons.grading import CHALLENGES, goal_label, grade, grade_metrics
 from ..util.jsonable import jsonable
 
 router = APIRouter()
@@ -90,15 +90,22 @@ def start_challenge(lid: str):
     meta = {"name": lesson["challenge"]["dataset_name"], "source": "lesson", "lesson": lid, "task_hint": ch["task"], "target_hint": ch["target"]}
     if lid in TEXT_LESSONS:
         meta.update(modality="text", text_column=ch["text_column"])
-    if lid in IMAGE_LESSONS:
+    if lid in RECSYS_LESSONS:
+        meta.update(modality="ratings", items=train.items.to_dict("records"),
+                    columns={"user": "user", "item": "item", "rating": "rating", "time": "day"})
+        did = datasets.put(train.ratings, meta)
+    elif lid in IMAGE_LESSONS:
         did = datasets.put(train.frame, meta, images=train.images)
+    elif lid in FORECAST_LESSONS:
+        meta.update(modality="timeseries", columns=dict(ch["columns"]), exog=list(ch["exog"]), horizon=ch["horizon"])
+        did = datasets.put(train, meta)
     else:
         did = datasets.put(train, meta)
     models = []
     for mid in ch["preset_models"]:
         params = {**defaults(mid), **ch.get("preset_params", {}).get(mid, {})}
         models.append({"key": new_id("m"), "model_id": mid, "params": params, "nn_arch": MODEL_INDEX[mid].get("default_arch")})
-    unsup = lid in UNSUPERVISED_LESSONS
+    unsup = lid in UNSUPERVISED_LESSONS or lid in RECSYS_LESSONS or lid in FORECAST_LESSONS
     project = projects.create({"name": f"{lesson['emoji']} {lesson['challenge']['title']}", "task": ch["task"], "step": "data",
                                "modality": ch.get("modality", "tabular"), "truth": ch.get("truth"),
                                "dataset_id": did, "target": None if unsup else ch["target"], "pipeline": ch.get("preset_pipeline") or None,
@@ -137,6 +144,27 @@ def check(lid: str, body: dict = Body(...)):
         shutil.copy(src, d / "model.joblib")
         joblib.dump(preprocessor_for(prepared, res["model_id"]), d / "preprocessor.joblib")
     train, hidden = GENERATORS[lid](seed=DATA_SEED)
+    if lid in RECSYS_LESSONS or lid in FORECAST_LESSONS:
+        if lid in FORECAST_LESSONS:
+            vals = procs.call(res["family"], "lesson_eval", model_dir=str(d), hidden=hidden, kind="forecast")
+            own = res["metrics"].get("test", {}).get("mae")
+            vals["error_ratio"] = vals["mae"] / own if own else None
+            vals["users_evaluated"] = vals.get("n", 0)
+        else:
+            vals = procs.call(res["family"], "lesson_eval", model_dir=str(d), hidden=train.hidden, seeds=train.seeds)
+        graded = grade_metrics(lid, vals, vals)
+        if lid in FORECAST_LESSONS:
+            graded["real_world"] = {k: vals.get(k) for k in ("mae", "mase", "smape", "rmse")}
+        graded.update({"model": res["label"], "model_id": res["model_id"], "key": key, "job_id": job_id,
+                       "your_test": res["metrics"].get("test", {}), "checked_at": time.time()})
+        prog = _progress().get(lid, {})
+        fields = {"attempts": prog.get("attempts", 0) + 1, "last_check": graded}
+        if graded["passed"] and not prog.get("completed_at"):
+            fields["completed_at"] = time.time()
+        _update(lid, **fields)
+        if graded["passed"]:
+            graded["solution"] = LESSON_INDEX[lid]["challenge"]["solution"]
+        return jsonable(graded)
     if lid in IMAGE_LESSONS:
         out = procs.call(res["family"], "predict_arrays", model_dir=str(d), images=np.asarray(hidden.images))
         hidden, train = hidden.frame, train.frame

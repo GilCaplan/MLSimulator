@@ -75,11 +75,15 @@ export const TASK_META: Record<string, { label: string; icon: string; badge: str
   clustering: { label: "Clustering", icon: "🫧", badge: "warning" },
   reduction: { label: "Data map", icon: "🗺️", badge: "accent" },
   anomaly: { label: "Anomaly detection", icon: "🚨", badge: "danger" },
+  recommendation: { label: "Recommender", icon: "🎬", badge: "accent" },
 };
 export const taskMeta = (task: string) => TASK_META[task] ?? { label: task, icon: "🤖", badge: "" };
 
 /** Saved models of the clustering / map / anomaly kind (SavedModel.task is typed for supervised tasks only). */
 export const isUnsupModel = (m: Pick<SavedModel, "task">) => ["clustering", "reduction", "anomaly"].includes(m.task as string);
+
+/** Saved recommenders (user–item ratings in, top-k lists out). */
+export const isRecsysModel = (m: Pick<SavedModel, "task" | "modality">) => (m.task as string) === "recommendation" || m.modality === "ratings";
 
 /** Saved models that read free text (one text input). */
 export const isTextModel = (m: Pick<SavedModel, "modality" | "input_schema">) => m.modality === "text" || m.input_schema?.[0]?.type === "text";
@@ -87,7 +91,8 @@ export const isTextModel = (m: Pick<SavedModel, "modality" | "input_schema">) =>
 /* ---------------------------------------------------------------- metrics */
 
 const RATIO = new Set(["accuracy", "balanced_accuracy", "precision", "recall", "f1", "f1_weighted", "roc_auc", "avg_precision", "r2", "explained_variance", "mape",
-  "purity", "trustworthiness", "explained_2d", "explained_all", "flagged_share", "noise_share"]);
+  "purity", "trustworthiness", "explained_2d", "explained_all", "flagged_share", "noise_share",
+  "recall_at_10", "precision_at_10", "hit_rate", "coverage", "novelty"]);
 
 export const isRatioMetric = (k: string) => RATIO.has(k);
 export const formatMetric = (k: string, v: number | null | undefined) => (v === null || v === undefined ? "—" : RATIO.has(k) ? pct(v, 1) : fmt(v, 3));
@@ -101,9 +106,11 @@ export function headline(m: Pick<SavedModel, "task" | "metrics">): { key: string
   const task = m.task as string;
   let key = primaryMetric(task);
   if (task === "anomaly" && test[key] === undefined) key = "flagged_share";
+  // recommenders lead with the plainest number: share of liked films found in the top 10
+  if (task === "recommendation" && test.recall_at_10 !== undefined) key = "recall_at_10";
   const value = test[key] ?? null;
   const ring = value === null ? 0 : Math.max(0, Math.min(1, value));
-  const [good, ok] = key === "silhouette" ? [0.5, 0.25] : key === "flagged_share" ? [2, 2] : [0.85, 0.6];
+  const [good, ok] = key === "silhouette" ? [0.5, 0.25] : key === "flagged_share" ? [2, 2] : key === "recall_at_10" ? [0.3, 0.15] : [0.85, 0.6];
   const tone = ring >= good ? "var(--success)" : ring >= ok ? "var(--accent)" : key === "flagged_share" ? "var(--accent-2)" : "var(--warning)";
   return { key, label: METRIC_LABELS[key] ?? metricLabel(key), value, text: formatMetric(key, value), ring, tone };
 }

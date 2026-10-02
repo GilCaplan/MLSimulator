@@ -6,7 +6,8 @@ import { navigate } from "../../lib/router";
 import type { SavedModel } from "../../lib/types";
 import { ProgressRing, Tooltip } from "../glass";
 import { Thumb } from "../train/visionKit";
-import { EditableText, headline, isTextModel, taskMeta } from "./shared";
+import { genreColor, genreIcon } from "../train/recsys/recKit";
+import { EditableText, headline, isRecsysModel, isTextModel, taskMeta } from "./shared";
 
 /** One saved model in the library grid. */
 export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: string; onRename: (name: string) => void; onDelete: () => void }>(
@@ -79,6 +80,7 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
               ))}
             </div>
           )}
+          {isRecsysModel(model) && <PosterStack hover={hover} genres={(model.detail?.recsys?.examples?.[0]?.recs ?? []).slice(0, 3).map((r) => r.genre ?? "")} />}
           {model.modality === "image" && model.dataset?.id && (
             <div className="row" style={{ gap: 0 }}>
               {[0, 1, 2].map((i) => (
@@ -94,6 +96,7 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
           <span className={`badge ${task.badge}`}>{task.icon} {task.label}</span>
           {model.modality === "image" && <span className="badge">🖼️ Images</span>}
           {isTextModel(model) && <span className="badge">💬 Text</span>}
+          {isRecsysModel(model) && <span className="badge" title="Learns from star ratings">⭐ Ratings</span>}
           {model.dataset?.name && <span className="badge truncate" style={{ maxWidth: 170 }} title={model.dataset.name}>📊 {model.dataset.name}</span>}
           <span className="grow" />
           <span className="tiny faint">{timeAgo(model.created_at)}</span>
@@ -102,6 +105,22 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
     );
   },
 );
+
+/** Three tiny fanned-out posters (recommenders) — they spread when the card is hovered. */
+function PosterStack({ hover, genres }: { hover: boolean; genres: string[] }) {
+  const g = genres.length >= 3 ? genres : ["Sci-Fi", "Drama", "Comedy"];
+  return (
+    <div className="row" style={{ gap: 0 }} aria-hidden>
+      {g.slice(0, 3).map((x, i) => (
+        <motion.div key={i} animate={{ rotate: hover ? (i - 1) * 12 : (i - 1) * 5, x: hover ? (i - 1) * 7 : 0, y: hover ? -3 : 0 }} transition={spring.gentle}
+          style={{ marginLeft: i ? -12 : 0, zIndex: 3 - i, width: 26, height: 37, borderRadius: 5, border: "2px solid var(--glass-strong)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12,
+            background: `linear-gradient(160deg, ${genreColor(x)}, ${genreColor(x)}66)`, boxShadow: "0 2px 6px rgba(0,0,0,.15)" }}>
+          {genreIcon(x)}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
 
 export function CardSkeleton() {
   return (

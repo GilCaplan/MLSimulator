@@ -52,6 +52,23 @@ def predict(mid: str, body: dict = Body(...)):
     return jsonable(library.predict(mid, rows))
 
 
+@router.post("/library/{mid}/recommend")
+def recommend(mid: str, body: dict = Body(...)):
+    """Recommenders: top-k for a known `user`, or for a new user described by `ratings` {item_id: stars}."""
+    return jsonable(library.recommend(mid, body))
+
+
+@router.post("/library/{mid}/forecast")
+def forecast(mid: str, body: dict = Body(default={})):
+    """Forecasters: the next `horizon` steps of one `series`, optionally with planned values for the extra columns (`exog`)."""
+    return jsonable(library.forecast(mid, body))
+
+
+@router.get("/library/{mid}/catalog")
+def catalog(mid: str, q: str = "", limit: int = 60):
+    return jsonable(library.catalog(mid, q, limit))
+
+
 @router.post("/library/{mid}/predict-text")
 def predict_text(mid: str, body: dict = Body(...)):
     """Text models: prediction + per-word influence (occlusion) for the first text."""

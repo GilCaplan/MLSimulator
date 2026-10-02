@@ -37,19 +37,29 @@ function fmtG(metric: string, v: number | null | undefined) {
   return fmtGoal(metric, v);
 }
 
-/** What the hidden test items are called (text challenges grade messages, not rows). */
-const hiddenNoun = () => (useProject.getState().project?.modality === "text" ? "messages" : "rows");
+/** Recommendation challenges are graded on hidden viewers' top-10 lists. */
+const isRecCheck = (check: ChallengeCheck) => (check.goals ?? []).some((g) => g.metric === "recall_at_10" || g.metric === "coverage");
+
+/** What the hidden test items are called (text challenges grade messages, recommenders viewers, not rows). */
+const hiddenNoun = (check?: ChallengeCheck) => {
+  const modality = useProject.getState().project?.modality;
+  return (check && isRecCheck(check)) || modality === "ratings" ? "viewers" : modality === "text" ? "messages" : "rows";
+};
+
+/** cold_start: the hidden viewers are brand-new (only a couple of seed ratings each). */
+const isColdStart = (check: ChallengeCheck, lessonId?: string | null) =>
+  (lessonId ?? useProject.getState().project?.challenge?.lesson_id) === "cold_start" || (isRecCheck(check) && check.goals.length === 1 && check.goals[0].metric === "recall_at_10");
 
 interface Side { eyebrow: string; value?: number; format: (v: number) => string; caption: ReactNode }
 
 /** The "your test vs the real world" contrast — leads with a failed goal, with special layouts for the newer metrics. */
-function contrast(check: ChallengeCheck) {
+function contrast(check: ChallengeCheck, lessonId?: string | null) {
   const own: Record<string, number> = check.your_test ?? {};
   const goals = (check.goals ?? []) as Goal[];
   const special = (g: Goal) => g.metric === "estimate_gap" || g.metric === "mae_vs_baseline";
   const comparable = (g: Goal) => !!OWN[g.metric] && own[OWN[g.metric]!] !== undefined;
   const goal = goals.find((x) => !x.passed && (comparable(x) || special(x))) ?? goals.find((x) => !x.passed) ?? goals.find((x) => comparable(x) || special(x)) ?? goals[0];
-  const hidden = `${check.n_hidden.toLocaleString()} hidden ${hiddenNoun()}`;
+  const hidden = `${check.n_hidden.toLocaleString()} hidden ${hiddenNoun(check)}`;
   if (goal?.metric === "ari") {
     // clustering has no test score: the only number available without answers is silhouette (how crisp the groups look)
     const sil = own.silhouette;
@@ -58,6 +68,20 @@ function contrast(check: ChallengeCheck) {
       left: { eyebrow: "🧪 Your rows said", value: sil, format: (v: number) => fmtG("silhouette", v), caption: <>silhouette — how crisp the groups look (the only score possible without answers)</> } as Side,
       right: { eyebrow: "🌍 The real world says", value: goal.value, format: (v: number) => fmtG("ari", v), caption: <>agreement with the hidden groups (ARI) on {hidden}</> } as Side,
       chip: null,
+    };
+  }
+  if (goal && isRecCheck(check)) {
+    const gm = goal.metric;
+    const mine = own[gm];
+    const cold = isColdStart(check, lessonId);
+    const what = gm === "coverage" ? "of the catalogue shown in someone's top 10" : "of the films they liked found in their top 10";
+    return {
+      goal, ownMetric: gm, ownValue: mine, realValue: goal.value,
+      left: { eyebrow: "🧪 Your test said", value: mine, format: (v: number) => fmtG(gm, v),
+        caption: <>{what} — {cold ? "viewers with long rating histories" : "your held-out ratings"}</> } as Side,
+      right: { eyebrow: "🌍 The real world says", value: goal.value, format: (v: number) => fmtG(gm, v),
+        caption: <>{what} — {cold ? <>{check.n_hidden.toLocaleString()} <b>brand-new</b> viewers with just a couple of ratings each</> : hidden}</> } as Side,
+      chip: cold ? <span className="badge">🆕 brand-new viewers</span> : null,
     };
   }
   if (goal?.metric === "estimate_gap") {
@@ -106,7 +130,7 @@ function contrast(check: ChallengeCheck) {
  * "Your test said … — the real world says …": the learner's own test score versus the hidden real-world results.
  * `reveal` plays the dramatic version (the real-world side lands after a beat).
  */
-export function CheckReveal({ check, reveal = false, compact = false }: { check: ChallengeCheck; reveal?: boolean; compact?: boolean }) {
+export function CheckReveal({ check, reveal = false, compact = false, lessonId }: { check: ChallengeCheck; reveal?: boolean; compact?: boolean; lessonId?: string | null }) {
   const [landed, setLanded] = useState(!reveal);
   useEffect(() => {
     if (!reveal) { setLanded(true); return; }
@@ -117,7 +141,7 @@ export function CheckReveal({ check, reveal = false, compact = false }: { check:
 
   const goals = (check.goals ?? []) as Goal[];
   const yours: Record<string, number> = check.your_test ?? {};
-  const h = contrast(check);
+  const h = contrast(check, lessonId);
   if (!h.goal) return null;
   const sameMetric = OWN[h.goal.metric] === h.ownMetric || h.goal.metric === "estimate_gap";
   const lowerBetter = h.goal.op === "<=";
@@ -153,7 +177,7 @@ export function CheckReveal({ check, reveal = false, compact = false }: { check:
             {!landed ? (
               <motion.span key="wait" exit={{ opacity: 0, y: -8 }} className="row" style={{ gap: 10, height: big * 1.05 }}>
                 <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }} style={{ fontSize: big * 0.6, display: "inline-block" }}>🌍</motion.span>
-                <span className="muted small">Testing on {check.n_hidden.toLocaleString()} real-world {hiddenNoun()}…</span>
+                <span className="muted small">Testing on {check.n_hidden.toLocaleString()} real-world {hiddenNoun(check)}…</span>
               </motion.span>
             ) : (
               <motion.span key="val" initial={reveal ? { opacity: 0, scale: 0.6, y: 10 } : false} animate={{ opacity: 1, scale: 1, y: 0 }} transition={spring.pop}
@@ -176,7 +200,7 @@ export function CheckReveal({ check, reveal = false, compact = false }: { check:
         {landed && (
           <motion.div initial={reveal ? { opacity: 0, y: 6 } : false} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: reveal ? 0.25 : 0 }}
             className={compact ? "small" : ""} style={{ lineHeight: 1.55, color: "var(--text-2)", padding: "0 2px" }}>
-            {verdict(check, h, drop, sameMetric)}
+            {verdict(check, h, drop, sameMetric, lessonId)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -232,7 +256,7 @@ function GoalNote({ g, own }: { g: Goal; own?: number }) {
   return text ? <span className="tiny faint">{text}</span> : null;
 }
 
-function verdict(check: ChallengeCheck, h: ReturnType<typeof contrast>, drop: number, sameMetric: boolean) {
+function verdict(check: ChallengeCheck, h: ReturnType<typeof contrast>, drop: number, sameMetric: boolean, lessonId?: string | null) {
   const g = h.goal as Goal;
   const own = h.ownValue === undefined ? "" : fmtG(h.ownMetric, h.ownValue);
   const realTxt = `${fmtG(g.metric, g.value)} ${SHORT[g.metric] ?? g.metric}`;
@@ -244,6 +268,27 @@ function verdict(check: ChallengeCheck, h: ReturnType<typeof contrast>, drop: nu
     return g.passed
       ? <>{sil !== undefined ? <>Silhouette said {T(fmtG("silhouette", sil))} — and </> : null}the hidden groups agree: {T(`ARI ${fmtG("ari", g.value)}`)}. Your clusters aren't just tidy blobs, they're the real segments. Clustering has no test score, so a hidden truth like this is the only way to be sure.</>
       : <>{sil !== undefined ? <>Silhouette said {T(fmtG("silhouette", sil))}{crisp ? " — the groups look crisp" : ""}. </> : null}But against the hidden groups the agreement is only {B(`ARI ${fmtG("ari", g.value)}`)} (goal ≥ {fmtG("ari", g.target)}). Clustering has no test score: silhouette rewards neat blobs, not meaningful ones — which is exactly why a hidden truth is so valuable. Look at the profiles: is one cluster really two kinds of rows?</>;
+  }
+  if (isRecCheck(check)) {
+    const goals = check.goals as Goal[];
+    const rec = goals.find((x) => x.metric === "recall_at_10");
+    const cov = goals.find((x) => x.metric === "coverage");
+    const yourRec = (check.your_test ?? {}).recall_at_10;
+    if (isColdStart(check, lessonId)) {
+      return check.passed
+        ? <>Your test said {T(fmtG("recall_at_10", yourRec))} — for viewers it knew well. The hidden viewers are {T("brand-new")}: a couple of ratings each. It still finds {T(fmtG("recall_at_10", rec?.value))} of what they go on to like. A safety net for newcomers (popular picks until they've rated a few films) is how real services survive the cold start.</>
+        : <>Your test said {T(fmtG("recall_at_10", yourRec))} — but those viewers had dozens of ratings each. The hidden viewers are {T("brand-new")}: they've rated only a couple of films, so a taste vector built from two numbers guesses wildly — just {B(fmtG("recall_at_10", rec?.value))}. Give newcomers a fallback: in the model's settings, set <b>Cold start → popularity</b> so viewers with few ratings get the crowd favourites until it knows them.</>;
+    }
+    if (check.passed) {
+      return <>{T("Personal and broad.")} It finds {T(fmtG("recall_at_10", rec?.value))} of the films hidden viewers went on to like{cov ? <> while showing {T(fmtG("coverage", cov.value))} of the catalogue</> : null} — not just the same blockbusters for everyone.</>;
+    }
+    if (cov && !cov.passed && rec?.passed) {
+      return <>It finds {T(fmtG("recall_at_10", rec.value))} of what viewers liked — but only {B(fmtG("coverage", cov.value))} of the catalogue ever gets recommended. Everyone sees nearly the same list, and most films are never discovered. A <b>personal</b> model (similar items or similar people) spreads the attention.</>;
+    }
+    if (cov && !cov.passed) {
+      return <>Only {B(fmtG("recall_at_10", rec?.value))} of liked films found, and just {B(fmtG("coverage", cov.value))} of the catalogue shown — the classic “show everyone the hits” recommender. Try a model that learns each viewer's own taste.</>;
+    }
+    return <>It shows plenty of the catalogue{cov ? <> ({T(fmtG("coverage", cov.value))})</> : null}, but finds only {B(fmtG("recall_at_10", rec?.value))} of the films viewers went on to like (goal ≥ {fmtG("recall_at_10", rec?.target)}). Variety only helps if the picks still suit people.</>;
   }
   if (g.metric === "estimate_gap" && h.ownValue !== undefined) {
     const of = g.of ?? "accuracy";

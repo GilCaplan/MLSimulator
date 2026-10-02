@@ -13,7 +13,8 @@ import { VisionGallery } from "../train/VisionGallery";
 import { VisionLooks } from "../train/VisionLooks";
 import { TextExplain, TextMistakes, TextWords } from "../train/TextViews";
 import { UnsupMetricTiles, UnsupViews } from "../train/unsup/UnsupViews";
-import { MetricTiles, SectionTitle, isUnsupModel, rise } from "./shared";
+import { RecsysTiles, RecsysViews } from "../train/recsys/RecsysViews";
+import { MetricTiles, SectionTitle, isRecsysModel, isUnsupModel, rise } from "./shared";
 
 function ChartCard({ title, help, caption, children, wide }: { title: string; help?: string; caption?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
@@ -59,8 +60,31 @@ function UnsupPerformance({ model }: { model: SavedModel }) {
   );
 }
 
+/** Recommenders: headline numbers and the same tabs as on the Train results (example viewers, long tail, taste map). */
+function RecsysPerformance({ model }: { model: SavedModel }) {
+  const metrics = model.metrics?.test ?? {};
+  return (
+    <motion.section variants={rise}>
+      <SectionTitle id="performance" icon="🏆" title="How its lists did"
+        subtitle="We hid each viewer's most recent ratings, asked for 10 picks, and counted how many of the films they really liked made the list — plus how much of the catalogue ever got a chance." />
+      <Glass>
+        <div className="col" style={{ gap: 18 }}>
+          <RecsysTiles metrics={metrics} />
+          <div className="row wrap tiny faint" style={{ gap: 14 }}>
+            {model.fit_time_s != null && <span>⏱ learned in {model.fit_time_s < 1 ? `${Math.round(model.fit_time_s * 1000)} ms` : `${model.fit_time_s.toFixed(1)} s`}</span>}
+            {metrics.users_evaluated ? <span>👥 tested on {Math.round(metrics.users_evaluated).toLocaleString()} viewers</span> : null}
+            {model.dataset?.n_rows != null && <span>⭐ {model.dataset.n_rows.toLocaleString()} ratings in the dataset</span>}
+          </div>
+          <RecsysViews detail={model.detail ?? {}} metrics={metrics} modelId={model.model_id} height={360} />
+        </div>
+      </Glass>
+    </motion.section>
+  );
+}
+
 /** "How it performed": test scores and the evaluation charts saved with the model. */
 export function Performance({ model }: { model: SavedModel }) {
+  if (isRecsysModel(model)) return <RecsysPerformance model={model} />;
   if (isUnsupModel(model)) return <UnsupPerformance model={model} />;
   return <SupervisedPerformance model={model} />;
 }

@@ -3,7 +3,13 @@ import { timeAgo } from "../../lib/format";
 import type { Project } from "../../lib/types";
 import { LineChart } from "../charts";
 import { PALETTE } from "../../lib/colors";
-import { fmtMetric, metricLabel } from "../train/util";
+import { fmtMetric, metricLabel as baseMetricLabel } from "../train/util";
+
+/** Ranking metrics of recommenders (fallback labels until the shared table has them). */
+const REC_LABELS: Record<string, string> = {
+  ndcg_at_10: "NDCG@10", recall_at_10: "Recall@10", precision_at_10: "Precision@10", hit_rate: "Hit rate", coverage: "Coverage", novelty: "Novelty",
+};
+const metricLabel = (m: string) => REC_LABELS[m] ?? baseMetricLabel(m);
 
 /** A little celebratory particle burst. */
 export function Burst({ count = 18 }: { count?: number }) {
@@ -25,9 +31,14 @@ export function Burst({ count = 18 }: { count?: number }) {
 }
 
 /** Best test score per training run, as a chart and a compact table. */
-export function ProgressOverRuns({ project }: { project: Project }) {
+export function ProgressOverRuns({ project, baselineModel, baselineLabel = "🎯 Baseline (always guessing)" }: {
+  project: Project;
+  /** a regular model that doubles as the reference line (recommenders: "popularity") */
+  baselineModel?: string;
+  baselineLabel?: string;
+}) {
   // the 'always guess' baseline row is a reference, never a run's best model
-  const runs = (project.history || []).map((h) => ({ ...h, leaderboard: (h.leaderboard || []).filter((r) => !r.baseline), base: (h.leaderboard || []).find((r) => r.baseline) }))
+  const runs = (project.history || []).map((h) => ({ ...h, leaderboard: (h.leaderboard || []).filter((r) => !r.baseline), base: (h.leaderboard || []).find((r) => r.baseline || (!!baselineModel && r.model_id === baselineModel)) }))
     .filter((h) => h.leaderboard.length);
   if (!runs.length) return <p className="small muted">Your training runs will show up here.</p>;
   const metric = runs[runs.length - 1].leaderboard[0].metric;
@@ -56,7 +67,7 @@ export function ProgressOverRuns({ project }: { project: Project }) {
           showLegend={hasBase}
           series={[
             { name: "Best test score", color: "#5E5CE6", points: bests.map((b, i) => ({ x: i + 1, y: b.score })), width: 2.6 },
-            ...(hasBase ? [{ name: "🎯 Baseline (always guessing)", color: "#8E8E93", points: runs.map((h, i) => ({ x: i + 1, y: h.base?.score })), dashed: true, width: 1.6 }] : []),
+            ...(hasBase ? [{ name: baselineLabel, color: "#8E8E93", points: runs.map((h, i) => ({ x: i + 1, y: h.base?.score })), dashed: true, width: 1.6 }] : []),
           ]} />
       ) : (
         <p className="small muted">Only one run so far — change something (settings, preparation, models) and train again to see whether it helps.</p>

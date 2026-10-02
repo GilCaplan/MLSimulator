@@ -6,7 +6,7 @@ import { SplitBar } from "../charts";
 import { Glass, InfoTip } from "../glass";
 import { NetworkDiagram } from "../nn/NetworkDiagram";
 import { diagramLayers, imageDims } from "../train/archLayers";
-import { SectionTitle, isTextModel, rise, specFor, useRegistry } from "./shared";
+import { SectionTitle, isRecsysModel, isTextModel, rise, specFor, useRegistry } from "./shared";
 import { textNetCaption } from "../train/textKit";
 
 const OVER: Record<string, string> = { random: "random copies", smote: "SMOTE", borderline_smote: "Borderline-SMOTE", adasyn: "ADASYN", svm_smote: "SVM-SMOTE" };
@@ -268,6 +268,38 @@ function textSteps(p: PipelineSpec, m: SavedModel): Step[] {
   ];
 }
 
+function recsysSteps(p: PipelineSpec, m: SavedModel): Step[] {
+  const rc = { min_user: 5, min_item: 2, positive: 4, test_k: 3, split: "leave_last_out" as const, ...(p.recsys ?? {}) };
+  const cols = { user: "user", item: "item", rating: "rating", time: null as string | null, ...(p.columns ?? {}) };
+  const fallback = m.params?.cold_start === "popularity";
+  const stars = (n: number) => "★".repeat(Math.max(0, Math.min(5, Math.round(n))));
+  return [
+    { icon: "🎬", title: "Who rated what",
+      text: <>Each row is one rating: viewer <b>{cols.user}</b> gave item <b>{cols.item}</b> a score in <b>{cols.rating}</b>{cols.time ? <>, at time <b>{cols.time}</b></> : null}. Together they form a huge, mostly empty grid of viewers × films.</> },
+    { icon: "🧹", title: `Filter: viewers with ≥ ${rc.min_user} ratings, films with ≥ ${rc.min_item}`,
+      text: "Viewers and films with almost no ratings carry too little signal to learn from, so they were dropped (a few rounds, since removing one can push the other under the bar)." },
+    { icon: "❤️", title: `“Liked” means ${rc.positive}+ stars`,
+      text: <>A rating of <span style={{ color: "#FFB800" }}>{stars(rc.positive)}</span> or more counts as a film the viewer liked. Only liked films count as hits — recommending something they'd rate 2 stars isn't a success.</> },
+    { icon: "🙈", title: `Hide each viewer's ${rc.test_k} ${rc.split === "leave_last_out" ? "most recent" : "random"} ratings`,
+      text: rc.split === "leave_last_out"
+        ? "Their latest ratings were held back as the exam: just like real life, the model must predict what they'll watch next from what they watched before."
+        : "A few random ratings per viewer were held back as the exam.",
+      extra: (
+        <div className="row" style={{ gap: 3, marginTop: 8 }}>
+          {Array.from({ length: 10 }, (_, i) => (
+            <span key={i} style={{ width: 16, height: 22, borderRadius: 4, background: i >= 10 - rc.test_k ? "#FF9F0A" : "#0A84FF", opacity: i >= 10 - rc.test_k ? 0.9 : 0.55 }} title={i >= 10 - rc.test_k ? "hidden for the exam" : "used for learning"} />
+          ))}
+          <span className="tiny faint" style={{ marginLeft: 6 }}>learn → <span style={{ color: "#FF9F0A", fontWeight: 600 }}>exam</span></span>
+        </div>
+      ) },
+    { icon: "🔟", title: "Grade: 10 picks per viewer",
+      text: "For every viewer, films they'd already rated are skipped and the 10 highest-scoring ones become their list. Recall@10 counts how many of their hidden favourites made it." },
+    { icon: "🛟", title: fallback ? `New viewers: popular picks until ${m.params?.cold_start_min ?? 5} ratings` : "No special treatment for new viewers",
+      text: fallback ? "Viewers with very few ratings get the crowd favourites instead of a shaky personal guess — the classic cure for the cold-start problem." : "Even a viewer with one rating gets a fully personal list. Turn on the popularity fallback in the model's settings to help brand-new viewers.",
+      off: !fallback },
+  ];
+}
+
 /** "Recipe": the model's settings, its network (if any) and the data-prep steps that feed it. */
 export function Recipe({ model }: { model: SavedModel }) {
   const registry = useRegistry();
@@ -278,7 +310,8 @@ export function Recipe({ model }: { model: SavedModel }) {
     : Object.entries(model.params ?? {}).map(([k, v]) => ({ name: k, label: k, help: "", value: v, changed: true }));
   const isImage = model.modality === "image";
   const isText = isTextModel(model);
-  const steps = model.pipeline ? (isImage ? imageSteps(model.pipeline, model) : isText ? textSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
+  const isRec = isRecsysModel(model);
+  const steps = model.pipeline ? (isRec ? recsysSteps(model.pipeline, model) : isImage ? imageSteps(model.pipeline, model) : isText ? textSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
   const dims = imageDims(model.image_shape);
   const nOut = model.task === "classification" ? model.classes?.length ?? 2 : 1;
 
@@ -288,7 +321,7 @@ export function Recipe({ model }: { model: SavedModel }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 16, alignItems: "start" }}>
         <Glass>
           <h3 style={{ marginBottom: 4 }}>Data preparation</h3>
-          <p className="small muted" style={{ marginBottom: 14 }}>The exact same steps run automatically on every new example you predict.</p>
+          <p className="small muted" style={{ marginBottom: 14 }}>{isRec ? "How the ratings were turned into a fair exam for the recommender." : "The exact same steps run automatically on every new example you predict."}</p>
           <div style={{ position: "relative" }}>
           <div style={{ position: "absolute", left: 16, top: 20, bottom: 20, width: 2, background: "var(--hairline)", borderRadius: 2 }} />
           <motion.ol variants={stagger(0.05)} initial="hidden" whileInView="show" viewport={{ once: true }} style={{ listStyle: "none", margin: 0, padding: 0, position: "relative" }}>
@@ -347,7 +380,20 @@ export function Recipe({ model }: { model: SavedModel }) {
             </Glass>
           )}
 
-          {isText ? (
+          {isRec ? (
+            <Glass>
+              <h3 style={{ marginBottom: 10 }}>What it needs</h3>
+              <div className="row" style={{ gap: 14 }}>
+                <span style={{ width: 52, height: 52, borderRadius: 14, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>🍿</span>
+                <div className="col" style={{ gap: 4 }}>
+                  <b>A known viewer — or a few star ratings</b>
+                  <span className="small muted" style={{ lineHeight: 1.5 }}>
+                    Name a viewer it learned from and it recalls their whole history. Or describe a brand-new viewer with a handful of 1–5 star ratings{model.model_id === "popularity" ? " (this model ignores them: everyone gets the same hits)" : model.model_id === "item_knn" ? " — it recommends neighbours of the films you liked" : " — it works out their taste from those ratings"}.
+                  </span>
+                </div>
+              </div>
+            </Glass>
+          ) : isText ? (
             <Glass>
               <h3 style={{ marginBottom: 10 }}>Text it expects</h3>
               <div className="row" style={{ gap: 14 }}>

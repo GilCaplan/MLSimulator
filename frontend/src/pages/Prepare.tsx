@@ -6,6 +6,7 @@ import { EncodeCard, OutliersCard } from "../components/prepare/EncodeOutliersCa
 import { FeaturesCard } from "../components/prepare/features/FeaturesCard";
 import { FlowStrip } from "../components/prepare/FlowStrip";
 import { ImagePrepareStep } from "../components/prepare/image/ImagePrepareStep";
+import { RatingsPrepareStep } from "../components/prepare/ratings/RatingsPrepareStep";
 import { TextPrepareStep } from "../components/prepare/text/TextPrepareStep";
 import { HoldoutCard, ReduceCard } from "../components/prepare/ReduceHoldoutCards";
 import { Results, ResultsSkeleton } from "../components/prepare/Results";
@@ -33,7 +34,7 @@ const UNSUP_INTRO = (
 
 export function PrepareStep() {
   const modality = useProject((s) => s.project?.modality);
-  return modality === "image" ? <ImagePrepareStep /> : modality === "text" ? <TextPrepareStep /> : <TabularPrepareStep />;
+  return modality === "image" ? <ImagePrepareStep /> : modality === "text" ? <TextPrepareStep /> : modality === "ratings" ? <RatingsPrepareStep /> : <TabularPrepareStep />;
 }
 
 function TabularPrepareStep() {

@@ -37,6 +37,7 @@ export const STAGE_TINT: Record<string, { color: string; bg: string }> = {
   Modeling: { color: "#30b0c7", bg: "rgba(48,176,199,.16)" },
   Generalization: { color: "#ff375f", bg: "rgba(255,55,95,.14)" },
   "Responsible ML": { color: "#30d158", bg: "rgba(48,209,88,.15)" },
+  Recommend: { color: "#5e5ce6", bg: "rgba(94,92,230,.15)" },
 };
 export const stageTint = (stage: string) => STAGE_TINT[stage] ?? { color: "var(--accent)", bg: "var(--accent-soft)" };
 
@@ -79,12 +80,13 @@ export const fmtGoal = (metric: string, v: number | null | undefined) =>
     : pct(v, metric === "tpr_gap" ? 1 : 0);
 
 /** The learner's own-test metric comparable to a hidden-set goal metric (if any). */
-export const OWN_METRIC: Record<string, string | undefined> = { accuracy: "accuracy", balanced_accuracy: "balanced_accuracy", r2: "r2", ari: "ari" };
+export const OWN_METRIC: Record<string, string | undefined> = { accuracy: "accuracy", balanced_accuracy: "balanced_accuracy", r2: "r2", ari: "ari", recall_at_10: "recall_at_10", coverage: "coverage" };
 
 export const SHORT_METRIC: Record<string, string> = {
   accuracy: "accuracy", balanced_accuracy: "balanced accuracy", r2: "R²", recall_pos: "recall", precision_pos: "precision",
   f1_pos: "F1", tpr_gap: "approval gap", ari: "agreement (ARI)", ece: "calibration error", roc_auc: "ROC-AUC",
   mae_vs_baseline: "gain over baseline", estimate_gap: "estimate gap",
+  recall_at_10: "of liked films found in the top 10", coverage: "of the catalogue recommended",
 };
 
 /** Headline numbers for the "your test vs the real world" contrast — leads with a failed goal when there is one. */

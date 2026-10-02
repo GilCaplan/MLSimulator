@@ -341,3 +341,70 @@ def unsupervised_suggestions(results: dict, prepared) -> list[dict]:
             out.append(S("truth", "info", "Compare with the hidden truth",
                          "Your data has a truth column the models never saw. Agreement scores (ARI, purity) show whether the groups match it — real projects rarely have this luxury."))
     return out
+
+
+def recsys_suggestions(results: dict, prepared) -> list[dict]:
+    out = []
+    by = {r["model_id"]: r for r in results.values()}
+    pop = by.get("popularity")
+    if pop and pop["metrics"]["test"].get("coverage") is not None and pop["metrics"]["test"]["coverage"] < 0.2:
+        out.append(S("popbias", "info", "Popularity gives everyone the same list",
+                     f"It only ever recommends {pop['metrics']['test']['coverage']:.0%} of the catalogue. Personal models (item-kNN, matrix "
+                     "factorisation) spread attention to niche items people actually like."))
+    for key, res in results.items():
+        m = res["metrics"]["test"]
+        if res["model_id"] == "mf_als" and m.get("rmse") and pop and (m.get("recall_at_10") or 0) < (pop["metrics"]["test"].get("recall_at_10") or 0):
+            out.append(S(f"mfrank_{key}", "warn", f"{res['label']} predicts ratings well but ranks poorly",
+                         "Good rating predictions (RMSE) don't guarantee good top-10 lists. Try more factors, less regularisation, or item-kNN."))
+    out.append(S("coldstart", "info", "What about brand-new users?",
+                 "Personal models need a few ratings first. A popularity fallback for users with very few ratings is a common fix — "
+                 "try it in a model's settings, then rate a few items as a new user in the library playground."))
+    return out
+
+
+def forecast_suggestions(results: dict, prepared) -> list[dict]:
+    out = []
+    idx = prepared.preprocessor
+    split = prepared.payload.get("split", "time")
+    unit = {"hour": "hour", "day": "day", "week": "week", "month": "month"}.get(idx.freq, "step")
+    if split == "random":
+        out.append(S("fc_random", "high", "Your test lets the model peek at the future",
+                     "With a random split, every test day sits between training days and is scored one step ahead with the true "
+                     "recent values. Real forecasts don't get that. Switch the split to “Last stretch of time” in Prepare.",
+                     {"kind": "pipeline", "patch": {"split": {"method": "time"}}, "label": "Use a time split"}))
+        return out
+    base = results.get("baseline")
+    real = {k: v for k, v in results.items() if not v.get("baseline")}
+    if base and real:
+        bm = base["metrics"]["test"].get("mae")
+        best_key = min(real, key=lambda k: real[k]["metrics"]["test"].get("mae") or 1e18)
+        best = real[best_key]
+        m = best["metrics"]["test"]
+        if bm and m.get("mae") and m["mae"] >= bm:
+            out.append(S("fc_nobeat", "warn", "Nothing beats “same as last season” yet",
+                         f"The repeating pattern is doing all the work. Add a lag at the season length (lag {idx.season}) and calendar "
+                         "features so models can learn the rhythm, or try exponential smoothing."))
+        if m.get("one_step_mae") and m.get("mae") and m["mae"] > 1.8 * m["one_step_mae"]:
+            out.append(S("fc_compound", "info", "Errors grow as the forecast runs ahead",
+                         f"One {unit} ahead, {best['label']} is off by {m['one_step_mae']:,.4g} on average; over the whole "
+                         f"{idx.horizon}-{unit} forecast it's {m['mae']:,.4g}. Each guess becomes an input for the next one. Season-length "
+                         "lags and calendar features lean less on the most recent (guessed) values."))
+        for k, res in real.items():
+            t = res["metrics"]["test"]
+            if res["model_id"] in ("fc_random_forest", "fc_gbm") and t.get("bias") and t.get("mae") and abs(t["bias"]) > 0.6 * t["mae"] and not idx.cfg["diff"]:
+                out.append(S(f"fc_bias_{k}", "warn", f"{res['label']} is consistently too {'low' if t['bias'] < 0 else 'high'}",
+                             "Tree models can't predict values outside the range they trained on, so a trend running past it gets cut off. "
+                             "Predicting the change instead of the level (differencing) lets trees follow a trend.",
+                             {"kind": "pipeline", "patch": {"forecast": {"diff": True}}, "label": "Turn on differencing"}))
+                break
+        gru = next((v for v in real.values() if v["model_id"] == "fc_gru"), None)
+        lin = next((v for v in real.values() if v["model_id"] == "fc_linear"), None)
+        if gru and lin and (gru["metrics"]["test"].get("mae") or 0) > (lin["metrics"]["test"].get("mae") or 1e18):
+            out.append(S("fc_gru", "info", "The neural network loses to a linear model",
+                         "Common with a few hundred time steps: networks need lots of history. Try a shorter look-back window, a smaller "
+                         "memory, or stick with the simpler model."))
+    if not idx.cfg["calendar"] and idx.season > 1:
+        out.append(S("fc_cal", "info", "Calendar features are off",
+                     "Day-of-week, hour or month flags let models learn rhythms directly instead of reconstructing them from lags.",
+                     {"kind": "pipeline", "patch": {"forecast": {"calendar": True}}, "label": "Turn on calendar features"}))
+    return out

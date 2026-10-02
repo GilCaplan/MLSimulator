@@ -20,6 +20,8 @@ export const STEPS: { id: StepId; label: string; icon: string; blurb: string }[]
 export const DEFAULT_OPTIONS: TrainOptions = { cv_folds: 0, seed: 42 };
 
 export const UNSUPERVISED = new Set(["clustering", "reduction", "anomaly"]);
+/** problems without a target column chosen by the learner */
+export const NO_TARGET = new Set(["clustering", "reduction", "anomaly", "recommendation"]);
 export const isUnsupervised = (task?: string | null) => !!task && UNSUPERVISED.has(task);
 
 export function defaultPipeline(target: string, task: PipelineSpec["task"]): PipelineSpec {
@@ -46,7 +48,7 @@ export function defaultPipeline(target: string, task: PipelineSpec["task"]): Pip
 
 /** Merge a (possibly partial) saved pipeline over the defaults. */
 export function fullPipeline(p: Project): PipelineSpec | null {
-  if (!p.task || (!p.target && !isUnsupervised(p.task))) return null;
+  if (!p.task || (!p.target && !NO_TARGET.has(p.task))) return null;
   const base = defaultPipeline(p.target ?? "", p.task);
   const saved = (p.pipeline || {}) as any;
   const out: any = { ...base };
@@ -60,6 +62,8 @@ export function fullPipeline(p: Project): PipelineSpec | null {
   out.task = p.task;
   if (isUnsupervised(p.task)) out.truth = p.truth ?? null;
   if (p.modality && p.modality !== "tabular") out.modality = p.modality;
+  if (saved.columns) out.columns = { ...saved.columns };
+  if (p.modality === "ratings") out.recsys = { min_user: 5, min_item: 2, positive: 4, test_k: 3, split: "leave_last_out", ...(saved.recsys || {}) };
   if (p.modality === "text") out.text = { text_column: null, ngram_max: 1, max_features: 3000, min_df: 2, max_len: 40, ...(saved.text || {}) };
   return out;
 }
@@ -69,7 +73,7 @@ export function stepDone(p: Project | null, step: StepId): boolean {
   switch (step) {
     case "problem": return !!p.task;
     case "models": return p.models.length > 0;
-    case "data": return !!p.dataset_id && (!!p.target || isUnsupervised(p.task));
+    case "data": return !!p.dataset_id && (!!p.target || NO_TARGET.has(p.task ?? ""));
     case "prepare": return !!p.prepared_id;
     case "train": return !!p.last_job_id;
     case "improve": return false;

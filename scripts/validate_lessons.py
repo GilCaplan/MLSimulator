@@ -19,8 +19,8 @@ if not TORCH_MODE:
 from mlp.core.pipeline import prepare
 from mlp.core.evaluate import cls_metrics, reg_metrics
 from mlp.core.registry import build_estimator, defaults
-from mlp.lessons.generators import GENERATORS, IMAGE_LESSONS, TEXT_LESSONS, UNSUPERVISED_LESSONS
-from mlp.lessons.grading import CHALLENGES, grade
+from mlp.lessons.generators import FORECAST_LESSONS, GENERATORS, IMAGE_LESSONS, RECSYS_LESSONS, TEXT_LESSONS, UNSUPERVISED_LESSONS
+from mlp.lessons.grading import CHALLENGES, grade, grade_metrics
 
 warnings.filterwarnings("ignore")
 
@@ -95,7 +95,49 @@ def run_text(lesson, cfg_name, seed):
     return out
 
 
+def run_recsys(lesson, cfg_name, seed):
+    from mlp.core.recsys import fit_recsys, lesson_eval, prepare_ratings
+    ch = CHALLENGES[lesson]
+    bundle, _ = GENERATORS[lesson](seed=seed)
+    params = copy.deepcopy(ch.get("preset_params", {}))
+    models = list(ch["preset_models"])
+    if cfg_name != "naive":
+        params = deep_merge(params, ch[cfg_name].get("params", {}))
+        models = ch[cfg_name].get("models", models)
+    prepared = prepare_ratings(bundle.ratings, {"columns": {"user": "user", "item": "item", "rating": "rating", "time": "day"}}, "validate", bundle.items)
+    out = {}
+    for mid in models:
+        model = fit_recsys(mid, params.get(mid, {}), prepared, lambda *a: None, None, mid)
+        out[mid] = grade_metrics(lesson, lesson_eval(model, bundle.hidden, bundle.seeds))
+    return out
+
+
+def run_forecast(lesson, cfg_name, seed):
+    from mlp.core.forecast import evaluate_forecast, fit_forecast, lesson_eval, prepare_forecast
+    ch = CHALLENGES[lesson]
+    train, hidden = GENERATORS[lesson](seed=seed)
+    pipe, params, models = copy.deepcopy(ch["preset_pipeline"]), copy.deepcopy(ch.get("preset_params", {})), list(ch["preset_models"])
+    if cfg_name != "naive":
+        pipe = deep_merge(pipe, ch[cfg_name].get("pipeline", {}))
+        params = deep_merge(params, ch[cfg_name].get("params", {}))
+        models = ch[cfg_name].get("models", models)
+    meta = {"columns": ch["columns"], "exog": ch["exog"], "horizon": ch["horizon"]}
+    prepared = prepare_forecast(train, pipe, "validate", meta)
+    out = {}
+    for mid in models:
+        f = fit_forecast(mid, params.get(mid, {}), prepared, lambda *a: None, None, mid)
+        own = evaluate_forecast(f, prepared)["metrics"]["test"]
+        vals = lesson_eval(f, hidden)
+        vals["error_ratio"] = vals["mae"] / own["mae"] if own.get("mae") else None
+        out[mid] = grade_metrics(lesson, vals)
+    return out
+
+
 def run(lesson, cfg_name, seed):
+    if lesson in FORECAST_LESSONS:
+        return run_forecast(lesson, cfg_name, seed)
+    if lesson in RECSYS_LESSONS:
+        return run_recsys(lesson, cfg_name, seed)
     if lesson in TEXT_LESSONS:
         return run_text(lesson, cfg_name, seed)
     if lesson in IMAGE_LESSONS:

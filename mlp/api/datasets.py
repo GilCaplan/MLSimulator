@@ -174,10 +174,17 @@ def rows(did: str, offset: int = 0, limit: int = 100):
 
 @router.get("/datasets/{did}/profile")
 def get_profile(did: str, target: str | None = None, task: str | None = None, modality: str | None = None,
-                text_column: str | None = None):
+                text_column: str | None = None, user_col: str | None = None, item_col: str | None = None, rating_col: str | None = None,
+                time_col: str | None = None, value_col: str | None = None, series_col: str | None = None):
+    if datasets.meta(did).get("modality") == "timeseries" or modality == "timeseries":
+        from .media import timeseries_profile
+        return timeseries_profile(did, {"time": time_col, "value": value_col, "series": series_col})
     if datasets.meta(did).get("modality") == "image":
         from .media import image_profile
         return image_profile(did, target)
+    if datasets.meta(did).get("modality") == "ratings" or modality == "ratings":
+        from .media import ratings_profile
+        return ratings_profile(did, {"user": user_col, "item": item_col, "rating": rating_col})
     if datasets.meta(did).get("modality") == "text" or modality == "text":
         from .media import text_profile
         return text_profile(did, target, text_column)
@@ -212,6 +219,17 @@ def prepare_dataset(did: str, body: dict = Body(...)):
     if meta.get("modality") == "image":
         from ..core.images import prepare_images
         prepared = prepare_images(datasets.images(did), df, spec, did)
+    elif meta.get("modality") == "timeseries" or spec.get("modality") == "timeseries" or spec.get("task") == "forecasting":
+        from ..core.forecast import prepare_forecast
+        try:
+            prepared = prepare_forecast(df, spec, did, meta)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+    elif meta.get("modality") == "ratings" or spec.get("modality") == "ratings" or spec.get("task") == "recommendation":
+        from ..core.recsys import prepare_ratings
+        items = pd.DataFrame(meta["items"]) if meta.get("items") else None
+        spec = {**spec, "columns": {**(meta.get("columns") or {}), **{k: v for k, v in (spec.get("columns") or {}).items() if v}}}
+        prepared = prepare_ratings(df, spec, did, items)
     elif meta.get("modality") == "text" or spec.get("modality") == "text":
         from ..core.text import prepare_text
         prepared = prepare_text(df, spec, did)
@@ -222,7 +240,7 @@ def prepare_dataset(did: str, body: dict = Body(...)):
         prepared = prepare(df, spec, did, image_shape=meta.get("image_shape"))
     prepared_store.put(prepared)
     report = dict(prepared.report)
-    report["coach"] = ([] if getattr(prepared, "modality", "tabular") != "tabular" or prepared.task not in ("classification", "regression")
+    report["coach"] = ([] if getattr(prepared, "modality", "tabular") not in ("tabular", "text") or prepared.task not in ("classification", "regression")
                        else coach.prepare_suggestions(report, prepared.spec, body.get("model_ids") or [], prepared.task))
     report["classes"] = prepared.classes
     report["task"] = prepared.task

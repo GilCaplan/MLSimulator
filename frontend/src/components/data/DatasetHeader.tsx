@@ -11,6 +11,10 @@ const SOURCE: Record<DatasetSummary["source"], { label: string; icon: string; cl
   preset: { label: "Toy shape", icon: "🧩", cls: "accent" },
   sample: { label: "Sample", icon: "📚", cls: "success" },
   composed: { label: "Mixed with synthetic", icon: "🧬", cls: "warning" },
+  image_set: { label: "Image set", icon: "🖼️", cls: "success" },
+  text_set: { label: "Text set", icon: "💬", cls: "success" },
+  ratings_set: { label: "Ratings set", icon: "🎬", cls: "success" },
+  lesson: { label: "Lesson data", icon: "🎓", cls: "accent" },
 };
 
 const ROLE_ICON: Record<string, string> = { numeric: "🔢", categorical: "🏷️", id: "🆔", text: "📝", datetime: "📅" };

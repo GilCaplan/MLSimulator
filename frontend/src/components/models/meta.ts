@@ -15,7 +15,20 @@ export const FAMILIES: { id: string; icon: string; blurb: string }[] = [
   { id: "Clustering", icon: "🫧", blurb: "Sort rows into groups of look-alikes — nobody tells them what the groups should be." },
   { id: "Reduction", icon: "🗺️", blurb: "Squash many columns down to a 2-D map you can actually look at." },
   { id: "Anomaly", icon: "🚨", blurb: "Learn what 'normal' looks like, then flag the rows that don't fit." },
+  { id: "Recommender", icon: "🎬", blurb: "Learn tastes from who-liked-what, then fill in the blanks: what would each person enjoy next?" },
 ];
+
+/** Recommendation projects: how each recommender thinks, in plain words (shown as the card's 👉 hint). */
+export const REC_HINTS: Record<string, string> = {
+  popularity: "Your baseline: no personal taste at all. Every personal model should beat it.",
+  item_knn: "“You liked Alien, and people who liked Alien also loved Blade Runner.” Easy to explain.",
+  user_knn: "Finds your taste twins and borrows their favourites. Struggles when people overlap little.",
+  svd: "Squeezes the ratings grid into a few hidden taste dials — e.g. “action-lover”, “arthouse”.",
+  mf_als: "Learns a taste vector for every person and film so their match predicts the stars.",
+};
+
+/** Recommendation projects: a baseline, a neighbourhood model and a taste-factor model. */
+export const REC_STARTER = ["popularity", "item_knn", "mf_als"];
 
 /** Plain-language "when to use it" line for the unsupervised models. */
 export const UNSUP_HINTS: Record<string, string> = {
@@ -78,6 +91,12 @@ export function badgesFor(spec: ModelSpec, modality: Modality = "tabular"): { te
   const text = modality === "text";
   if (text ? spec.id === "logistic_regression" || spec.id === "multinomial_nb" : image ? VISION_IDS.has(spec.id) && spec.id === "cnn2d" : FIRST_TRY.has(spec.id)) out.push({ text: "Great first try", tone: "success" });
   if (text && TEXT_ORDER_IDS.has(spec.id)) out.push({ text: "Reads word order", tone: "accent" });
+  if (modality === "ratings") {
+    if (spec.id === "popularity") out.push({ text: "Baseline to beat", tone: "warning" });
+    if (spec.id === "item_knn") out.push({ text: "Great first try", tone: "success" });
+    if (spec.id === "mf_als") out.push({ text: "Netflix-prize classic", tone: "accent" });
+    return out;
+  }
   if (spec.id === "dbscan") out.push({ text: "Finds k itself", tone: "accent" });
   if (spec.id === "tsne") out.push({ text: "Slow on big data", tone: "warning" });
   if (image && VISION_IDS.has(spec.id)) out.push({ text: "Built for pictures", tone: "accent" });
@@ -103,6 +122,7 @@ export const TEXT_STARTER = ["logistic_regression", "multinomial_nb", "gru"];
 /** Starter line-up for any problem: beginner trio, vision / text starter or the unsupervised quick pick. */
 export function starterFor(task: string, image: boolean, modality: Modality = image ? "image" : "tabular"): string[] {
   if (isUnsupervised(task)) return UNSUP_STARTER[task] ?? [];
+  if (task === "recommendation" || modality === "ratings") return REC_STARTER;
   if (modality === "text") return TEXT_STARTER;
   const t = task as Task;
   return (image ? BEGINNER_IMAGE : BEGINNER)[t] ?? [];

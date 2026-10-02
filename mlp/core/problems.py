@@ -40,9 +40,11 @@ PROBLEMS: list[dict] = [
      "steps": [["problem", "Problem"], ["models", "Models"], ["data", "Data"], ["prepare", "Prepare"], ["train", "Detect"], ["improve", "Refine"]]},
     {"id": "recommendation", "task": "recommendation", "modality": "ratings", "group": "Recommend", "emoji": "🎬",
      "label": "Recommendations", "question": "What will this person like next?", "primary_metric": "ndcg_at_10",
-     "lower_is_better": False, "enabled": False},
+     "lower_is_better": False, "enabled": True,
+     "steps": [["problem", "Problem"], ["models", "Models"], ["data", "Ratings"], ["prepare", "Prepare"], ["train", "Train"], ["improve", "Tune"]]},
     {"id": "forecasting", "task": "forecasting", "modality": "timeseries", "group": "Forecast", "emoji": "⏱️",
-     "label": "Forecasting", "question": "What happens next?", "primary_metric": "mae", "lower_is_better": True, "enabled": False},
+     "label": "Forecasting", "question": "What happens next?", "primary_metric": "mae", "lower_is_better": True, "enabled": False,
+     "steps": [["problem", "Problem"], ["models", "Models"], ["data", "Series"], ["prepare", "Prepare"], ["train", "Train"], ["improve", "Improve"]]},
 ]
 
 PROBLEM_INDEX = {p["id"]: p for p in PROBLEMS}

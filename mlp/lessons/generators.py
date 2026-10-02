@@ -381,3 +381,58 @@ def negated_reviews(seed: int = 7, n: int = 2400, n_hidden: int = 2000):
 
 GENERATORS.update({"bag_of_words": negated_reviews})
 TEXT_LESSONS = {"bag_of_words"}
+
+
+# ----------------------------------------------------------------------------- 18–19. recommenders
+class RatingsBundle:
+    """Recommender lesson data: the learner's ratings + item catalogue; hidden interactions (and seed ratings for
+    brand-new users) are used only for grading."""
+
+    def __init__(self, ratings, items, hidden, seeds=None):
+        self.ratings, self.items, self.hidden, self.seeds = ratings, items, hidden, seeds
+
+
+def _split_last(ratings, k):
+    ratings = ratings.sort_values(["user", "day"])
+    last = ratings.groupby("user").tail(k)
+    return ratings.drop(last.index), last
+
+
+def movie_history(seed: int = 7):
+    """Hidden = each viewer's 3 most recent ratings."""
+    from ..core.recsys import gen_movies
+    ratings, items = gen_movies(800, 400, seed=seed)
+    train, hidden = _split_last(ratings, 3)
+    return RatingsBundle(train.reset_index(drop=True), items, hidden.reset_index(drop=True)), None
+
+
+def movie_newcomers(seed: int = 7, n_new: int = 300):
+    """Hidden = 300 brand-new viewers: we know only their first 2 ratings."""
+    from ..core.recsys import gen_movies
+    ratings, items = gen_movies(800 + n_new, 400, seed=seed)
+    new_users = sorted(ratings["user"].unique())[-n_new:]
+    old = ratings[~ratings["user"].isin(new_users)]
+    new = ratings[ratings["user"].isin(new_users)].sort_values(["user", "day"])
+    seeds = new.groupby("user").head(2)
+    hidden = new.drop(seeds.index)
+    return RatingsBundle(old.reset_index(drop=True), items, hidden.reset_index(drop=True), seeds.reset_index(drop=True)), None
+
+
+GENERATORS.update({"popularity_bias": movie_history, "cold_start": movie_newcomers})
+RECSYS_LESSONS = {"popularity_bias", "cold_start"}
+
+
+def shop_forecast(seed=0, horizon=28):
+    """Daily sales of one shop + a leaky `customers` column (only known once the day is over).
+    Hidden = the next 28 days; there `customers` is unknown, so the best available stand-in (the recent average) is used."""
+    from ..core.forecast import gen_store_sales
+    rng = np.random.default_rng(seed + 1)
+    df = gen_store_sales(n_days=640 + horizon, n_stores=1, seed=seed, start="2023-07-01").drop(columns="store")
+    df["customers"] = np.round(df["sales"] / rng.normal(23, 1.6, len(df))).astype(int)
+    train, hidden = df.iloc[:-horizon].reset_index(drop=True), df.iloc[-horizon:].reset_index(drop=True)
+    hidden["customers"] = int(round(train["customers"].iloc[-horizon:].mean()))
+    return train, hidden
+
+
+GENERATORS.update({"no_peeking": shop_forecast})
+FORECAST_LESSONS = {"no_peeking"}

@@ -159,6 +159,34 @@ CHALLENGES.update({
     },
 })
 
+CHALLENGES.update({
+    "popularity_bias": {
+        "kind": "recsys", "task": "recommendation", "target": "rating", "modality": "ratings",
+        "preset_pipeline": {"modality": "ratings"},
+        "preset_models": ["popularity"],
+        "goals": [{"metric": "recall_at_10", "op": ">=", "value": 0.22}, {"metric": "coverage", "op": ">=", "value": 0.40}],
+        "solution": {"models": ["item_knn"]},
+    },
+    "cold_start": {
+        "kind": "recsys", "task": "recommendation", "target": "rating", "modality": "ratings",
+        "preset_pipeline": {"modality": "ratings"},
+        "preset_models": ["mf_als"],
+        "goals": [{"metric": "recall_at_10", "op": ">=", "value": 0.12}],
+        "solution": {"params": {"mf_als": {"cold_start": "popularity", "cold_start_min": 5}}},
+    },
+})
+
+CHALLENGES.update({
+    "no_peeking": {
+        "kind": "forecast", "task": "forecasting", "target": "sales", "modality": "timeseries",
+        "columns": {"time": "date", "value": "sales"}, "exog": ["promo", "customers"], "horizon": 28,
+        "preset_pipeline": {"modality": "timeseries", "split": {"method": "random"}},
+        "preset_models": ["fc_random_forest"],
+        "goals": [{"metric": "error_ratio", "op": "<=", "value": 2.0}, {"metric": "mase", "op": "<=", "value": 1.2}],
+        "solution": {"pipeline": {"split": {"method": "time"}, "forecast": {"exog": ["promo"]}}},
+    },
+})
+
 METRIC_LABELS = {
     "accuracy": "Accuracy", "balanced_accuracy": "Balanced accuracy", "recall_pos": "Recall ({pos})",
     "precision_pos": "Precision ({pos})", "f1_pos": "F1 ({pos})", "r2": "R²",
@@ -168,9 +196,13 @@ METRIC_LABELS = {
     "ece": "Calibration error",
     "roc_auc": "ROC-AUC",
     "ari": "Agreement with the hidden groups (ARI)",
+    "recall_at_10": "Share of liked items found in the top 10 (recall@10)",
+    "coverage": "Share of the catalogue ever recommended (coverage)",
+    "error_ratio": "Real-world error ÷ your test error",
+    "mase": "Real-world error vs 'same as last week' (MASE)",
 }
 
-PERCENT_METRICS = {"accuracy", "balanced_accuracy", "recall_pos", "precision_pos", "f1_pos", "tpr_gap", "mae_vs_baseline",
+PERCENT_METRICS = {"recall_at_10", "coverage", "accuracy", "balanced_accuracy", "recall_pos", "precision_pos", "f1_pos", "tpr_gap", "mae_vs_baseline",
                    "estimate_gap", "ece"}
 
 
@@ -179,6 +211,8 @@ def goal_label(ch: dict, g: dict) -> str:
     v = g["value"]
     if g["metric"] == "estimate_gap":
         shown = f"{v * 100:g} pts"
+    elif g["metric"] == "error_ratio":
+        shown = f"{v:g}×"
     elif g["metric"] in PERCENT_METRICS:
         shown = f"{v:.0%}" if abs(v * 100 - round(v * 100)) < 1e-9 else f"{v:.1%}"
     else:
@@ -247,6 +281,18 @@ def metric_value(metric: str, ch: dict, y_true, y_pred, hidden: pd.DataFrame, pr
         extra["per_group"] = {k: r(v) for k, v in rates.items()}
         return float(max(rates.values()) - min(rates.values())), extra
     raise ValueError(metric)
+
+
+def grade_metrics(lesson_id: str, values: dict, extra: dict | None = None) -> dict:
+    """Grade precomputed metric values (recommender lessons compute them inside the worker)."""
+    ch = CHALLENGES[lesson_id]
+    results = []
+    for g in ch["goals"]:
+        v = values.get(g["metric"])
+        ok = v is not None and (v >= g["value"] if g["op"] == ">=" else v <= g["value"])
+        results.append({"metric": g["metric"], "label": goal_label(ch, g), "value": r(v) if v is not None else None, "target": g["value"],
+                        "op": g["op"], "passed": bool(ok)})
+    return {"passed": all(x["passed"] for x in results), "goals": results, "n_hidden": int((extra or {}).get("users_evaluated", 0))}
 
 
 def grade(lesson_id: str, hidden: pd.DataFrame, predictions, probabilities=None, classes=None, your_test: dict | None = None,

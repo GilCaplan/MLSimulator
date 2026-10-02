@@ -62,7 +62,7 @@ def save(job_id: str, key: str, name: str, notes: str = "", project_id: str | No
             "modality": getattr(prepared, "modality", "tabular"), "image_shape": prepared.image_shape}
     (d / "meta.json").write_text(json.dumps(jsonable(meta)))
     detail = {k: res.get(k) for k in ("confusion", "roc", "pr", "residuals", "importance", "surface", "curve", "cv", "thresholds", "notes",
-                                      "calibration", "mistakes", "slices", "vision", "clusters", "reduction", "anomaly", "text")}
+                                      "calibration", "mistakes", "slices", "vision", "clusters", "reduction", "anomaly", "text", "recsys", "forecast")}
     (d / "result.json").write_text(json.dumps(jsonable(detail)))
     return meta
 
@@ -105,6 +105,20 @@ def _fam(mid: str) -> str:
 
 def predict(mid: str, rows: list[dict]) -> dict:
     return procs.call(_fam(mid), "predict", model_dir=str(ROOT / mid), rows=rows)
+
+
+def recommend(mid: str, body: dict) -> dict:
+    return procs.call(_fam(mid), "recommend", model_dir=str(ROOT / mid), user=body.get("user"), ratings=body.get("ratings"),
+                      k=int(body.get("k", 10)))
+
+
+def forecast(mid: str, body: dict) -> dict:
+    return procs.call(_fam(mid), "forecast", model_dir=str(ROOT / mid), series=body.get("series"), horizon=body.get("horizon"),
+                      exog=body.get("exog"))
+
+
+def catalog(mid: str, q: str = "", limit: int = 60) -> dict:
+    return procs.call(_fam(mid), "catalog", model_dir=str(ROOT / mid), q=q, limit=limit)
 
 
 def predict_text(mid: str, texts: list[str]) -> dict:

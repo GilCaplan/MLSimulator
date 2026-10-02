@@ -5,7 +5,7 @@ import { CoachPanel, NextBar, StepLayout, useStepLabel } from "../components/she
 import { LiveDashboard } from "../components/train/LiveDashboard";
 import { TrainResults } from "../components/train/TrainResults";
 import { TrainSetup } from "../components/train/TrainSetup";
-import { liveProjectId } from "../components/train/util";
+import { isRecsys, liveProjectId } from "../components/train/util";
 import { navigate } from "../lib/router";
 import { isUnsupervised, useJob, useProject } from "../lib/store";
 
@@ -23,6 +23,7 @@ const view = {
 
 export function TrainStep() {
   const stepLabel = useStepLabel("train");
+  const nextLabel = useStepLabel("improve");
   const project = useProject((s) => s.project)!;
   const result = useProject((s) => s.result);
   const jobId = useJob((s) => s.jobId);
@@ -39,7 +40,13 @@ export function TrainStep() {
   const img = project.modality === "image";
   const txt = project.modality === "text";
   const unsup = isUnsupervised(project.task);
-  const intro = unsup ? {
+  const rec = isRecsys(project.task);
+  const intro = rec ? {
+    cta: <>Before training, your ratings need to be prepared — viewers and films with too few ratings filtered out, and each viewer's most recent ratings hidden away for the exam.</>,
+    setup: <>Each model studies <b>who rated what</b>, then writes a <b>top-10 list</b> for every viewer. The exam: how many of the films each viewer rated (and liked) <i>most recently</i> made their list? <b>Most popular</b> gives everyone the same list — it's the baseline to beat.</>,
+    live: <>Most recommenders learn in one go. <b>Matrix factorisation</b> learns step by step: every round it refines a hidden “taste vector” for each viewer and film, and the <b>RMSE</b> lines show its star-guesses getting closer.</>,
+    results: <>Look past the top score: <b>coverage</b> tells you how much of the catalogue ever gets shown, and the <b>Long tail</b> tab shows whether a model only pushes blockbusters. Open <b>Recommendations</b> to see real top-10 lists — ✓ marks a film the viewer really went on to like.</>,
+  }[mode] : unsup ? {
     cta: <>Before exploring, your data needs to be prepared — cleaned and scaled so every column speaks the same language. (There's nothing to predict, so no test split is needed.)</>,
     setup: project.task === "clustering"
       ? <>No answers this time: each model looks at the rows and tries to find <b>natural groups</b> on its own. If you kept a hidden <b>truth</b> column, we'll peek at it afterwards to see how well the groups match reality.</>
@@ -74,11 +81,11 @@ export function TrainStep() {
   return (
     <StepLayout
       title={stepLabel}
-      subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
+      subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : rec ? "Teach your models who likes what — then see whose top-10 lists hit the mark." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
       coach={<CoachPanel intro={intro} suggestions={mode === "results" ? result?.coach ?? [] : []} />}
       footer={
-        <NextBar back="prepare" next="improve" nextLabel={unsup ? "Refine" : "Improve"} nextDisabled={!result}
-          status={live ? (unsup ? "Exploring…" : "Training in progress…") : result ? undefined : unsup ? "Run once to unlock the Refine step." : "Train once to unlock the Improve step."} />
+        <NextBar back="prepare" next="improve" nextLabel={nextLabel} nextDisabled={!result}
+          status={live ? (unsup ? "Exploring…" : "Training in progress…") : result ? undefined : unsup ? `Run once to unlock the ${nextLabel} step.` : `Train once to unlock the ${nextLabel} step.`} />
       }
     >
       <AnimatePresence mode="wait">

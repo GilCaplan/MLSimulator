@@ -6,13 +6,13 @@ import queue as queue_mod
 import threading
 import time
 
-from .registry import is_nn
+from .registry import uses_torch
 
 CTX = mp.get_context("spawn")
 
 
 def family(model_id: str) -> str:
-    return "torch" if is_nn(model_id) else "classic"
+    return "torch" if uses_torch(model_id) else "classic"
 
 
 def run_in_process(payload: dict, on_event, cancel_flag: threading.Event, label: str = "model"):

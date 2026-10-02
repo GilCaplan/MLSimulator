@@ -22,13 +22,14 @@ It runs entirely on your computer. Nothing is uploaded anywhere.
 | **Vision.** Image classification and image regression: built-in image sets (shapes, count the dots, line tilt, arrows, handwritten digits) or your own ZIP of images. Augmentation with previews, CNNs and a Tiny ResNet next to "pixels as a table" models, and a look inside the network: saliency maps, learned filters, feature maps and a mistakes gallery. Draw or upload a picture to test a saved model. | ![Decision map](docs/images/decision-map.jpg) |
 | **Discover (unsupervised).** Clustering (k-means with a live animation, Gaussian mixtures, DBSCAN, hierarchical), maps of your data (PCA with scree and loadings, t-SNE) and anomaly detection (Isolation Forest, One-Class SVM, Local Outlier Factor). Cluster profiles explain each group, an optional hidden "truth" column shows whether the groups make sense, and a k sweep helps choose the number of clusters. | ![Lessons](docs/images/lessons.jpg) |
 | **Language (NLP).** Text classification from built-in sets (product reviews with negations, support tickets, SMS spam) or your own CSV: bag-of-words models (TF-IDF with words or word pairs) next to word embeddings, a GRU and a tiny Transformer. See the words that drive each class, word-by-word explanations of predictions, and type your own sentences in the playground. | ![Lessons](docs/images/lessons.jpg) |
-| **Lessons.** 17 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
+| **Recommendations.** User–item–rating data (a built-in movie-ratings set or your own CSV): most-popular, item- and user-similarity, SVD and matrix factorisation. Ranking metrics (recall/NDCG@10, coverage, novelty), the long tail, a taste map, and a playground where you rate a few films as a new viewer and get live recommendations with "because you liked…". | ![Lessons](docs/images/lessons.jpg) |
+| **Lessons.** 19 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
 
 ### Lessons
 
 Baselines · Missing values · Outliers & skewed targets · Data leakage · Feature engineering · Honest splits (groups &
 time) · Feature scaling · Class imbalance · Overfitting · Calibration & error analysis · Spurious shortcuts · Fairness
-& proxy bias · Choosing k · The curse of dimensionality · Bag of words · Convolutions · Data augmentation.
+& proxy bias · Choosing k · The curse of dimensionality · Bag of words · Popularity bias · Cold start · Convolutions · Data augmentation.
 
 ![Your test vs the real world](docs/images/lesson-check.jpg)
 
@@ -63,7 +64,7 @@ Then open <http://localhost:8765>.
 - **[Architecture](docs/ARCHITECTURE.md)**: how the app is built.
 - **[Contributing](CONTRIBUTING.md)**: development setup and the workflow guides in [`docs/workflows/`](docs/workflows/)
   (adding models, datasets and lessons, releases).
-- **[Roadmap](docs/expansion_plan.md)**: vision, unsupervised learning and NLP have landed; recommenders and forecasting are next.
+- **[Roadmap](docs/expansion_plan.md)**: vision, unsupervised learning, NLP and recommenders have landed; forecasting is next.
 
 ## Where things are stored
 Projects, datasets, trained models and logs live in `data/` inside the project folder. Back it up to keep your work;

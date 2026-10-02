@@ -7,7 +7,8 @@ import { Performance } from "../components/library/Performance";
 import { Playground } from "../components/library/Playground";
 import { Recipe } from "../components/library/Recipe";
 import { TextPlayground } from "../components/library/TextPlayground";
-import { EditableText, PageFrame, emojiFor, headline, isTextModel, isUnsupModel, rise, specFor, taskMeta, useRegistry } from "../components/library/shared";
+import { EditableText, PageFrame, emojiFor, headline, isRecsysModel, isTextModel, isUnsupModel, rise, specFor, taskMeta, useRegistry } from "../components/library/shared";
+import { RecsysPlayground } from "../components/library/RecsysPlayground";
 import { UnsupPlayground } from "../components/library/UnsupPlayground";
 import { spring } from "../design/motion";
 import { ApiError, api } from "../lib/api";
@@ -28,6 +29,12 @@ const UNSUP_JUMPS = [
   { id: "recipe", label: "📜 Recipe" },
 ];
 
+const RECSYS_JUMPS = [
+  { id: "try", label: "🍿 Try it live" },
+  { id: "performance", label: "🏆 How its lists did" },
+  { id: "recipe", label: "📜 Recipe" },
+];
+
 const JUMPS = [
   { id: "try", label: "🎮 Try it live" },
   { id: "batch", label: "📦 Batch" },
@@ -41,6 +48,7 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
   const h = headline(model);
   const task = taskMeta(model.task);
   const unsup = isUnsupModel(model);
+  const rec = isRecsysModel(model);
   return (
     <Glass variant="strong" pad="lg" animate_in>
       <div className="row between wrap" style={{ gap: 10, marginBottom: 18 }}>
@@ -66,7 +74,7 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
             <span className="badge">{model.family === "torch" ? "🔥 PyTorch neural net" : "🧰 scikit-learn"}</span>
             {model.modality === "image" && <span className="badge accent">🖼️ Image model{model.image_shape ? ` · ${model.image_shape[2]}×${model.image_shape[1]}` : ""}</span>}
             {isTextModel(model) && <span className="badge accent">💬 Text model{model.text_column ? ` · reads “${model.text_column}”` : ""}</span>}
-            {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} ${model.modality === "image" ? "pictures" : isTextModel(model) ? "texts" : "rows"}` : ""}</span>}
+            {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} ${model.modality === "image" ? "pictures" : isTextModel(model) ? "texts" : rec ? "ratings" : "rows"}` : ""}</span>}
             {model.n_params != null && <span className="badge accent">🧮 {model.n_params.toLocaleString()} params</span>}
             <span className="badge">🕒 saved {timeAgo(model.created_at)}</span>
           </div>
@@ -75,7 +83,7 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
           <ProgressRing value={h.ring} size={84} stroke={8} color={h.tone}>
             <span style={{ fontSize: unsup ? 15 : 17, fontWeight: 750 }}>{h.value === null ? "—" : unsup ? h.text : `${Math.round(h.value * 100)}%`}</span>
           </ProgressRing>
-          <span className="tiny muted">{unsup ? "" : "test "}{h.label.toLowerCase()}</span>
+          <span className="tiny muted">{rec ? "liked films found in top 10" : `${unsup ? "" : "test "}${h.label.toLowerCase()}`}</span>
         </div>
       </div>
     </Glass>
@@ -140,12 +148,14 @@ export function ModelPage({ modelId }: { modelId: string }) {
       <Header model={model} onPatch={patch} />
       <motion.nav variants={rise} className="row wrap" style={{ gap: 6, position: "sticky", top: 0, zIndex: 5, pointerEvents: "none" }}>
         <div className="glass strong row" style={{ padding: 4, gap: 2, borderRadius: 999, pointerEvents: "auto" }}>
-          {(model.modality === "image" ? IMAGE_JUMPS : isUnsupModel(model) ? UNSUP_JUMPS : JUMPS).map((j) => (
+          {(model.modality === "image" ? IMAGE_JUMPS : isRecsysModel(model) ? RECSYS_JUMPS : isUnsupModel(model) ? UNSUP_JUMPS : JUMPS).map((j) => (
             <button key={j.id} className="btn ghost sm" onClick={() => jump(j.id)}>{j.label}</button>
           ))}
         </div>
       </motion.nav>
-      {model.modality === "image" ? (
+      {isRecsysModel(model) ? (
+        <RecsysPlayground key={model.id} model={model} />
+      ) : model.modality === "image" ? (
         <ImagePlayground key={model.id} model={model} />
       ) : isTextModel(model) ? (
         <>

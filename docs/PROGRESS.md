@@ -1,6 +1,6 @@
 # Build progress & resume checkpoint
 
-_Last updated: 2026-10-02 (session 2). If a session ends mid-task, start here._
+_Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
 
 ## Done
 - v1 app: tabular classification/regression wizard, 17 classic models + 5 PyTorch nets, synthetic/sample/upload data,
@@ -46,6 +46,28 @@ _Last updated: 2026-10-02 (session 2). If a session ends mid-task, start here._
 - Frontend done: text problem tile, text sets/upload with text-column picker, Words/Sequence-length stages, text model
   builders, Mistakes/Words/Explanations tabs, text playground with word influence, templates, bag_of_words demo.
 - Next: Phase 4 Recommenders, Phase 5 Forecasting, Phase 6 extras (see `docs/expansion_plan.md`).
+
+## Phase 4 (recommenders) — DONE, session 4
+- Backend: `mlp/core/recsys.py` (movie ratings + catalogue, leave-last-out, popularity / item-kNN / user-kNN / SVD /
+  ALS + cold-start fallback, ranking metrics, long tail, taste map, lesson_eval), `/library/{id}/recommend|catalog`,
+  lessons `popularity_bias`, `cold_start` (validated), `scripts/smoke_recsys.py`.
+- Frontend: ratings data/prepare/models/tune, results (examples, long tail, taste map), library playground (known
+  viewer / be a new viewer), Movie-night template, challenge check, demos for both lessons.
+
+## Phase 5 (forecasting) — backend DONE, UI next (session 4)
+- Backend: `mlp/core/forecast.py` — 4 series sets (shop sales ×3 stores + promo, hourly energy + temperature, airline
+  monthly, web traffic with a level shift), causal features (lags, rolling means, calendar, trend, known-in-advance
+  extra columns, series one-hot), per-series scaling, optional log / differencing, time split (recursive multi-step test)
+  or random split (the trap), models naive / seasonal naive / moving average / Holt-Winters / ridge / RF / HistGB /
+  GRU (torch, `"torch": True` → `registry.uses_torch`), metrics MAE/RMSE/sMAPE/MASE/bias + one-step MAE, forecast bands
+  from validation residuals, MASE by horizon step, importance, `forecast_from_end` (playground, exog what-ifs).
+- API: `/datasets/timeseries-sets`, `POST /datasets/timeseries-set`, profile (`modality=timeseries`, `time_col`,
+  `value_col`, `series_col`), prepare dispatch, `POST /library/{id}/forecast`, worker ops `forecast` +
+  `lesson_eval(kind="forecast")`, auto seasonal-naive baseline (skipped if the learner picks it), coach rules.
+- Lesson `no_peeking` (leaky `customers` column + random split; goals error_ratio ≤ 2 and MASE ≤ 1.2; validated 5 seeds).
+- Smoke: `scripts/smoke_forecast.py PORT`.
+- **Hidden until the UI lands:** `problems.py` forecasting `enabled: False` and `no_peeking` not in `ORDER` (catalog.py).
+  Re-enable both when the forecasting UI is merged.
 
 ## Next
 - Vision UI is complete (problem picker, image Data/Prepare, results tabs, playground, 14 lessons incl. 2 vision demos);

@@ -366,3 +366,88 @@ export function TextClassifyArt({ active }: { active: boolean }) {
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ recommendation art */
+
+const POSTER_COLORS = ["#FF375F", "#0A84FF", "#30D158", "#FF9F0A", "#BF5AF2", "#64D2FF", "#5E5CE6"];
+
+/** A tiny film poster: coloured card with a sun-and-hills picture on it. */
+function Poster({ x, y, w, h, color, glow }: { x: number; y: number; w: number; h: number; color: string; glow?: boolean }) {
+  return (
+    <g>
+      {glow && <rect x={x - 3} y={y - 3} width={w + 6} height={h + 6} rx={7} fill={color} opacity={0.22} />}
+      <rect x={x} y={y} width={w} height={h} rx={4.5} fill={color} />
+      <rect x={x} y={y} width={w} height={h * 0.45} rx={4.5} fill="white" opacity={0.18} />
+      <circle cx={x + w * 0.7} cy={y + h * 0.3} r={w * 0.12} fill="white" opacity={0.85} />
+      <path d={`M ${x + 2} ${y + h - 4} L ${x + w * 0.38} ${y + h * 0.55} L ${x + w * 0.62} ${y + h * 0.78} L ${x + w * 0.78} ${y + h * 0.64} L ${x + w - 2} ${y + h - 4} Z`} fill="white" opacity={0.55} />
+    </g>
+  );
+}
+
+function Star({ cx, cy, r, fill }: { cx: number; cy: number; r: number; fill: string }) {
+  const pts = Array.from({ length: 10 }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.45 : r;
+    return `${cx + Math.cos(a) * rr},${cy + Math.sin(a) * rr}`;
+  }).join(" ");
+  return <polygon points={pts} fill={fill} stroke="white" strokeWidth={0.8} strokeLinejoin="round" />;
+}
+
+/** A person stars a few posters, then a row of suggested posters slides in underneath — "you'll like these". Loops. */
+export function RecommendArt({ active }: { active: boolean }) {
+  const D = 5.6;
+  const liked = [{ x: 58, c: POSTER_COLORS[0] }, { x: 90, c: POSTER_COLORS[1] }, { x: 122, c: POSTER_COLORS[4] }];
+  const recs = [{ x: 58, c: POSTER_COLORS[3] }, { x: 96, c: POSTER_COLORS[2] }, { x: 134, c: POSTER_COLORS[6] }, { x: 172, c: POSTER_COLORS[5] }];
+  const loop = { duration: D, repeat: Infinity, ease: [0.32, 0.72, 0, 1] as const };
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      {/* the viewer */}
+      <motion.g animate={{ y: [0, -2, 0, 0] }} transition={{ duration: D, times: [0, 0.1, 0.2, 1], repeat: Infinity }}>
+        <circle cx={26} cy={30} r={10} fill="#5E5CE6" />
+        <path d="M 8 62 Q 8 44 26 44 Q 44 44 44 62 Z" fill="#5E5CE6" opacity={0.85} />
+        <circle cx={22.5} cy={29} r={1.4} fill="white" />
+        <circle cx={29.5} cy={29} r={1.4} fill="white" />
+        <path d="M 22 33.5 Q 26 36.5 30 33.5" stroke="white" strokeWidth={1.3} fill="none" strokeLinecap="round" />
+      </motion.g>
+      {/* posters they rated, each earning a star */}
+      {liked.map((p, i) => (
+        <g key={i}>
+          <Poster x={p.x} y={14} w={26} h={36} color={p.c} />
+          <motion.g style={{ originX: `${p.x + 24}px`, originY: "14px" }}
+            animate={{ scale: [0, 0, 1.35, 1, 1, 0], opacity: [0, 0, 1, 1, 1, 0] }}
+            transition={{ duration: D, times: [0, 0.06 + i * 0.08, 0.12 + i * 0.08, 0.16 + i * 0.08, 0.9, 1], repeat: Infinity }}>
+            <Star cx={p.x + 24} cy={14} r={7} fill="#FFD60A" />
+          </motion.g>
+        </g>
+      ))}
+      {/* taste "thinking" dots */}
+      {[0, 1, 2].map((k) => (
+        <motion.circle key={k} cx={166 + k * 9} cy={32} r={2.6} fill="var(--text-3)"
+          animate={{ opacity: [0, 0, 1, 0.3, 0, 0], y: [0, 0, -3, 0, 0, 0] }}
+          transition={{ duration: D, times: [0, 0.34 + k * 0.03, 0.4 + k * 0.03, 0.46 + k * 0.03, 0.52, 1], repeat: Infinity }} />
+      ))}
+      {/* "for you" label + dashed hand-off line */}
+      <motion.path d="M 40 66 Q 40 82 52 86" stroke="var(--accent)" strokeWidth={1.6} strokeDasharray="3 3" fill="none" strokeLinecap="round"
+        animate={{ pathLength: [0, 0, 1, 1, 0], opacity: [0, 0, 1, 1, 0] }}
+        transition={{ duration: D, times: [0, 0.44, 0.52, 0.9, 1], repeat: Infinity }} />
+      <motion.text x={14} y={104} fontSize={9.5} fontWeight={700} fill="var(--accent)"
+        animate={{ opacity: [0, 0, 1, 1, 0] }} transition={{ duration: D, times: [0, 0.46, 0.54, 0.9, 1], repeat: Infinity }}>
+        For you
+      </motion.text>
+      {/* suggestions sliding in */}
+      {recs.map((p, i) => (
+        <motion.g key={i}
+          animate={{ x: [60, 60, 0, 0, -20], opacity: [0, 0, 1, 1, 0] }}
+          transition={{ ...loop, times: [0, 0.5 + i * 0.05, 0.62 + i * 0.05, 0.9, 1] }}>
+          <Poster x={p.x} y={74} w={30} h={42} color={p.c} glow={active && i === 0} />
+          {i === 0 && (
+            <motion.g animate={{ scale: [1, 1.25, 1], rotate: [0, 20, 0] }} transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 0.6 }}
+              style={{ originX: `${p.x + 30}px`, originY: "74px" }}>
+              <text x={p.x + 30} y={78} fontSize={12} textAnchor="middle">✨</text>
+            </motion.g>
+          )}
+        </motion.g>
+      ))}
+    </svg>
+  );
+}

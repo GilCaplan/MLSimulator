@@ -4,6 +4,7 @@ import { EmptyState, Glass, Tooltip } from "../components/glass";
 import { LineupTray } from "../components/models/LineupTray";
 import { ModelCard } from "../components/models/ModelCard";
 import { ModelSettingsModal } from "../components/models/ModelSettingsModal";
+import { RecBaselineNote } from "../components/models/RecBaselineNote";
 import { configsFor, FAMILIES, lineupLabels, modalityOf, specFits, specModalities, starterFor, TEXT_GROUPS, TEXT_NN_IDS, TEXT_ORDER_IDS, VISION_IDS } from "../components/models/meta";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
@@ -19,6 +20,21 @@ const UNSUP_INTRO: Record<string, React.ReactNode> = {
   anomaly: <>Anomaly detectors never see an example of a fault — they learn what's <b>normal</b> and flag whatever doesn't fit.
     <br /><br /><b>Isolation Forest</b> is a fast all-rounder, <b>Local Outlier Factor</b> compares each row with its neighbours, <b>One-Class SVM</b> draws a fence around normal. Hit <b>Starter set</b> to race all three.</>,
 };
+
+const REC_INTRO = (
+  <>A recommender looks at a big grid — <b>people</b> down the side, <b>things</b> across the top — where almost every cell is empty. Its job is to guess the blanks: <b>what would this person rate highly that they haven't seen yet?</b>
+    <br /><br /><b>Most popular</b> ignores taste completely. <b>Similar items</b> and <b>similar people</b> borrow from neighbours. <b>SVD</b> and <b>matrix factorisation</b> learn hidden “taste dials” for every person and item.
+    <br /><br />Not sure? Hit <b>Recommender starter</b> — it races one of each.</>
+);
+
+/** Line-up tips for recommendation problems. */
+function recSuggestions(ids: string[]): Suggestion[] {
+  const out: Suggestion[] = [];
+  if (ids.length && !ids.includes("popularity")) out.push({ id: "pop", severity: "warn", title: "Add the popularity baseline", why: "Without it you can't tell whether a personal model has learned anything about taste — recommending blockbusters to everyone is surprisingly hard to beat.", action: { kind: "add_models", label: "Add Most popular", model_ids: ["popularity"] } });
+  if (ids.length === 1 && ids[0] === "popularity") out.push({ id: "personal", severity: "info", title: "Add a personal model", why: "Most popular gives everyone the same list. Similar items (item-kNN) is quick and learns from what each person liked.", action: { kind: "add_models", label: "Add item-kNN", model_ids: ["item_knn"] } });
+  if (ids.length && !ids.some((id) => id === "mf_als" || id === "svd")) out.push({ id: "factors", severity: "info", title: "Try a taste-factor model", why: "Matrix factorisation squeezes the whole grid into a few hidden taste dials per person and item — the idea that won the Netflix prize.", action: { kind: "add_models", label: "Add matrix factorisation", model_ids: ["mf_als"] } });
+  return out;
+}
 
 /** Line-up tips for unsupervised problems. */
 function unsupSuggestions(task: string, ids: string[]): Suggestion[] {
@@ -45,6 +61,7 @@ export function ModelsStep() {
   const modality = modalityOf(project?.modality);
   const image = modality === "image";
   const text = modality === "text";
+  const rec = task === "recommendation";
   const unsup = isUnsupervised(task);
   const models = project?.models ?? [];
   const available = useMemo(
@@ -102,7 +119,15 @@ export function ModelsStep() {
   };
   const starter = starterFor(task, image, modality);
   const starterNames = starter.map((id) => available.find((s) => s.id === id)?.label ?? id);
-  const picks: { label: string; icon: string; tip: string; run: () => void }[] = unsup ? [
+  const picks: { label: string; icon: string; tip: string; run: () => void }[] = rec ? [
+    { label: "Recommender starter", icon: "🌱", tip: `Replace the line-up with ${starterNames.join(", ")} — a baseline, a “people who liked this also liked…” model and a taste-factor model.`, run: () => {
+      update((p) => ({ models: configsFor(starter, available, p.models) }));
+      toast.success("Recommender starter ready — most popular, similar items and matrix factorisation.");
+    } },
+    { label: "Add them all", icon: "📚", tip: "Add every recommender and race them on the same held-out ratings.", run: () =>
+      addIds(available.map((s) => s.id), "Added {n} recommenders.") },
+    { label: "Clear", icon: "🧹", tip: "Remove everything from the line-up.", run: () => update({ models: [] }) },
+  ] : unsup ? [
     { label: "Starter set", icon: "🌱", tip: `Replace the line-up with ${starterNames.join(", ")} — different ideas of what a ${task === "clustering" ? "group" : task === "reduction" ? "good map" : "weird row"} is.`, run: () => {
       update((p) => ({ models: configsFor(starter, available, p.models) }));
       toast.success(`Starter set ready — ${starterNames.join(", ")}.`);
@@ -139,7 +164,8 @@ export function ModelsStep() {
   ];
 
   const suggestions: Suggestion[] = [];
-  if (unsup) suggestions.push(...unsupSuggestions(task, models.map((m) => m.model_id)));
+  if (rec) suggestions.push(...recSuggestions(models.map((m) => m.model_id)));
+  else if (unsup) suggestions.push(...unsupSuggestions(task, models.map((m) => m.model_id)));
   else if (models.length === 1) suggestions.push({ id: "one", severity: "info", title: "Add a rival or two", why: "With a single model you can't tell whether its score is good. Two or three contenders make the comparison meaningful." });
   if (image && models.length && !models.some((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "novision", severity: "warn", title: "Add a vision network", why: "None of your models are built for pictures. Add the Image CNN or Tiny ResNet — they usually beat pixel-by-pixel models by a wide margin.", action: { kind: "add_models", label: "Add CNN + ResNet", model_ids: ["cnn2d", "tiny_resnet"] } });
   if (image && models.length && models.every((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "baseline", severity: "info", title: "Add a baseline to beat", why: "A classic model on raw pixels (like logistic regression) shows how much the vision networks actually add." });
@@ -150,8 +176,10 @@ export function ModelsStep() {
 
   return (
     <StepLayout
-      title={unsup ? "Pick your explorers" : "Pick your contenders"}
-      subtitle={unsup
+      title={rec ? "Pick your recommenders" : unsup ? "Pick your explorers" : "Pick your contenders"}
+      subtitle={rec
+        ? "Each recommender has its own idea of taste. Race a few and see which one guesses people's next favourites best."
+        : unsup
         ? task === "clustering" ? "Each algorithm has its own idea of what a “group” is. Try a few and see which grouping makes the most sense."
           : task === "reduction" ? "Each algorithm flattens your columns onto a 2-D map in its own way. Compare the maps side by side."
           : "Each detector learns what “normal” looks like differently. Compare which rows they find suspicious."
@@ -163,7 +191,7 @@ export function ModelsStep() {
       coach={
         <CoachPanel
           suggestions={suggestions}
-          intro={unsup ? UNSUP_INTRO[task] : text
+          intro={rec ? REC_INTRO : unsup ? UNSUP_INTRO[task] : text
             ? <>Models can't read — so text first becomes numbers. The simplest way is a <b>bag of words</b>: count which words appear and forget their order. It's fast and often surprisingly good.
               <br /><br />But “the battery is <b>not</b> good” and “<b>not</b> bad — the battery is good” share almost the same words. Networks that <b>read in order</b> (GRU, Transformer) can tell them apart.
               <br /><br />Not sure? Hit <b>Text starter</b> and see whether word order matters for your data.</>
@@ -178,7 +206,7 @@ export function ModelsStep() {
         <NextBar
           back="problem"
           next="data"
-          nextLabel={image ? "Images" : text ? "Texts" : undefined}
+          nextLabel={image ? "Images" : text ? "Texts" : rec ? "Ratings" : undefined}
           nextDisabled={models.length === 0}
           status={models.length === 0 ? "Pick at least one model" : `${models.length} model${models.length === 1 ? "" : "s"} selected`}
         />
@@ -197,6 +225,8 @@ export function ModelsStep() {
       </motion.div>
 
       <LineupTray onSettings={setEditing} />
+
+      {rec && <RecBaselineNote has={!!counts.popularity} onAdd={() => addIds(["popularity"], "Added the baseline.")} />}
 
       {loadError && !registry.length && (
         <Glass><EmptyState icon="🔌" title="Couldn't load the model list" text={loadError}
