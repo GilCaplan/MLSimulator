@@ -231,7 +231,7 @@ function MapInsight({ profile }: { profile: DatasetProfile }) {
   const chance = 1 / profile.class_balance.labels.length;
   const mixed = share < chance + 0.25;
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="row small" style={{ gap: 10, padding: "10px 14px", borderRadius: 14, background: mixed ? "var(--accent-soft)" : "rgba(48,209,88,.12)", lineHeight: 1.5 }}>
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="row small" style={{ gap: 10, padding: "10px 14px", borderRadius: 14, background: mixed ? "var(--accent-soft)" : "color-mix(in srgb, var(--success) 12%, transparent)", lineHeight: 1.5 }}>
       <span style={{ fontSize: 16 }}>{mixed ? "🧩" : "🏝️"}</span>
       <span style={{ color: "var(--text-2)" }}>
         {mixed

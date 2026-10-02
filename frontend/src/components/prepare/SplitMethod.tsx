@@ -63,7 +63,7 @@ function PatientDots({ method, active }: { method: "random" | "group"; active: b
         <text x={MID + 14} y={13} fontSize={10} fontWeight={700} fill={TEST}>test</text>
       </motion.g>
       {dots.map((d) => (
-        <motion.circle key={d.key} r={6} fill={d.color} stroke="white" strokeWidth={1.2}
+        <motion.circle key={d.key} r={6} fill={d.color} stroke="var(--bg)" strokeWidth={1.2}
           initial={false} animate={{ cx: d.x, cy: d.y }} transition={spring.gentle} />
       ))}
       {method === "random" && (
@@ -93,7 +93,7 @@ function TimelineCut({ active }: { active: boolean }) {
       {xs.map((x, i) => {
         const future = x > cut;
         return (
-          <motion.circle key={i} cx={x} r={5} stroke="white" strokeWidth={1}
+          <motion.circle key={i} cx={x} r={5} stroke="var(--bg)" strokeWidth={1}
             initial={false}
             animate={{ cy: ys[i], fill: split ? (future ? TEST : TRAIN) : "var(--text-3)", x: split && future ? 6 : 0 }}
             transition={{ ...spring.gentle, delay: split ? i * 0.03 : 0 }} />
@@ -203,7 +203,7 @@ export function SplitMethodSettings({ ctx }: { ctx: PrepCtx }) {
         ))}
 
         {method === "random" && repeating && (
-          <div className="col" style={{ gap: 8, padding: "10px 12px", borderRadius: 12, background: "rgba(255,159,10,.10)" }}>
+          <div className="col" style={{ gap: 8, padding: "10px 12px", borderRadius: 12, background: "color-mix(in srgb, var(--warning) 10%, transparent)" }}>
             <span className="small" style={{ lineHeight: 1.5 }}>
               🔁 <b>“{repeating.name}”</b> repeats (~{repeating.repeats!.toFixed(1)} rows per value). If those rows are the same person or thing, a random split
               lets the model peek at the test set.
@@ -269,7 +269,7 @@ export function SplitInfoView({ info, compact }: { info: SplitInfo; compact?: bo
       )}
       {leak && (
         <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: [0, -4, 4, 0] }} transition={{ duration: 0.4 }}
-          className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "9px 12px", borderRadius: 12, background: "rgba(255,69,58,.12)", lineHeight: 1.5 }}>
+          className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "9px 12px", borderRadius: 12, background: "color-mix(in srgb, var(--danger) 12%, transparent)", lineHeight: 1.5 }}>
           <span>🚨</span>
           <span className="grow">
             <b style={{ color: "var(--danger)" }}>{fmtInt(info.shared_groups!)} {info.group_column ?? "group"} value{info.shared_groups === 1 ? "" : "s"} appear in both train and test.</b>{" "}

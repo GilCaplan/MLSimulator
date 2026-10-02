@@ -335,8 +335,8 @@ function ClusterPlot({ pts, frame, colours, truth, runKey }: { pts: Pt[]; frame:
             <g key={`${runKey}-${j}`} className="mlp-km-c" style={{ transform: `translate(${sx(c.x)}px, ${sy(c.y)}px)` }}>
               <g style={{ animation: `mlpKmPop .5s ${j * 90}ms both` }}>
                 <circle r={11} fill={colours[j]} opacity={0.22} />
-                <circle r={7.5} fill={colours[j]} stroke="white" strokeWidth={2.5} style={{ filter: `drop-shadow(0 2px 4px ${colours[j]}88)` }} />
-                <path d="M-3,0H3M0,-3V3" stroke="white" strokeWidth={1.8} strokeLinecap="round" />
+                <circle r={7.5} fill={colours[j]} stroke="var(--bg)" strokeWidth={2.5} style={{ filter: `drop-shadow(0 2px 4px ${colours[j]}88)` }} />
+                <path d="M-3,0H3M0,-3V3" stroke="var(--on-accent)" strokeWidth={1.8} strokeLinecap="round" />
               </g>
             </g>
           ))}
@@ -369,7 +369,7 @@ function KChart({ values, k, gold, goldLabel, fmt, color }: { values: number[]; 
           {values.map((y, i) => <circle key={i} cx={sx(i + K_MIN)} cy={sy(y)} r={3} fill={color} />)}
           <circle cx={sx(gold)} cy={sy(gv)} r={7} fill="none" stroke={GOLD} strokeWidth={2.4} />
           <text x={sx(gold)} y={m.t - 7} textAnchor={anchor} fontSize={9.5} fontWeight={700} fill={GOLD}>★ {goldLabel}: k={gold}</text>
-          <motion.circle initial={false} animate={{ cx: sx(k), cy: sy(v) }} transition={spring.snappy} r={5.5} fill={color} stroke="white" strokeWidth={2} />
+          <motion.circle initial={false} animate={{ cx: sx(k), cy: sy(v) }} transition={spring.snappy} r={5.5} fill={color} stroke="var(--bg)" strokeWidth={2} />
           {Array.from({ length: K_MAX - K_MIN + 1 }, (_, i) => i + K_MIN).map((kk) => (
             <text key={kk} x={sx(kk)} y={height - 5} textAnchor="middle" fontSize={10} fontWeight={kk === k ? 700 : 400} fill={kk === k ? "var(--text)" : "var(--text-3)"}>{kk}</text>
           ))}

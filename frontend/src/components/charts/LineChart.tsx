@@ -87,7 +87,7 @@ export function LineChart({ series, height = 220, xLabel, yLabel, yDomain, marke
             })}
             {series.map((s) => {
               const last = [...s.points].reverse().find((p) => p.y !== null && p.y !== undefined && isFinite(p.y as number));
-              return last ? <circle key={`d${s.name}`} cx={sx(last.x)} cy={sy(last.y as number)} r={3.5} fill={s.color} stroke="white" strokeWidth={1.5} /> : null;
+              return last ? <circle key={`d${s.name}`} cx={sx(last.x)} cy={sy(last.y as number)} r={3.5} fill={s.color} stroke="var(--bg)" strokeWidth={1.5} /> : null;
             })}
           </svg>
         )}

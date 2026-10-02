@@ -10,7 +10,7 @@ export const Section = forwardRef<HTMLElement, { id: string; n: number; icon: st
         <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={spring.gentle}
           className="row" style={{ gap: 14, alignItems: "flex-end", padding: "0 4px" }}>
           <span style={{ width: 46, height: 46, borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0,
-            background: done ? "rgba(48,209,88,.16)" : "var(--accent-soft)", border: `1px solid ${done ? "rgba(48,209,88,.4)" : "transparent"}`, transition: "background .3s" }}>
+            background: done ? "color-mix(in srgb, var(--success) 16%, transparent)" : "var(--accent-soft)", border: `1px solid ${done ? "color-mix(in srgb, var(--success) 40%, transparent)" : "transparent"}`, transition: "background .3s" }}>
             {icon}
           </span>
           <div className="col grow" style={{ gap: 2 }}>

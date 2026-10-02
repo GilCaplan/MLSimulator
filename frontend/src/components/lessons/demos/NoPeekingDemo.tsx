@@ -296,9 +296,9 @@ function SalesChart({ shop, today, setToday, onRelease, ev, split, useCust }: {
             <line x1={todayX} x2={todayX} y1={m.t - 8} y2={total} stroke={C.purple} strokeWidth={2} />
             <g transform={`translate(${clamp(todayX, m.l + 50, width - m.r - 50)}, ${m.t - 16})`}>
               <rect x={-50} y={-11} width={100} height={20} rx={10} fill={C.purple} style={{ filter: `drop-shadow(0 3px 8px ${C.purple}66)` }} />
-              <text x={0} y={3} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="white">📍 today · {DAY_NAMES[today % 7]} {today}</text>
+              <text x={0} y={3} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="var(--on-accent)">📍 today · {DAY_NAMES[today % 7]} {today}</text>
             </g>
-            <circle cx={todayX} cy={H - m.b} r={dragging ? 8 : 6.5} fill={C.purple} stroke="white" strokeWidth={2.5} style={{ transition: "r .15s" }} />
+            <circle cx={todayX} cy={H - m.b} r={dragging ? 8 : 6.5} fill={C.purple} stroke="var(--bg)" strokeWidth={2.5} style={{ transition: "r .15s" }} />
           </svg>
         )}
       </div>

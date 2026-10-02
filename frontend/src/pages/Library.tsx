@@ -149,7 +149,7 @@ export function LibraryPage() {
         footer={
           <>
             <button className="btn ghost" onClick={() => setDoomed(null)} disabled={deleting}>Keep it</button>
-            <button className="btn primary" style={{ background: "var(--danger)", boxShadow: "0 6px 18px rgba(255,69,58,0.35)" }} onClick={confirmDelete} disabled={deleting}>
+            <button className="btn primary" style={{ background: "var(--danger)", boxShadow: "0 6px 18px color-mix(in srgb, var(--danger) 35%, transparent)" }} onClick={confirmDelete} disabled={deleting}>
               {deleting ? <Spinner size={14} /> : "🗑️"} Delete
             </button>
           </>

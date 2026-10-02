@@ -156,7 +156,7 @@ export function AssignPanel({ model, result, busy }: { model: SavedModel; result
           <div style={{ position: "relative", height: 14, borderRadius: 7, background: `linear-gradient(90deg, ${ramp(0)}, ${ramp(0.4)}, ${ramp(0.75)}, ${ramp(1)})`, opacity: 0.9 }}>
             <div style={{ position: "absolute", left: `${Math.max(0, Math.min(1, tt)) * 100}%`, top: -7, bottom: -7, width: 3, marginLeft: -1.5, borderRadius: 2, background: RED }} />
             <motion.div animate={{ left: `${Math.max(0, Math.min(1, t)) * 100}%` }} transition={spring.snappy}
-              style={{ position: "absolute", top: "50%", width: 24, height: 24, marginLeft: -12, marginTop: -12, borderRadius: 12, background: "white", boxShadow: "0 2px 10px rgba(0,0,0,0.3)", border: `3px solid ${flagged ? RED : "#30D158"}` }} />
+              style={{ position: "absolute", top: "50%", width: 24, height: 24, marginLeft: -12, marginTop: -12, borderRadius: 12, background: "var(--bg)", boxShadow: "0 2px 10px rgba(0,0,0,0.3)", border: `3px solid ${flagged ? RED : "#30D158"}` }} />
           </div>
           <div className="row between tiny faint num" style={{ marginTop: 8 }}>
             <span>typical</span>

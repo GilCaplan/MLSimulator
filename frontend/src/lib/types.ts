@@ -802,3 +802,30 @@ export interface TransferResult {
   /** test images with true labels; runs[x].examples[i] = that run's prediction for examples[i] */
   examples: { image: string; label: number }[];
 }
+
+/* ---- Try a trained model before saving it (mlp/api/trymodel.py) */
+export interface TryResult {
+  modality: Modality;
+  task: Task;
+  model: string;
+  prediction: string | number;
+  classes?: string[] | null;
+  /** classification: one probability per class (same order as classes) */
+  probabilities?: number[];
+  /** text: influence of each word */
+  tokens?: { t: string; w: number }[];
+  /** image: what the model actually sees (resized/greyscale) and a saliency map (rows of 0–1) */
+  model_input?: string;
+  saliency?: number[][];
+  /** only for random test examples: the true answer, and correct (classification) or error = prediction − truth */
+  truth?: string | number;
+  correct?: boolean;
+  error?: number;
+}
+export interface TryExample extends TryResult {
+  index: number;
+  /** how many test examples matched the request (e.g. of the chosen class) */
+  n_pool: number;
+  input: { image?: string; text?: string; row?: Record<string, any> };
+}
+export interface TryInputs { modality: Modality; task: Task; classes: string[] | null; input_schema: InputSchemaItem[]; image_shape: number[] | null }

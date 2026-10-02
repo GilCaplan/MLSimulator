@@ -248,7 +248,7 @@ function SweepIntro() {
     <div className="inset row wrap" style={{ padding: 16, gap: 18, alignItems: "center" }}>
       <svg width={180} height={84} viewBox="0 0 180 84" style={{ flexShrink: 0 }}>
         {demo.map((v, i) => (
-          <motion.circle key={i} cx={14 + i * 22} r={4.5} fill={i === 3 ? "#FFD60A" : "#0A84FF"} stroke="white" strokeWidth={1.2}
+          <motion.circle key={i} cx={14 + i * 22} r={4.5} fill={i === 3 ? "#FFD60A" : "#0A84FF"} stroke="var(--bg)" strokeWidth={1.2}
             initial={{ cy: 80, opacity: 0 }} animate={{ cy: [80, 76 - v * 110, 76 - v * 110, 80], opacity: [0, 1, 1, 0] }}
             transition={{ duration: 4, times: [0, 0.2, 0.85, 1], repeat: Infinity, delay: i * 0.18 }} />
         ))}

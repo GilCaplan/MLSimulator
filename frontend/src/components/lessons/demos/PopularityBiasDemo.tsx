@@ -294,7 +294,7 @@ function ViewerRow({ world, viewer, name, avatar, list }: { world: World; viewer
 
 export function CheckDot({ size = 18 }: { size?: number }) {
   return (
-    <span aria-label="liked" style={{ width: size, height: size, borderRadius: size / 2, background: C.ok, color: "white", fontSize: size * 0.62, fontWeight: 800,
+    <span aria-label="liked" style={{ width: size, height: size, borderRadius: size / 2, background: C.ok, color: "var(--on-accent)", fontSize: size * 0.62, fontWeight: 800,
       display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: `0 2px 6px ${C.ok}77`, flexShrink: 0 }}>✓</span>
   );
 }

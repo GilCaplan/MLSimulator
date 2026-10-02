@@ -40,7 +40,7 @@ export function Scatter({ points, classes, height = 280, radius = 3.2, continuou
               return (
                 <g key={p.id ?? i} className={`mlp-pt ${p.synthetic ? "mlp-pop" : ""}`} style={{ transform: t, ["--t" as any]: t, animationDelay: p.synthetic ? `${(i % 60) * 12}ms` : undefined }}>
                   {p.synthetic && <circle r={radius + 2.6} fill="none" stroke={c} strokeWidth={1.2} opacity={0.7} />}
-                  <circle r={radius} fill={c} fillOpacity={p.synthetic ? 0.95 : 0.78} stroke="white" strokeOpacity={0.6} strokeWidth={0.6} />
+                  <circle r={radius} fill={c} fillOpacity={p.synthetic ? 0.95 : 0.78} stroke="var(--bg)" strokeOpacity={0.6} strokeWidth={0.6} />
                 </g>
               );
             })}

@@ -21,52 +21,52 @@ const LOOK: Record<string, { examples: string[]; art?: (active: boolean) => Reac
   classification: {
     examples: ["📧 Spam or not spam", "🌸 Which flower species", "👋 Will a customer churn"],
     art: (a) => <ClassificationArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(10,132,255,.14), rgba(255,55,95,.12))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #0A84FF 14%, transparent), color-mix(in srgb, #FF375F 12%, transparent))",
   },
   regression: {
     examples: ["🏡 A house's price", "🌡️ Tomorrow's temperature", "📦 Next month's sales"],
     art: (a) => <RegressionArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(94,92,230,.14), rgba(191,90,242,.12))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #5E5CE6 14%, transparent), color-mix(in srgb, #BF5AF2 12%, transparent))",
   },
   image_classification: {
     examples: ["🐱 Cat, dog or bird?", "✍️ Which digit was written", "🔩 Healthy or damaged part"],
     art: (a) => <ImageClassifyArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(255,159,10,.15), rgba(255,55,95,.1))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #FF9F0A 15%, transparent), color-mix(in srgb, #FF375F 10%, transparent))",
   },
   image_regression: {
     examples: ["🎲 How many dots are there", "📐 How tilted is the line", "🍎 How ripe is the fruit (1–10)"],
     art: (a) => <ImageNumberArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(48,209,88,.14), rgba(94,92,230,.12))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #30D158 14%, transparent), color-mix(in srgb, #5E5CE6 12%, transparent))",
   },
   text_classification: {
     examples: ["⭐ Is a review positive or negative", "📵 Spam or a real message", "🎫 Which team should answer a ticket"],
     art: (a) => <TextClassifyArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(48,209,88,.13), rgba(10,132,255,.12))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #30D158 13%, transparent), color-mix(in srgb, #0A84FF 12%, transparent))",
   },
   clustering: {
     examples: ["🛍️ Customer segments", "🎵 Songs that sound alike", "🧬 Similar patients or cells"],
     art: (a) => <ClusteringArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(10,132,255,.13), rgba(48,209,88,.12))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #0A84FF 13%, transparent), color-mix(in srgb, #30D158 12%, transparent))",
   },
   reduction: {
     examples: ["🗺️ See 20 columns at once", "🔍 Spot hidden groups by eye", "🧹 Squash redundant columns"],
     art: (a) => <MapArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(191,90,242,.13), rgba(255,159,10,.11))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #BF5AF2 13%, transparent), color-mix(in srgb, #FF9F0A 11%, transparent))",
   },
   recommendation: {
     examples: ["🎬 Films a viewer will love", "🛒 \u201cCustomers also bought…\u201d", "🎧 The next song in a playlist"],
     art: (a) => <RecommendArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(255,214,10,.15), rgba(255,55,95,.11))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #FFD60A 15%, transparent), color-mix(in srgb, #FF375F 11%, transparent))",
   },
   forecasting: {
     examples: ["🛒 Next month's daily sales", "⚡ Tomorrow's electricity demand", "✈️ Passengers next summer"],
     art: (a) => <ForecastArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(10,132,255,.13), rgba(255,159,10,.13))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #0A84FF 13%, transparent), color-mix(in srgb, #FF9F0A 13%, transparent))",
   },
   anomaly: {
     examples: ["💳 Odd card transactions", "🏭 Machines about to fail", "🧾 Data-entry mistakes"],
     art: (a) => <AnomalyArt active={a} />,
-    tint: "linear-gradient(135deg, rgba(100,210,255,.14), rgba(255,69,58,.11))",
+    tint: "linear-gradient(135deg, color-mix(in srgb, #64D2FF 14%, transparent), color-mix(in srgb, #FF453A 11%, transparent))",
   },
 };
 

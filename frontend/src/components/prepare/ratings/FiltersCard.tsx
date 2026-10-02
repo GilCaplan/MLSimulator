@@ -68,7 +68,7 @@ function Estimate({ n, noun, nouns }: { n: number | null; noun: string; nouns: s
   if (n === null) return <span className="tiny faint">Load the ratings on the Data step to see how many fall below.</span>;
   return (
     <span className="tiny row" style={{ gap: 6, color: n ? "var(--text-2)" : "var(--text-3)" }}>
-      <motion.span key={n} initial={{ scale: 1.25 }} animate={{ scale: 1 }} transition={spring.pop} className="badge num" style={{ height: 20, background: n ? "rgba(255,159,10,.15)" : undefined, color: n ? "#E08A00" : undefined }}>
+      <motion.span key={n} initial={{ scale: 1.25 }} animate={{ scale: 1 }} transition={spring.pop} className="badge num" style={{ height: 20, background: n ? "color-mix(in srgb, var(--warning) 15%, transparent)" : undefined, color: n ? "color-mix(in srgb, var(--warning) 70%, var(--text))" : undefined }}>
         {n ? `≈ ${fmtInt(n)}` : "0"}
       </motion.span>
       {n === 1 ? noun : nouns} below the line{n ? " — they'll be left out" : ""}

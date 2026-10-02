@@ -43,7 +43,7 @@ export function ChallengeBanner() {
         {collapsed ? (
           <motion.button key="pill" layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={spring.snappy}
             onClick={() => toggle(false)} className="glass strong row" whileHover={{ y: -1 }}
-            style={{ gap: 8, height: 34, padding: "0 14px 0 10px", borderRadius: 999, cursor: "pointer", border: "1px solid rgba(94,92,230,.35)" }}>
+            style={{ gap: 8, height: 34, padding: "0 14px 0 10px", borderRadius: 999, cursor: "pointer", border: "1px solid color-mix(in srgb, var(--accent) 35%, transparent)" }}>
             <span style={{ fontSize: 15 }}>🎯</span>
             <span className="small" style={{ fontWeight: 650 }}>Challenge: {ch?.title ?? "…"}</span>
             <span className="tiny faint">· {ch?.goals.length ?? 0} goal{ch?.goals.length === 1 ? "" : "s"}</span>
@@ -51,10 +51,10 @@ export function ChallengeBanner() {
           </motion.button>
         ) : (
           <motion.div key="full" layout initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={spring.snappy}
-            className="glass strong row" style={{ width: "100%", gap: 14, padding: "10px 12px 10px 14px", borderRadius: 18, border: "1px solid rgba(94,92,230,.35)", minHeight: 56 }}>
-            <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "linear-gradient(90deg, rgba(10,132,255,.10), rgba(191,90,242,.10) 50%, transparent)" }} />
+            className="glass strong row" style={{ width: "100%", gap: 14, padding: "10px 12px 10px 14px", borderRadius: 18, border: "1px solid color-mix(in srgb, var(--accent) 35%, transparent)", minHeight: 56 }}>
+            <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent) 50%, transparent)" }} />
             <motion.span animate={{ scale: [1, 1.12, 1] }} transition={{ repeat: Infinity, duration: 2.6, repeatDelay: 1.5 }}
-              style={{ width: 36, height: 36, borderRadius: 12, background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, boxShadow: "0 4px 14px rgba(94,92,230,.35)" }}>
+              style={{ width: 36, height: 36, borderRadius: 12, background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, boxShadow: "0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent)" }}>
               🎯
             </motion.span>
             <div className="col grow" style={{ gap: 3, minWidth: 0 }}>

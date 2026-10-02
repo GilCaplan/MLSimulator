@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 import type { NNArch } from "../../lib/types";
+import { tint } from "../charts/contrast";
 import { useSize } from "../charts/util";
 
 export interface DiagramLayer { label: string; units: number; kind: "input" | "dense" | "conv" | "attention" | "graph" | "output" }
@@ -91,7 +92,7 @@ export function NetworkDiagram({ layers, height = 280, training = false, weights
             );
           })}
           {training && pulses.map((e, i) => (
-            <motion.circle key={`p${i}`} r={2.6} fill="#fff" filter="url(#nn-glow)"
+            <motion.circle key={`p${i}`} r={2.6} fill={tint(KIND_COLOR.dense, 55)} filter="url(#nn-glow)"
               initial={{ cx: e.x1, cy: e.y1, opacity: 0 }}
               animate={{ cx: [e.x1, e.x2], cy: [e.y1, e.y2], opacity: [0, 1, 0] }}
               transition={{ duration: 1.1 / speed, repeat: Infinity, delay: (i % 10) * 0.12 + e.li * 0.25, ease: "easeInOut" }} />
@@ -109,9 +110,9 @@ export function NetworkDiagram({ layers, height = 280, training = false, weights
                 {c.ys.map((y, k) => (
                   <motion.g key={k} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 400, damping: 20, delay: li * 0.08 + k * 0.02 }} style={{ originX: `${c.x}px`, originY: `${y}px` }}>
                     {layers[li].kind === "conv" ? (
-                      <rect x={c.x - 7} y={y - 7} width={14} height={14} rx={3.5} fill={color} stroke="white" strokeWidth={1.5} />
+                      <rect x={c.x - 7} y={y - 7} width={14} height={14} rx={3.5} fill={color} stroke="var(--bg)" strokeWidth={1.5} />
                     ) : (
-                      <circle cx={c.x} cy={y} r={7} fill={color} stroke="white" strokeWidth={1.5} />
+                      <circle cx={c.x} cy={y} r={7} fill={color} stroke="var(--bg)" strokeWidth={1.5} />
                     )}
                     {training && (
                       <motion.circle cx={c.x} cy={y} r={7} fill="none" stroke={color} animate={{ r: [7, 12], opacity: [0.6, 0] }} transition={{ duration: 1.4, repeat: Infinity, delay: li * 0.2 + k * 0.1 }} />

@@ -45,7 +45,7 @@ export function SpaceEditor({ params, state, onChange, disabled }: { params: Hyp
             style={{ padding: 12, gap: 8, borderColor: s.on ? "var(--accent)" : undefined, background: s.on ? "var(--accent-soft)" : undefined, opacity: disabled ? 0.6 : 1, transition: "background .2s, border-color .2s" }}>
             <label className="row" style={{ gap: 8, cursor: disabled ? "default" : "pointer" }}>
               <motion.span animate={{ scale: s.on ? [1, 1.25, 1] : 1, background: s.on ? "var(--accent)" : "var(--fill-2)" }} transition={{ duration: 0.25 }}
-                style={{ width: 18, height: 18, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                style={{ width: 18, height: 18, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent-contrast)", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                 {s.on ? "✓" : ""}
               </motion.span>
               <input type="checkbox" checked={s.on} disabled={disabled} onChange={(e) => set(hp.name, { on: e.target.checked })} style={{ display: "none" }} />

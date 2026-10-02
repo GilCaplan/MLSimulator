@@ -4,3 +4,4 @@ export * from "./Bars";
 export * from "./Scatter";
 export * from "./LineChart";
 export * from "./Evaluation";
+export * from "./contrast";

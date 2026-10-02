@@ -74,7 +74,7 @@ export function RecentProjects({ projects, loading, onChange }: { projects: Proj
         footer={
           <>
             <button className="btn" onClick={() => setConfirm(null)} disabled={deleting}>Cancel</button>
-            <button className="btn primary" style={{ background: "var(--danger)", boxShadow: "0 6px 18px rgba(255,69,58,.35)" }} onClick={remove} disabled={deleting}>
+            <button className="btn primary" style={{ background: "var(--danger)", boxShadow: "0 6px 18px color-mix(in srgb, var(--danger) 35%, transparent)" }} onClick={remove} disabled={deleting}>
               {deleting && <Spinner size={14} />} Delete
             </button>
           </>

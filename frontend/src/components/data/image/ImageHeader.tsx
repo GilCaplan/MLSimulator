@@ -68,7 +68,7 @@ export function ImageHeader({ dataset, project, profile, pickerOpen, onTogglePic
       <AnimatePresence>
         {mismatch && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}>
-            <div className="row small" style={{ gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "rgba(255,159,10,.12)" }}>
+            <div className="row small" style={{ gap: 10, marginTop: 12, padding: "10px 12px", borderRadius: 12, background: "color-mix(in srgb, var(--warning) 12%, transparent)" }}>
               <span>💡</span>
               <span className="grow">
                 These pictures are labelled with {profile!.task_guess === "regression" ? <b>numbers</b> : <b>categories</b>}, but this project is set up for <b>image {project.task}</b>.

@@ -215,7 +215,7 @@ function Gallery({ shape, settings, variants, broken, seed }: { shape: Shape; se
                     <AnimatePresence>
                       {bad && (
                         <motion.div initial={{ opacity: 0, scale: 0.6, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.6 }} transition={spring.pop}
-                          style={{ position: "absolute", top: photo - 14, left: 2, right: 2, padding: "2px 4px", borderRadius: 7, background: C.pos, color: "white", fontSize: photo < 90 ? 9 : 10, fontWeight: 700, lineHeight: 1.2, textAlign: "center", boxShadow: "0 3px 10px rgba(255,55,95,.4)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          style={{ position: "absolute", top: photo - 14, left: 2, right: 2, padding: "2px 4px", borderRadius: 7, background: C.pos, color: "var(--on-accent)", fontSize: photo < 90 ? 9 : 10, fontWeight: 700, lineHeight: 1.2, textAlign: "center", boxShadow: "0 3px 10px rgba(255,55,95,.4)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                           {photo < 100 ? `⚠️ left → ${dir}!` : `⚠️ label changed: left → ${dir}!`}
                         </motion.div>
                       )}
@@ -271,7 +271,7 @@ function RealWorld({ shape, tests, rot, shift, maxRot, rotCov, shiftCov, acc, ac
               <div key={`${shape}-${i}`} className="col" style={{ alignItems: "center", gap: 3, position: "relative" }}>
                 <Photo shape={shape} aug={{ rot: t.rot, dx: t.dx, dy: t.dy, flip: false, bright: 1, cut: null }} size={thumb} />
                 <motion.span key={String(ok)} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring.pop}
-                  title={ok ? "Recognised" : "Missed"} style={{ position: "absolute", top: -5, right: 0, width: 18, height: 18, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, fontWeight: 800, color: "white", background: ok ? C.ok : C.pos, boxShadow: "0 2px 6px rgba(0,0,0,.25)" }}>
+                  title={ok ? "Recognised" : "Missed"} style={{ position: "absolute", top: -5, right: 0, width: 18, height: 18, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, fontWeight: 800, color: "var(--on-accent)", background: ok ? C.ok : C.pos, boxShadow: "0 2px 6px rgba(0,0,0,.25)" }}>
                   {ok ? "✓" : "✕"}
                 </motion.span>
                 <span className="tiny faint num" style={{ fontSize: 9.5 }}>{Math.round(t.rot)}°</span>

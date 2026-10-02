@@ -108,7 +108,7 @@ export function ChoiceGrid<T extends string>({ value, options, onChange, min = 1
               {active && (
                 <motion.span
                   initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={spring.pop}
-                  style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: 9, background: "var(--accent)", color: "white", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, boxShadow: "0 2px 6px rgba(0,0,0,.2)" }}
+                  style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: 9, background: "var(--accent)", color: "var(--accent-contrast)", fontSize: 11, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, boxShadow: "0 2px 6px rgba(0,0,0,.2)" }}
                 >✓</motion.span>
               )}
             </AnimatePresence>
@@ -135,7 +135,7 @@ export function SubHead({ children, info, right }: { children: ReactNode; info?:
 /** Soft note line with an icon. */
 export function Note({ icon = "💡", children, tone = "info" }: { icon?: ReactNode; children: ReactNode; tone?: "info" | "warn" }) {
   return (
-    <div className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "9px 12px", borderRadius: 12, background: tone === "warn" ? "rgba(255,159,10,.12)" : "var(--accent-soft)", lineHeight: 1.5 }}>
+    <div className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "9px 12px", borderRadius: 12, background: tone === "warn" ? "color-mix(in srgb, var(--warning) 12%, transparent)" : "var(--accent-soft)", lineHeight: 1.5 }}>
       <span>{icon}</span>
       <span style={{ color: "var(--text-2)" }}>{children}</span>
     </div>

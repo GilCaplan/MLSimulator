@@ -52,7 +52,7 @@ export function LearnSection({ lesson, onFinished, onContinue }: { lesson: Lesso
       )}
 
       <Glass pad="lg" variant="default" style={{ minHeight: 300, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 100% 0%, var(--accent-soft), transparent 55%)" }} />
+        <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 55%)" }} />
         <div className="grow" style={{ position: "relative" }}>
           <AnimatePresence mode="wait" custom={dir} initial={false}>
             <motion.div key={idx} custom={dir} variants={slide} initial="enter" animate="center" exit="exit" transition={spring.snappy} className="col" style={{ gap: 14 }}>
@@ -77,7 +77,7 @@ export function LearnSection({ lesson, onFinished, onContinue }: { lesson: Lesso
             {cards.map((_, i) => (
               <button key={i} aria-label={`Card ${i + 1}`} onClick={() => go(i)}
                 style={{ width: i === idx ? 22 : 8, height: 8, borderRadius: 4, border: "none", padding: 0, cursor: "pointer", transition: "width .3s var(--ease), background .3s",
-                  background: i === idx ? "var(--accent)" : seen.has(i) ? "rgba(10,132,255,.4)" : "var(--fill-2)" }} />
+                  background: i === idx ? "var(--accent)" : seen.has(i) ? "color-mix(in srgb, var(--accent) 40%, transparent)" : "var(--fill-2)" }} />
             ))}
           </div>
           {last ? (

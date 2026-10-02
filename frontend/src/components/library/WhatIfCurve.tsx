@@ -50,7 +50,7 @@ export function WhatIfCurve({ xs, ys, value, domain, color, height = 38, format 
           <motion.path animate={{ d: geo.area }} initial={false} transition={spring.gentle} fill={`url(#wf${gid})`} />
           <motion.path animate={{ d: geo.line }} initial={false} transition={spring.gentle} fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
           <motion.line animate={{ x1: geo.cx, x2: geo.cx }} initial={false} transition={spring.snappy} y1={0} y2={height} stroke={color} strokeOpacity={0.25} strokeDasharray="2 3" />
-          <motion.circle animate={{ cx: geo.cx, cy: geo.cy }} initial={false} transition={spring.snappy} r={4.5} fill={color} stroke="white" strokeWidth={1.8}>
+          <motion.circle animate={{ cx: geo.cx, cy: geo.cy }} initial={false} transition={spring.snappy} r={4.5} fill={color} stroke="var(--bg)" strokeWidth={1.8}>
             <title>{format(geo.yv)}</title>
           </motion.circle>
         </svg>

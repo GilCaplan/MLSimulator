@@ -4,7 +4,7 @@ import { spring, stagger } from "../../../design/motion";
 import { withAlpha } from "../../../lib/colors";
 import { fmt, pct } from "../../../lib/format";
 import type { ClusterResult } from "../../../lib/types";
-import { Sparkline } from "../../charts";
+import { Sparkline, textOn } from "../../charts";
 import { AnimatedNumber, InfoTip, Segmented } from "../../glass";
 import { metricHelp, metricLabel } from "../util";
 import { MapCanvas, MapLegend, clusterColor, clusterName, nearest, truthColor, truthLabels, type MapCentre } from "./mapKit";
@@ -240,7 +240,7 @@ export function TruthCheck({ data, metrics }: { data: ClusterResult; metrics: Re
                   <motion.div key={j} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...spring.gentle, delay: (i + j) * 0.025 }}
                     title={`${name} → ${clusterName(ct.cols[j])}: ${v} rows (${pct(s, 0)} of ${name})`}
                     style={{ height: 38, borderRadius: 8, background: v ? withAlpha(col, 0.1 + 0.8 * s) : "var(--fill)", display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 12, fontWeight: s > 0.5 ? 700 : 500, color: s > 0.55 ? "white" : v ? "var(--text)" : "var(--text-3)", fontVariantNumeric: "tabular-nums" }}>
+                      fontSize: 12, fontWeight: s > 0.5 ? 700 : 500, color: s > 0.55 ? textOn(col) : v ? "var(--text)" : "var(--text-3)", fontVariantNumeric: "tabular-nums" }}>
                     {v || "·"}
                   </motion.div>
                 );

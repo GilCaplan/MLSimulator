@@ -73,7 +73,7 @@ export function SweepChart({ series, kMin, kMax, best, selected, onSelect, heigh
                     <motion.circle cx={sx(p.k)} cy={sy(p.v)} fill="none" stroke="#FFD60A" strokeWidth={2}
                       initial={{ r: 5, opacity: 0.9 }} animate={{ r: [6, 15], opacity: [0.9, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} />
                   )}
-                  <motion.circle cx={sx(p.k)} fill={p.k === best ? "#FFD60A" : s.color} stroke="white" strokeWidth={1.4}
+                  <motion.circle cx={sx(p.k)} fill={p.k === best ? "#FFD60A" : s.color} stroke="var(--bg)" strokeWidth={1.4}
                     initial={{ r: 0, cy: sy(p.v) - 22 }} animate={{ r: p.k === selected || p.k === best ? 6 : 4.4, cy: sy(p.v) }}
                     transition={{ type: "spring", stiffness: 420, damping: 17 }} />
                 </g>

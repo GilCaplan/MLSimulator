@@ -189,8 +189,8 @@ function Plot({ orders, active, withDisasters, eta, med, avg, onSet, done }: {
                 return (
                   <motion.g key={o.id} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0, y: -14 }} transition={spring.pop} style={{ transformOrigin: `${x}px ${y}px` }}>
                     {o.disaster
-                      ? <rect x={x - R - 0.6} y={y - R - 0.6} width={2 * R + 1.2} height={2 * R + 1.2} rx={1.5} transform={`rotate(45 ${x} ${y})`} fill={C.pos} fillOpacity={inBand ? 1 : 0.75} stroke="white" strokeWidth={1} />
-                      : <circle cx={x} cy={y} r={R} fill={C.neg} fillOpacity={inBand ? 1 : 0.38} stroke={inBand ? "white" : "none"} strokeWidth={1.2} style={{ transition: "fill-opacity .25s" }} />}
+                      ? <rect x={x - R - 0.6} y={y - R - 0.6} width={2 * R + 1.2} height={2 * R + 1.2} rx={1.5} transform={`rotate(45 ${x} ${y})`} fill={C.pos} fillOpacity={inBand ? 1 : 0.75} stroke="var(--bg)" strokeWidth={1} />
+                      : <circle cx={x} cy={y} r={R} fill={C.neg} fillOpacity={inBand ? 1 : 0.38} stroke={inBand ? "var(--bg)" : "none"} strokeWidth={1.2} style={{ transition: "fill-opacity .25s" }} />}
                   </motion.g>
                 );
               })}
@@ -208,16 +208,16 @@ function Plot({ orders, active, withDisasters, eta, med, avg, onSet, done }: {
             <motion.path initial={false} animate={{ d: line(curves.rmse) }} transition={spring.gentle} fill="none" stroke={C_RMSE} strokeWidth={2.4} strokeDasharray="6 4" strokeLinejoin="round" />
             {/* the prediction line */}
             <motion.line initial={false} animate={{ x1: sx(eta), x2: sx(eta) }} transition={tr} y1={TOP - 8} y2={LOSS_T + LOSS_H} stroke="var(--accent)" strokeWidth={2.5} strokeLinecap="round" />
-            <motion.circle initial={false} animate={{ cx: sx(eta), cy: sy(mae) }} transition={tr} r={5} fill={C_MAE} stroke="white" strokeWidth={1.5} />
-            <motion.circle initial={false} animate={{ cx: sx(eta), cy: sy(rmse) }} transition={tr} r={5} fill={C_RMSE} stroke="white" strokeWidth={1.5} />
+            <motion.circle initial={false} animate={{ cx: sx(eta), cy: sy(mae) }} transition={tr} r={5} fill={C_MAE} stroke="var(--bg)" strokeWidth={1.5} />
+            <motion.circle initial={false} animate={{ cx: sx(eta), cy: sy(rmse) }} transition={tr} r={5} fill={C_RMSE} stroke="var(--bg)" strokeWidth={1.5} />
             <text x={(M.l + width - M.r) / 2} y={H - 4} textAnchor="middle" fontSize={10.5} fill="var(--text-2)">delivery time / predicted ETA (minutes)</text>
           </svg>
 
           {/* draggable handle (keyboard accessible) */}
           <motion.div ref={knob} role="slider" tabIndex={0} aria-label="Predicted ETA in minutes" aria-valuemin={XD[0]} aria-valuemax={XD[1]} aria-valuenow={eta} aria-valuetext={`${eta} minutes`}
             onKeyDown={onKey} initial={false} animate={{ left: clamp(sx(eta), 52, width - 52) }} transition={tr}
-            style={{ position: "absolute", top: 0, transform: "translateX(-50%)", padding: "2px 9px", borderRadius: 8, background: "var(--accent)", color: "white", fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap",
-              boxShadow: dragging ? "0 0 0 5px var(--accent-soft), 0 6px 16px rgba(10,132,255,.45)" : "0 4px 12px rgba(10,132,255,.35)", cursor: "grab", outline: "none" }}>
+            style={{ position: "absolute", top: 0, transform: "translateX(-50%)", padding: "2px 9px", borderRadius: 8, background: "var(--accent)", color: "var(--accent-contrast)", fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap",
+              boxShadow: dragging ? "0 0 0 5px var(--accent-soft), 0 6px 16px color-mix(in srgb, var(--accent) 45%, transparent)" : "0 4px 12px color-mix(in srgb, var(--accent) 35%, transparent)", cursor: "grab", outline: "none" }}>
             🎯 ETA {eta % 1 ? eta.toFixed(1) : eta} min
           </motion.div>
 

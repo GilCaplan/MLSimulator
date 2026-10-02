@@ -24,7 +24,7 @@ export const Station = forwardRef<HTMLButtonElement, { lesson: LessonSummary; up
           style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "var(--accent)" }} />
       )}
       <span className="glass strong" style={{ position: "absolute", inset: 0, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.42,
-        boxShadow: status === "done" ? "0 0 0 3px rgba(48,209,88,.35), 0 0 26px rgba(48,209,88,.55)" : upNext ? "0 0 0 3px var(--accent-soft), 0 8px 26px rgba(10,132,255,.35)" : undefined }}>
+        boxShadow: status === "done" ? "0 0 0 3px color-mix(in srgb, var(--success) 35%, transparent), 0 0 26px color-mix(in srgb, var(--success) 55%, transparent)" : upNext ? "0 0 0 3px var(--accent-soft), 0 8px 26px rgba(10,132,255,.35)" : undefined }}>
         {lesson.emoji}
       </span>
       <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)", pointerEvents: "none" }}>
@@ -33,7 +33,7 @@ export const Station = forwardRef<HTMLButtonElement, { lesson: LessonSummary; up
           initial={{ strokeDashoffset: c }} whileInView={{ strokeDashoffset: c * (1 - n / 4) }} viewport={{ once: true }} transition={{ ...spring.soft, delay: 0.3 }} />
       </svg>
       <span style={{ position: "absolute", top: -4, right: -4, minWidth: 22, height: 22, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 750,
-        background: status === "done" ? "var(--success)" : "var(--glass-strong)", color: status === "done" ? "white" : "var(--text-2)", border: "1px solid var(--glass-border)", boxShadow: "0 2px 6px rgba(0,0,0,.12)" }}>
+        background: status === "done" ? "var(--success)" : "var(--glass-strong)", color: status === "done" ? "var(--on-accent)" : "var(--text-2)", border: "1px solid var(--glass-border)", boxShadow: "0 2px 6px rgba(0,0,0,.12)" }}>
         {status === "done" ? "✓" : lesson.order}
       </span>
     </motion.button>
@@ -48,8 +48,8 @@ export function LessonCard({ lesson, upNext, onOpen, align }: { lesson: LessonSu
     <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-40px" }} onClick={onOpen}
       className="glass tile" whileTap={{ scale: 0.985 }}
       style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10, cursor: "pointer", flex: 1, minWidth: 0,
-        borderColor: status === "done" ? "rgba(48,209,88,.5)" : upNext ? "var(--accent)" : undefined,
-        boxShadow: status === "done" ? "var(--glass-shadow), 0 0 32px rgba(48,209,88,.22)" : upNext ? "0 0 0 3px var(--accent-soft), var(--glass-shadow)" : undefined,
+        borderColor: status === "done" ? "color-mix(in srgb, var(--success) 50%, transparent)" : upNext ? "var(--accent)" : undefined,
+        boxShadow: status === "done" ? "var(--glass-shadow), 0 0 32px color-mix(in srgb, var(--success) 22%, transparent)" : upNext ? "0 0 0 3px var(--accent-soft), var(--glass-shadow)" : undefined,
         textAlign: align }}>
       <div className="row between" style={{ gap: 8, flexDirection: align === "right" ? "row-reverse" : "row" }}>
         <StageChip stage={lesson.stage} small />
@@ -69,7 +69,7 @@ export function LessonCard({ lesson, upNext, onOpen, align }: { lesson: LessonSu
             <Tooltip key={s.id} content={`${s.icon} ${s.label}${flags[s.id] ? " — done" : ""}`} width={120}>
               <motion.span initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ once: true }} transition={{ ...spring.pop, delay: 0.2 + i * 0.05 }}
                 style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 22, height: 22, borderRadius: 7, fontSize: 11,
-                  background: flags[s.id] ? "rgba(48,209,88,.18)" : "var(--fill)", border: `1px solid ${flags[s.id] ? "rgba(48,209,88,.45)" : "var(--hairline)"}`, filter: flags[s.id] ? "none" : "grayscale(1)", opacity: flags[s.id] ? 1 : 0.7 }}>
+                  background: flags[s.id] ? "color-mix(in srgb, var(--success) 18%, transparent)" : "var(--fill)", border: `1px solid ${flags[s.id] ? "color-mix(in srgb, var(--success) 45%, transparent)" : "var(--hairline)"}`, filter: flags[s.id] ? "none" : "grayscale(1)", opacity: flags[s.id] ? 1 : 0.7 }}>
                 {flags[s.id] ? "✓" : s.icon}
               </motion.span>
             </Tooltip>

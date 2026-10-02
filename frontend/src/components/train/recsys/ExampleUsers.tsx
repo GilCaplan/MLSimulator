@@ -31,9 +31,9 @@ export function ExampleUsers({ data, explains }: { data: RecsysResult; explains?
             const sel = k === i;
             return (
               <motion.button key={e.user} whileTap={{ scale: 0.94 }} onClick={() => setI(k)} className="btn sm"
-                style={{ background: sel ? "var(--accent)" : undefined, color: sel ? "white" : undefined, borderColor: sel ? "transparent" : undefined, gap: 6 }}>
+                style={{ background: sel ? "var(--accent)" : undefined, color: sel ? "var(--accent-contrast)" : undefined, borderColor: sel ? "transparent" : undefined, gap: 6 }}>
                 👤 {e.user}
-                {n > 0 && <span className="num" style={{ fontWeight: 800, color: sel ? "white" : "var(--success)" }}>✓{n}</span>}
+                {n > 0 && <span className="num" style={{ fontWeight: 800, color: sel ? "var(--accent-contrast)" : "var(--success)" }}>✓{n}</span>}
               </motion.button>
             );
           })}

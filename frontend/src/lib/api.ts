@@ -2,7 +2,7 @@ import type { UIPrefs } from "../design/prefs";
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, TimeseriesSetInfo, ForecastResponse, LabsCatalog, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, TimeseriesSetInfo, ForecastResponse, LabsCatalog, TryExample, TryResult, TryInputs, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
@@ -134,6 +134,13 @@ export const api = {
   labResult: <T,>(jobId: string) => get<T>(`/jobs/${jobId}/result`),
   /** decode map points of a finished autoencoder-map run → 8×8 images (64 values 0–1) */
   vaeDecode: (run_id: string, z: [number, number][]) => post<{ images: number[][] }>("/labs/vae/decode", { run_id, z }),
+
+  // try a trained (not yet saved) model
+  tryExample: (jobId: string, key: string, opts: { label?: string | null; seed?: number } = {}) =>
+    get<TryExample>(`/jobs/${jobId}/models/${key}/example?${new URLSearchParams({ ...(opts.label ? { label: opts.label } : {}), ...(opts.seed !== undefined ? { seed: String(opts.seed) } : {}) })}`),
+  tryInput: (jobId: string, key: string, input: { image?: string; text?: string; row?: Record<string, any> }) =>
+    post<TryResult>(`/jobs/${jobId}/models/${key}/try`, input),
+  tryInputs: (jobId: string, key: string) => get<TryInputs>(`/jobs/${jobId}/models/${key}/inputs`),
 
   // library
   saveModel: (body: { job_id: string; key: string; name: string; notes?: string; project_id?: string }) => post<SavedModel>("/library/save", body),

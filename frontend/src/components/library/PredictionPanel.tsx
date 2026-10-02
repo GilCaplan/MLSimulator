@@ -3,7 +3,7 @@ import { spring } from "../../design/motion";
 import { classColor, ramp } from "../../lib/colors";
 import { fmt, pct } from "../../lib/format";
 import type { PredictResponse, SavedModel } from "../../lib/types";
-import { BarList, Gauge } from "../charts";
+import { BarList, Gauge, tint } from "../charts";
 import { AnimatedNumber, InfoTip, Spinner } from "../glass";
 import { Swap } from "./shared";
 
@@ -57,7 +57,7 @@ export function PredictionPanel({ model, result, warming, busy, targetRange }: {
         <div className="col center" style={{ gap: 4, textAlign: "center" }}>
           <span className="small muted">Predicted <b>{model.target}</b></span>
           <Swap k={String(pred)}>
-            <div style={{ fontSize: 46, fontWeight: 760, letterSpacing: "-0.035em", color, lineHeight: 1.1, textShadow: `0 6px 28px ${color}55`, wordBreak: "break-word" }}>{String(pred)}</div>
+            <div style={{ fontSize: 46, fontWeight: 760, letterSpacing: "-0.035em", color, lineHeight: 1.1, textShadow: `0 6px 28px ${tint(color, 33)}`, wordBreak: "break-word" }}>{String(pred)}</div>
           </Swap>
         </div>
         {p !== null && (
@@ -103,7 +103,7 @@ export function PredictionPanel({ model, result, warming, busy, targetRange }: {
             <motion.div
               animate={{ left: `${Math.max(0, Math.min(1, t)) * 100}%` }}
               transition={spring.snappy}
-              style={{ position: "absolute", top: "50%", width: 24, height: 24, marginLeft: -12, marginTop: -12, borderRadius: 12, background: "white", boxShadow: "0 2px 10px rgba(0,0,0,0.3)", border: `3px solid ${ramp(Math.max(0, Math.min(1, t)))}` }}
+              style={{ position: "absolute", top: "50%", width: 24, height: 24, marginLeft: -12, marginTop: -12, borderRadius: 12, background: "var(--bg)", boxShadow: "0 2px 10px rgba(0,0,0,0.3)", border: `3px solid ${ramp(Math.max(0, Math.min(1, t)))}` }}
             />
           </div>
           <div className="row between tiny faint num" style={{ marginTop: 8 }}>

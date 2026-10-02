@@ -186,7 +186,7 @@ function CarScatter({ cars, typos, log, a, b, ghost }: { cars: Car[]; typos: boo
                     </text>
                   </>
                 ) : (
-                  <circle r={4} fill={C.indigo} fillOpacity={0.72} stroke="white" strokeOpacity={0.7} strokeWidth={0.8} />
+                  <circle r={4} fill={C.indigo} fillOpacity={0.72} stroke="var(--bg)" strokeOpacity={0.7} strokeWidth={0.8} />
                 )}
               </g>
             );

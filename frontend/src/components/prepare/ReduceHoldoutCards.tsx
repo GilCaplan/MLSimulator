@@ -124,7 +124,7 @@ function KeptMeter({ pct, k }: { pct: number; k: number }) {
     <div className="col" style={{ gap: 6 }}>
       <div style={{ height: 10, borderRadius: 6, background: "var(--fill-2)", overflow: "hidden" }}>
         <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={spring.gentle}
-          style={{ height: "100%", borderRadius: 6, background: "linear-gradient(90deg, #0A84FF, #BF5AF2)" }} />
+          style={{ height: "100%", borderRadius: 6, background: "var(--grad)" }} />
       </div>
       <span className="small muted"><b className="num" style={{ color: "var(--text)" }}>{k}</b> direction{k === 1 ? "" : "s"} keep <b className="num" style={{ color: "var(--text)" }}>{pct}%</b> of the variation{pct < 70 ? " — quite a lot is lost; try keeping more." : pct > 97 ? " — almost everything; you could squash further." : "."}</span>
     </div>
@@ -171,7 +171,7 @@ function ReduceDemo({ on, k }: { on: boolean; k: number }) {
           </marker>
         </defs>
         {pts.map((p, i) => (
-          <motion.circle key={i} r={3.6} fill="#0A84FF" fillOpacity={0.75} stroke="white" strokeWidth={0.9}
+          <motion.circle key={i} r={3.6} fill="#0A84FF" fillOpacity={0.75} stroke="var(--bg)" strokeWidth={0.9}
             initial={false} animate={{ cx: squash ? p.px : p.x, cy: squash ? p.py : p.y }}
             transition={{ ...spring.gentle, delay: reduce ? 0 : (i % 8) * 0.02 }} />
         ))}

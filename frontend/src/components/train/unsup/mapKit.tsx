@@ -114,7 +114,7 @@ export function MapCanvas({ points, centres, trails, height = 300, domain, surfa
                 <animate attributeName="r" values="17;26;17" dur="2.4s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.5;0;0.5" dur="2.4s" repeatCount="indefinite" />
               </circle>
-              <circle r={8} fill={c.color} stroke="white" strokeWidth={2} />
+              <circle r={8} fill={c.color} stroke="var(--bg)" strokeWidth={2} />
               {c.label && <text y={-23} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--text)" style={{ paintOrder: "stroke", stroke: "var(--glass-strong)", strokeWidth: 3 }}>{c.label}</text>}
             </motion.g>
           ))}
@@ -124,7 +124,7 @@ export function MapCanvas({ points, centres, trails, height = 300, domain, surfa
                 <animate attributeName="r" values="8;24;8" dur="1.8s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.9;0;0.9" dur="1.8s" repeatCount="indefinite" />
               </circle>
-              <circle r={8} fill={pulse.color} stroke="white" strokeWidth={3} style={{ filter: `drop-shadow(0 2px 6px ${withAlpha(pulse.color.startsWith("#") ? pulse.color : "#5E5CE6", 0.6)})` }} />
+              <circle r={8} fill={pulse.color} stroke="var(--bg)" strokeWidth={3} style={{ filter: `drop-shadow(0 2px 6px ${withAlpha(pulse.color.startsWith("#") ? pulse.color : "#5E5CE6", 0.6)})` }} />
               {pulse.label && <text y={-16} textAnchor="middle" fontSize={11.5} fontWeight={750} fill="var(--text)" style={{ paintOrder: "stroke", stroke: "var(--glass-strong)", strokeWidth: 3.5 }}>{pulse.label}</text>}
             </motion.g>
           )}

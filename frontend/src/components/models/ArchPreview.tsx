@@ -73,7 +73,7 @@ export function ArchPreview({ arch, task }: { arch: NNArch; task: Task | null })
       <AnimatePresence mode="popLayout">
         {errors.length > 0 && (
           <motion.div key="err" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="small" style={{ padding: "10px 12px", borderRadius: 12, lineHeight: 1.5, background: needsImage ? "rgba(255,159,10,.14)" : "rgba(255,69,58,.12)", color: needsImage ? "var(--text)" : "var(--danger)" }}>
+            className="small" style={{ padding: "10px 12px", borderRadius: 12, lineHeight: 1.5, background: needsImage ? "color-mix(in srgb, var(--warning) 14%, transparent)" : "color-mix(in srgb, var(--danger) 12%, transparent)", color: needsImage ? "var(--text)" : "var(--danger)" }}>
             {needsImage ? "🖼️ " : "⚠️ "}{errors.join(" ")}
           </motion.div>
         )}

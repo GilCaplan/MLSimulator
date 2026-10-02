@@ -11,6 +11,7 @@ import { ExplainedSentence, InfluenceLegend, type Tok } from "../train/textKit";
 import { useDebounced } from "./inputs";
 import { PredictionPanel } from "./PredictionPanel";
 import { SectionTitle, rise } from "./shared";
+import { textOn, tint } from "../charts/contrast";
 
 const SENTIMENT = /sentiment|review|positive|negative|mood|opinion/i;
 const SKIP = new Set(["the", "a", "an", "is", "was", "it", "this", "that", "and", "or", "of", "to", "in", "on", "for", "my", "i", "very", "not", "no", "never"]);
@@ -98,7 +99,7 @@ export function TextPlayground({ model }: { model: SavedModel }) {
                 style={{ width: "100%", minHeight: 118, resize: "vertical", padding: "14px 16px", fontSize: 17, lineHeight: 1.5, borderRadius: 16, fontFamily: "inherit" }} />
               {pred && !empty && (
                 <motion.span key={pred} initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={spring.pop}
-                  style={{ position: "absolute", right: 12, bottom: 12, padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: "#fff", background: classColor(pred, classes), boxShadow: `0 4px 14px ${classColor(pred, classes)}55`, pointerEvents: "none" }}>
+                  style={{ position: "absolute", right: 12, bottom: 12, padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: textOn(classColor(pred, classes)), background: classColor(pred, classes), boxShadow: `0 4px 14px ${tint(classColor(pred, classes), 33)}`, pointerEvents: "none" }}>
                   {pred}
                 </motion.span>
               )}

@@ -117,8 +117,8 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
       {base && baseScore !== null && real.length > 0 && !fcRandom && (
         <motion.div key={`${metric}-${beaten}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={spring.gentle}
           className="inset row" style={{ gap: 10, padding: "9px 12px", marginBottom: 12, alignItems: "flex-start",
-            background: beaten === real.length ? "rgba(48,209,88,.08)" : beaten === 0 ? "rgba(255,69,58,.08)" : "rgba(255,159,10,.08)",
-            borderColor: beaten === real.length ? "rgba(48,209,88,.3)" : beaten === 0 ? "rgba(255,69,58,.3)" : "rgba(255,159,10,.3)" }}>
+            background: beaten === real.length ? "color-mix(in srgb, var(--success) 8%, transparent)" : beaten === 0 ? "color-mix(in srgb, var(--danger) 8%, transparent)" : "color-mix(in srgb, var(--warning) 8%, transparent)",
+            borderColor: beaten === real.length ? "color-mix(in srgb, var(--success) 30%, transparent)" : beaten === 0 ? "color-mix(in srgb, var(--danger) 30%, transparent)" : "color-mix(in srgb, var(--warning) 30%, transparent)" }}>
           <span style={{ fontSize: 18 }}>{beaten === real.length ? "✅" : beaten === 0 ? "🚨" : "🎯"}</span>
           <span className="small" style={{ lineHeight: 1.5 }}>
             {fc ? (beaten === real.length
@@ -192,8 +192,8 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                 className="row"
                 style={{
                   gap: 12, padding: "10px 12px", borderRadius: 14, cursor: "pointer", textAlign: "left", width: "100%",
-                  border: `1px solid ${sel ? "var(--accent)" : below ? "rgba(255,69,58,.28)" : "var(--hairline)"}`,
-                  background: sel ? "var(--accent-soft)" : below ? "rgba(255,69,58,.05)" : top ? "var(--glass-strong)" : "var(--fill)",
+                  border: `1px solid ${sel ? "var(--accent)" : below ? "color-mix(in srgb, var(--danger) 28%, transparent)" : "var(--hairline)"}`,
+                  background: sel ? "var(--accent-soft)" : below ? "color-mix(in srgb, var(--danger) 5%, transparent)" : top ? "var(--glass-strong)" : "var(--fill)",
                   boxShadow: sel ? "0 0 0 3px var(--accent-soft)" : "none",
                 }}
               >
@@ -252,7 +252,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
       {Object.keys(result.failures || {}).length > 0 && (
         <div className="col" style={{ gap: 6, marginTop: 12 }}>
           {Object.entries(result.failures).map(([k, err]) => (
-            <div key={k} className="inset row" style={{ padding: "8px 12px", gap: 10, alignItems: "flex-start", borderColor: "rgba(255,69,58,.3)" }}>
+            <div key={k} className="inset row" style={{ padding: "8px 12px", gap: 10, alignItems: "flex-start", borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)" }}>
               <span>💥</span>
               <span className="small"><b>{failLabel(k)}</b> <span className="muted">failed: {err}</span></span>
             </div>

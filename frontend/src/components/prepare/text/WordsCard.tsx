@@ -78,7 +78,7 @@ export function NgramDemo({ ngram }: { ngram: 1 | 2 }) {
             <span className="tiny faint" style={{ width: 44 }}>words</span>
             {SENTENCE.map((w, i) => (
               <motion.span key={w} initial={{ opacity: 0, y: -14, scale: 0.6 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring.pop, delay: 0.7 + i * 0.1 }}
-                className="badge" style={{ height: 26, fontSize: 12.5, background: w === "not" || w === "good" ? "rgba(255,159,10,.18)" : "var(--glass-strong)", color: "var(--text)", border: "1px solid var(--hairline)" }}>
+                className="badge" style={{ height: 26, fontSize: 12.5, background: w === "not" || w === "good" ? "color-mix(in srgb, var(--warning) 18%, transparent)" : "var(--glass-strong)", color: "var(--text)", border: "1px solid var(--hairline)" }}>
                 {w}
               </motion.span>
             ))}
@@ -90,7 +90,7 @@ export function NgramDemo({ ngram }: { ngram: 1 | 2 }) {
                 const key = p === "not good";
                 return (
                   <motion.span key={p} initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: key ? [0.4, 1.12, 1] : 1 }} transition={{ ...spring.pop, delay: 1.4 + i * 0.14 }}
-                    className="badge" style={{ height: 26, fontSize: 12.5, background: key ? "var(--accent)" : "var(--accent-soft)", color: key ? "white" : "var(--accent)", fontWeight: 650 }}>
+                    className="badge" style={{ height: 26, fontSize: 12.5, background: key ? "var(--accent)" : "var(--accent-soft)", color: key ? "var(--accent-contrast)" : "var(--accent)", fontWeight: 650 }}>
                     {p}
                   </motion.span>
                 );
@@ -126,15 +126,15 @@ function VocabCurve({ maxFeatures, minDf }: { maxFeatures: number; minDf: number
           const kept = i <= cut && f >= minDf;
           const y = yOf(f);
           return (
-            <motion.rect key={i} x={PAD + i * bw + 0.5} width={bw - 1.2} rx={1.5}
-              animate={{ y, height: H - 18 - y, fill: kept ? "#0A84FF" : "rgba(142,142,147,.35)" }} transition={spring.gentle} />
+            <motion.rect key={i} x={PAD + i * bw + 0.5} width={bw - 1.2} rx={1.5} style={{ fill: kept ? "var(--accent)" : "var(--fill-2)", transition: "fill .25s" }}
+              animate={{ y, height: H - 18 - y }} transition={spring.gentle} />
           );
         })}
-        <motion.line y1={4} y2={H - 18} stroke="var(--accent-2, #BF5AF2)" strokeWidth={1.8} strokeDasharray="4 3"
+        <motion.line y1={4} y2={H - 18} stroke="var(--accent-2)" strokeWidth={1.8} strokeDasharray="4 3"
           animate={{ x1: PAD + (cut + 1) * bw, x2: PAD + (cut + 1) * bw }} transition={spring.gentle} />
         <motion.text y={12} fontSize={9.5} fontWeight={650} fill="var(--text-2)" textAnchor="end"
           animate={{ x: PAD + (cut + 1) * bw - 4 }} transition={spring.gentle}>keep {compactCount(maxFeatures)}</motion.text>
-        <motion.line x1={PAD} x2={W - PAD} stroke="#FF9F0A" strokeWidth={1.4} animate={{ y1: dfY, y2: dfY }} transition={spring.gentle} />
+        <motion.line x1={PAD} x2={W - PAD} stroke="var(--warning)" strokeWidth={1.4} animate={{ y1: dfY, y2: dfY }} transition={spring.gentle} />
         <text x={PAD} y={H - 4} fontSize={9.5} fill="var(--text-3)">common words</text>
         <text x={W - PAD} y={H - 4} fontSize={9.5} fill="var(--text-3)" textAnchor="end">rare words →</text>
       </svg>

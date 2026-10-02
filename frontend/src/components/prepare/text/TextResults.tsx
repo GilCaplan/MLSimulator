@@ -7,6 +7,7 @@ import { AnimatedNumber, Glass, InfoTip, Segmented } from "../../glass";
 import { tokenize } from "../../data/text/textData";
 import { ClassSplits } from "../image/ImageResults";
 import { SPLIT_COLORS } from "../SplitScaleCards";
+import { textOn } from "../../data/contrast";
 
 /** What the text pipeline produced: counts, vocabulary, class mix and tokenised example sentences. */
 export function TextResults({ report, maxLen, ngram, classTotals }: { report: PrepareReport; maxLen: number; ngram: 1 | 2; classTotals: Record<string, number> | null }) {
@@ -33,7 +34,7 @@ function Counters({ report }: { report: PrepareReport }) {
     { icon: "🧭", label: "validation texts", value: report.splits.val, color: SPLIT_COLORS.val, tip: "" },
     { icon: "🔒", label: "test texts", value: report.splits.test, color: SPLIT_COLORS.test, tip: "" },
     { icon: "🛍️", label: "bag-of-words columns", value: report.n_features, color: "var(--accent-2)", tip: "Words (and pairs) the classic models count — one column each." },
-    { icon: "🔢", label: "words networks know", value: report.vocab_size ?? 0, color: "#30D158", tip: "Every word seen in training gets a number (plus two specials: padding and 'unknown'). Neural text models learn a vector for each." },
+    { icon: "🔢", label: "words networks know", value: report.vocab_size ?? 0, color: "var(--success)", tip: "Every word seen in training gets a number (plus two specials: padding and 'unknown'). Neural text models learn a vector for each." },
   ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
@@ -77,7 +78,7 @@ function TokenizedExamples({ report, maxLen }: { report: PrepareReport; maxLen: 
             <div key={r} className="inset col" style={{ padding: "10px 12px", gap: 8 }}>
               <div className="row between" style={{ gap: 10 }}>
                 <span className="small muted" style={{ lineHeight: 1.45, minWidth: 0 }}>“{e.text}”</span>
-                <span className="badge" style={{ background: c, color: "white", flexShrink: 0 }}>{e.label}</span>
+                <span className="badge" style={{ background: c, color: textOn(c), flexShrink: 0 }}>{e.label}</span>
               </div>
               <div className="row wrap" style={{ gap: 4 }}>
                 {toks.map((w, i) => {

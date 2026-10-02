@@ -42,7 +42,7 @@ export function TruthPicker({ dataset, task, truth, onChange }: {
       <AnimatePresence mode="wait" initial={false}>
         {col ? (
           <motion.div key={col.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={spring.gentle}
-            className="row wrap" style={{ gap: 8, padding: "10px 12px", borderRadius: 12, background: many ? "rgba(255,159,10,.12)" : "var(--accent-soft)" }}>
+            className="row wrap" style={{ gap: 8, padding: "10px 12px", borderRadius: 12, background: many ? "color-mix(in srgb, var(--warning) 12%, transparent)" : "var(--accent-soft)" }}>
             <span className="badge" style={{ background: "var(--glass-strong)" }}>🔒 “{col.name}” is locked away from the models</span>
             {many ? (
               <span className="small" style={{ color: "var(--text-2)" }}>⚠️ It has {col.unique.toLocaleString()} different values — an answer key works best with a handful of categories.</span>

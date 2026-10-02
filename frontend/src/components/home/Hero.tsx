@@ -85,7 +85,7 @@ export function Hero({ projectCount }: { projectCount: number }) {
 
         <div style={{ position: "relative", minHeight: 280 }}>
           <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ ...spring.soft, delay: 0.2 }}
-            className="inset" style={{ padding: "16px 10px", borderRadius: 26, background: "linear-gradient(160deg, var(--accent-soft), rgba(191,90,242,.10))" }}>
+            className="inset" style={{ padding: "16px 10px", borderRadius: 26, background: "linear-gradient(160deg, var(--accent-soft), color-mix(in srgb, var(--accent-2) 10%, transparent))" }}>
             <NetworkDiagram layers={layers} height={250} training compact speed={0.8} />
           </motion.div>
           {FLOATERS.map((f) => (

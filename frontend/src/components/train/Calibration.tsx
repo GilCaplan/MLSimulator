@@ -50,7 +50,7 @@ export function Calibration({ cal, onCalibrate, calibrated }: { cal: Cal; onCali
       </div>
       {cal.ece > 0.05 && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.6 }}
-          className="row wrap" style={{ gap: 12, padding: "12px 14px", borderRadius: 16, background: "rgba(255,159,10,.10)", border: "1px solid rgba(255,159,10,.35)" }}>
+          className="row wrap" style={{ gap: 12, padding: "12px 14px", borderRadius: 16, background: "color-mix(in srgb, var(--warning) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
           <span style={{ fontSize: 22 }}>🩹</span>
           <span className="small grow" style={{ lineHeight: 1.55, minWidth: 220 }}>
             <b>These probabilities can't be taken at face value.</b>{" "}
@@ -98,8 +98,8 @@ export function ReliabilityDiagram({ cal, height = 290 }: { cal: Cal; height?: n
         <svg width={width} height={height} onMouseLeave={() => setHover(null)}>
           <defs>
             <pattern id="cal-gap" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="6" height="6" fill="rgba(255,69,58,.14)" />
-              <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(255,69,58,.45)" strokeWidth="2" />
+              <rect width="6" height="6" fill="color-mix(in srgb, var(--danger) 14%, transparent)" />
+              <line x1="0" y1="0" x2="0" y2="6" stroke="color-mix(in srgb, var(--danger) 45%, transparent)" strokeWidth="2" />
             </pattern>
           </defs>
           {ticks.map((t) => (
@@ -122,7 +122,7 @@ export function ReliabilityDiagram({ cal, height = 290 }: { cal: Cal; height?: n
                 <rect x={x0 - 2} y={m.t} width={w + 4} height={H + strip + 34} fill="transparent" />
                 <motion.rect x={x0} width={w} rx={4} fill="var(--accent)" fillOpacity={on ? Math.min(1, op + 0.2) : op}
                   initial={{ y: sy(0), height: 0 }} animate={{ y: sy(b.freq), height: Math.max(0, sy(0) - sy(b.freq)) }} transition={{ ...spring.gentle, delay: 0.05 * i }} />
-                <motion.rect x={x0} width={w} y={gapTop} height={gapH} fill="url(#cal-gap)" stroke="rgba(255,69,58,.55)" strokeWidth={1} rx={3}
+                <motion.rect x={x0} width={w} y={gapTop} height={gapH} fill="url(#cal-gap)" stroke="color-mix(in srgb, var(--danger) 55%, transparent)" strokeWidth={1} rx={3}
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 + 0.05 * i }} />
                 {/* counts strip */}
                 <motion.rect x={x0} width={w} rx={2} fill="var(--text-3)" fillOpacity={on ? 0.7 : 0.4}
@@ -140,7 +140,7 @@ export function ReliabilityDiagram({ cal, height = 290 }: { cal: Cal; height?: n
           <motion.path d={cal.bins.map((b, i) => `${i ? "L" : "M"}${sx(b.p).toFixed(1)},${sy(b.freq).toFixed(1)}`).join("")} fill="none" stroke="var(--accent-2)" strokeWidth={2.2}
             strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1, delay: 0.3 }} />
           {cal.bins.map((b, i) => (
-            <motion.circle key={`d${i}`} cx={sx(b.p)} cy={sy(b.freq)} r={hover === b ? 5.5 : 3.8} fill="var(--accent-2)" stroke="white" strokeWidth={1.5}
+            <motion.circle key={`d${i}`} cx={sx(b.p)} cy={sy(b.freq)} r={hover === b ? 5.5 : 3.8} fill="var(--accent-2)" stroke="var(--bg)" strokeWidth={1.5}
               initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ ...spring.pop, delay: 0.4 + 0.05 * i }} />
           ))}
         </svg>

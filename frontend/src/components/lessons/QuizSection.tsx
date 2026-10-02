@@ -102,11 +102,11 @@ function Question({ q, answer, onAnswer, onNext, last }: { q: Lesson["quiz"][num
               whileHover={answered ? undefined : { x: 4 }}
               className="row"
               style={{ gap: 12, padding: "12px 14px", borderRadius: 16, cursor: answered ? "default" : "pointer", textAlign: "left",
-                border: `1px solid ${state === "correct" ? "rgba(48,209,88,.6)" : state === "wrong" ? "rgba(255,69,58,.55)" : "var(--glass-border)"}`,
-                background: state === "correct" ? "rgba(48,209,88,.14)" : state === "wrong" ? "rgba(255,69,58,.12)" : "var(--glass-strong)",
-                boxShadow: "0 1px 0 rgba(255,255,255,.5) inset, 0 2px 8px rgba(0,0,0,.05)" }}>
+                border: `1px solid ${state === "correct" ? "color-mix(in srgb, var(--success) 60%, transparent)" : state === "wrong" ? "color-mix(in srgb, var(--danger) 55%, transparent)" : "var(--glass-border)"}`,
+                background: state === "correct" ? "color-mix(in srgb, var(--success) 14%, transparent)" : state === "wrong" ? "color-mix(in srgb, var(--danger) 12%, transparent)" : "var(--glass-strong)",
+                boxShadow: "0 2px 8px rgba(0,0,0,.05)" }}>
               <span style={{ width: 28, height: 28, borderRadius: 9, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13,
-                background: state === "correct" ? "var(--success)" : state === "wrong" ? "var(--danger)" : "var(--fill)", color: state === "correct" || state === "wrong" ? "white" : "var(--text-2)" }}>
+                background: state === "correct" ? "var(--success)" : state === "wrong" ? "var(--danger)" : "var(--fill)", color: state === "correct" || state === "wrong" ? "var(--on-accent)" : "var(--text-2)" }}>
                 {state === "correct" ? "✓" : state === "wrong" ? "✕" : LETTERS[i]}
               </span>
               <span style={{ fontSize: 14.5, lineHeight: 1.45 }}><Rich text={o} /></span>
@@ -117,7 +117,7 @@ function Question({ q, answer, onAnswer, onNext, last }: { q: Lesson["quiz"][num
       <AnimatePresence>
         {answered && (
           <motion.div initial={{ opacity: 0, height: 0, y: -6 }} animate={{ opacity: 1, height: "auto", y: 0 }} transition={spring.gentle} style={{ overflow: "hidden" }}>
-            <div className="inset row" style={{ gap: 12, padding: "12px 14px", alignItems: "flex-start", borderColor: right ? "rgba(48,209,88,.4)" : "rgba(255,159,10,.4)" }}>
+            <div className="inset row" style={{ gap: 12, padding: "12px 14px", alignItems: "flex-start", borderColor: right ? "color-mix(in srgb, var(--success) 40%, transparent)" : "color-mix(in srgb, var(--warning) 40%, transparent)" }}>
               <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={spring.pop} style={{ fontSize: 22 }}>{right ? "🎯" : "💡"}</motion.span>
               <div className="col grow" style={{ gap: 3 }}>
                 <b>{right ? "Correct!" : "Not quite."}</b>

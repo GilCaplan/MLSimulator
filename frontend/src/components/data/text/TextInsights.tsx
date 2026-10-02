@@ -7,6 +7,7 @@ import { BarList, Histogram } from "../../charts";
 import { Glass, Spinner } from "../../glass";
 import { SectionTitle } from "../ui";
 import { lengthStats, tokenize } from "./textData";
+import { textOn } from "../contrast";
 
 /** Class colours follow the alphabetical order the trained models use (LabelEncoder), so they match later steps. */
 export const textClassColor = (label: string, labels: string[]) => classColor(label, [...labels].sort());
@@ -75,7 +76,7 @@ export function TopWordsCard({ profile }: { profile: DatasetProfile }) {
           return (
             <div key={g.class} className="inset col" style={{ padding: 12, gap: 10 }}>
               <span className="row" style={{ gap: 8 }}>
-                <span className="badge" style={{ background: c, color: "white" }}>{g.class}</span>
+                <span className="badge" style={{ background: c, color: textOn(c) }}>{g.class}</span>
                 <span className="tiny faint">{g.words.length} clues</span>
               </span>
               <div className="row wrap" style={{ gap: 6, alignItems: "center" }}>

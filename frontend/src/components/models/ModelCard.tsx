@@ -75,7 +75,7 @@ export function CheckDot({ checked, size = 24 }: { checked: boolean; size?: numb
       style={{ width: size, height: size, borderRadius: size / 2, border: "1.5px solid", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
     >
       <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 14 14">
-        <motion.path d="M2.5 7.5 L5.8 10.5 L11.5 3.8" fill="none" stroke="white" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+        <motion.path d="M2.5 7.5 L5.8 10.5 L11.5 3.8" fill="none" stroke="var(--accent-contrast)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
           initial={false} animate={{ pathLength: checked ? 1 : 0, opacity: checked ? 1 : 0 }} transition={{ type: "spring", stiffness: 400, damping: 28 }} />
       </svg>
     </motion.span>

@@ -33,20 +33,24 @@ export function Rich({ text }: { text: string }) {
 export const STAGE_TINT: Record<string, { color: string; bg: string }> = {
   Cleaning: { color: "#0a84ff", bg: "rgba(10,132,255,.14)" },
   Features: { color: "#bf5af2", bg: "rgba(191,90,242,.15)" },
-  Preparation: { color: "#ff9f0a", bg: "rgba(255,159,10,.16)" },
+  Preparation: { color: "#ff9f0a", bg: "color-mix(in srgb, var(--warning) 16%, transparent)" },
   Modeling: { color: "#30b0c7", bg: "rgba(48,176,199,.16)" },
   Generalization: { color: "#ff375f", bg: "rgba(255,55,95,.14)" },
-  "Responsible ML": { color: "#30d158", bg: "rgba(48,209,88,.15)" },
+  "Responsible ML": { color: "#30d158", bg: "color-mix(in srgb, var(--success) 15%, transparent)" },
   Recommend: { color: "#5e5ce6", bg: "rgba(94,92,230,.15)" },
-  Evaluation: { color: "#ff9f0a", bg: "rgba(255,159,10,.14)" },
+  Evaluation: { color: "#ff9f0a", bg: "color-mix(in srgb, var(--warning) 14%, transparent)" },
   Forecast: { color: "#64d2ff", bg: "rgba(100,210,255,.16)" },
 };
 export const stageTint = (stage: string) => STAGE_TINT[stage] ?? { color: "var(--accent)", bg: "var(--accent-soft)" };
+/** A series/stage colour nudged toward the theme's text colour, so it stays readable as text on light and dark surfaces. */
+export const inkOf = (c: string, pct = 72) => `color-mix(in srgb, ${c} ${pct}%, var(--text))`;
+/** A translucent tint of any colour (hex or CSS variable). */
+export const tintOf = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 
 export function StageChip({ stage, small }: { stage: string; small?: boolean }) {
   const t = stageTint(stage);
   return (
-    <span className="badge" style={{ background: t.bg, color: t.color, ...(small ? { height: 20, fontSize: 10.5 } : {}) }}>
+    <span className="badge" style={{ background: t.bg, color: inkOf(t.color), ...(small ? { height: 20, fontSize: 10.5 } : {}) }}>
       <span style={{ width: 6, height: 6, borderRadius: 3, background: t.color }} />
       {stage}
     </span>

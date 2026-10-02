@@ -4,6 +4,7 @@ import { classColor, colorAt, ramp, withAlpha } from "../../lib/colors";
 import type { ModelResult, Surface } from "../../lib/types";
 import { Segmented } from "../glass";
 import { LineChart } from "./LineChart";
+import { textOn } from "./contrast";
 import { extent, linear, niceTicks, tickFmt, useSize } from "./util";
 
 /** Confusion matrix with colour intensity, staggered reveal and count/percentage toggle. */
@@ -29,12 +30,13 @@ export function ConfusionMatrix({ labels, matrix }: { labels: string[]; matrix: 
               {row.map((v, j) => {
                 const frac = mode === "pct" ? v / rowSums[i] : v / max;
                 const diag = i === j;
-                const base = diag ? "#30D158" : "#FF453A";
+                const base = diag ? "var(--success)" : "var(--danger)";
+                const alpha = 0.12 + 0.78 * frac;
                 return (
                   <motion.div key={`${i}-${j}`} initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: (i * k + j) * 0.012, type: "spring", stiffness: 300, damping: 22 }}
                     title={`true ${labels[i]} → predicted ${labels[j]}: ${v}`}
                     style={{ height: cell, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: k > 8 ? 10 : 12.5, fontWeight: 650,
-                      background: v === 0 ? "var(--fill)" : withAlpha(base, 0.12 + 0.78 * frac), color: frac > 0.55 ? "white" : "var(--text)" }}>
+                      background: v === 0 ? "var(--fill)" : `color-mix(in srgb, ${base} ${Math.round(alpha * 100)}%, transparent)`, color: frac > 0.55 ? "#fff" : "var(--text)" }}>
                     {mode === "pct" ? `${Math.round((v / rowSums[i]) * 100)}%` : v}
                   </motion.div>
                 );
@@ -138,7 +140,7 @@ export function DecisionSurface({ surface, classes, height = 300 }: { surface: S
     return (
       <div style={{ position: "relative" }}>
         <LineChart height={height} xLabel="Feature" yLabel="Target" showLegend={false}
-          series={[{ name: "Model", color: "#BF5AF2", points: surface.xs!.map((x, i) => ({ x, y: surface.pred![i] })), width: 3 }]} />
+          series={[{ name: "Model", color: colorAt(4), points: surface.xs!.map((x, i) => ({ x, y: surface.pred![i] })), width: 3 }]} />
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
           <CurvePoints pts={pts} height={height} xs={surface.xs!} preds={surface.pred!} />
         </div>
@@ -156,7 +158,7 @@ export function DecisionSurface({ surface, classes, height = 300 }: { surface: S
         <svg width={width} height={height} style={{ position: "absolute", inset: 0 }}>
           {surface.points.map((p, i) => (
             <motion.circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={3} initial={{ r: 0 }} animate={{ r: 3 }} transition={{ delay: 0.3 + (i % 200) * 0.002 }}
-              fill={isCls ? classColor(p.label as string, classes) : ramp((Number(p.label) - vlo) / (vhi - vlo || 1))} stroke="white" strokeWidth={0.8} />
+              fill={isCls ? classColor(p.label as string, classes) : ramp((Number(p.label) - vlo) / (vhi - vlo || 1))} stroke="var(--bg)" strokeOpacity={0.85} strokeWidth={0.8} />
           ))}
         </svg>
       )}
@@ -180,7 +182,7 @@ function CurvePoints({ pts, height, xs, preds }: { pts: { x: number; y: number }
   const sy = linear(dy[0], dy[1], height - m.b, m.t);
   return (
     <div ref={ref} style={{ width: "100%", height }}>
-      {width > 0 && <svg width={width} height={height}>{pts.map((p, i) => <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={2.6} fill="#0A84FF" opacity={0.5} />)}</svg>}
+      {width > 0 && <svg width={width} height={height}>{pts.map((p, i) => <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={2.6} fill={colorAt(0)} opacity={0.5} />)}</svg>}
     </div>
   );
 }
@@ -199,7 +201,7 @@ export function Heatmap({ columns, matrix }: { columns: string[]; matrix: number
             <span className="tiny muted truncate" style={{ alignSelf: "center", textAlign: "right", paddingRight: 6 }} title={columns[i]}>{columns[i]}</span>
             {row.map((v, j) => (
               <motion.div key={`${i}-${j}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: (i + j) * 0.015 }} title={`${columns[i]} × ${columns[j]}: ${v}`}
-                style={{ height: cell, borderRadius: 5, background: withAlpha(v >= 0 ? "#0A84FF" : "#FF375F", Math.abs(v) * 0.85 + 0.05), fontSize: 9.5, display: "flex", alignItems: "center", justifyContent: "center", color: Math.abs(v) > 0.6 ? "white" : "var(--text-2)" }}>
+                style={{ height: cell, borderRadius: 5, background: withAlpha(v >= 0 ? "#0A84FF" : "#FF375F", Math.abs(v) * 0.85 + 0.05), fontSize: 9.5, display: "flex", alignItems: "center", justifyContent: "center", color: Math.abs(v) > 0.6 ? textOn(v >= 0 ? "#0A84FF" : "#FF375F") : "var(--text-2)" }}>
                 {cell > 30 ? v.toFixed(1) : ""}
               </motion.div>
             ))}

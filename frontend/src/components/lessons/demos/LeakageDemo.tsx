@@ -91,16 +91,16 @@ export function LeakageDemo({ onDone }: DemoProps) {
               <div key={s.label} style={{ position: "absolute", left: `${posOf(i) * 100}%`, top: 0, transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", width: 96, pointerEvents: "none" }}>
                 <span style={{ fontSize: 20, filter: known ? "none" : "grayscale(1)", opacity: known ? 1 : 0.45, transition: "all .3s" }}>{s.icon}</span>
                 <span className="tiny" style={{ fontWeight: 650, color: known ? "var(--text)" : "var(--text-3)", whiteSpace: "nowrap" }}>{s.label}</span>
-                <span style={{ marginTop: 6, width: 14, height: 14, borderRadius: 7, background: known ? "var(--accent)" : "var(--glass-strong)", border: `2px solid ${known ? "white" : "var(--fill-2)"}`, boxShadow: known ? "0 0 0 4px var(--accent-soft)" : "none", transition: "all .3s" }} />
+                <span style={{ marginTop: 6, width: 14, height: 14, borderRadius: 7, background: known ? "var(--accent)" : "var(--glass-strong)", border: `2px solid ${known ? "var(--bg)" : "var(--fill-2)"}`, boxShadow: known ? "0 0 0 4px var(--accent-soft)" : "none", transition: "all .3s" }} />
                 <span className="tiny faint" style={{ marginTop: 4, whiteSpace: "nowrap", fontSize: 10 }}>{s.when}</span>
               </div>
             );
           })}
           {/* the prediction-time marker: a knob on the rail + a label underneath */}
           <div style={{ position: "absolute", top: 46, left: `${pos * 100}%`, transform: "translateX(-50%)", transition: dragging ? "none" : "left .45s var(--ease)", pointerEvents: "none", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <span style={{ width: 26, height: 26, borderRadius: 13, background: C.purple, border: "3px solid white", boxShadow: `0 0 0 6px ${C.purple}33, 0 4px 14px ${C.purple}88`, transform: dragging ? "scale(1.15)" : "scale(1)", transition: "transform .2s" }} />
+            <span style={{ width: 26, height: 26, borderRadius: 13, background: C.purple, border: "3px solid var(--bg)", boxShadow: `0 0 0 6px ${C.purple}33, 0 4px 14px ${C.purple}88`, transform: dragging ? "scale(1.15)" : "scale(1)", transition: "transform .2s" }} />
             <span style={{ width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderBottom: `6px solid ${C.purple}`, marginTop: 26 }} />
-            <span className="tiny" style={{ background: C.purple, color: "white", fontWeight: 700, padding: "3px 9px", borderRadius: 8, whiteSpace: "nowrap", boxShadow: `0 4px 12px ${C.purple}55`, transform: `translateX(${(0.5 - pos) * 60}%)` }}>🔮 predicting at {STAGES[stage].label.toLowerCase()}</span>
+            <span className="tiny" style={{ background: C.purple, color: "var(--on-accent)", fontWeight: 700, padding: "3px 9px", borderRadius: 8, whiteSpace: "nowrap", boxShadow: `0 4px 12px ${C.purple}55`, transform: `translateX(${(0.5 - pos) * 60}%)` }}>🔮 predicting at {STAGES[stage].label.toLowerCase()}</span>
           </div>
         </div>
       </div>

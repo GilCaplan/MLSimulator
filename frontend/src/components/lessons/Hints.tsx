@@ -12,7 +12,7 @@ export function Hints({ lessonId, hints, compact }: { lessonId: string; hints: s
         {hints.slice(0, shown).map((h, i) => (
           <motion.div key={i} layout initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring.gentle}
             className="inset row" style={{ alignItems: "flex-start", gap: 10, padding: compact ? "8px 10px" : "10px 12px" }}>
-            <span style={{ width: 22, height: 22, borderRadius: 11, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,159,10,.18)", color: "#c77700", fontSize: 11, fontWeight: 700 }}>{i + 1}</span>
+            <span style={{ width: 22, height: 22, borderRadius: 11, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "color-mix(in srgb, var(--warning) 18%, transparent)", color: "color-mix(in srgb, var(--warning) 70%, var(--text))", fontSize: 11, fontWeight: 700 }}>{i + 1}</span>
             <span className={compact ? "small" : ""} style={{ lineHeight: 1.5, color: "var(--text-2)" }}><Rich text={h} /></span>
           </motion.div>
         ))}

@@ -231,7 +231,7 @@ function FitPlot({ train, test, curve, height }: { train: Pt[]; test: Pt[]; curv
             <motion.path initial={false} animate={{ d: path(curve) }} transition={{ type: "spring", stiffness: 140, damping: 22 }}
               fill="none" stroke={C.purple} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 2px 6px ${C.purple}55)` }} />
           </g>
-          {train.map((p, i) => <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={4.6} fill={C.neg} stroke="white" strokeWidth={1.2} />)}
+          {train.map((p, i) => <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={4.6} fill={C.neg} stroke="var(--bg)" strokeWidth={1.2} />)}
         </svg>
       )}
     </div>
@@ -314,8 +314,8 @@ function AlphaCurve({ pts, alpha, zones, train, test }: {
           <text x={(m.l + width - m.r) / 2} y={height - 3} textAnchor="middle" fontSize={10.5} fill="var(--text-2)">← wiggly · penalty (alpha) · flat →</text>
           <text transform={`translate(10 ${(m.t + height - m.b) / 2}) rotate(-90)`} textAnchor="middle" fontSize={10} fill="var(--text-2)">error (log)</text>
           <motion.line initial={false} animate={{ x1: sx(alpha), x2: sx(alpha) }} transition={spring.snappy} y1={m.t} y2={height - m.b} stroke="var(--text-3)" strokeDasharray="3 3" />
-          <motion.circle initial={false} animate={{ cx: sx(alpha), cy: sy(train) }} transition={spring.snappy} r={4.5} fill={C.neg} stroke="white" strokeWidth={1.5} />
-          <motion.circle initial={false} animate={{ cx: sx(alpha), cy: sy(test) }} transition={spring.snappy} r={5.5} fill={C.pos} stroke="white" strokeWidth={1.5} />
+          <motion.circle initial={false} animate={{ cx: sx(alpha), cy: sy(train) }} transition={spring.snappy} r={4.5} fill={C.neg} stroke="var(--bg)" strokeWidth={1.5} />
+          <motion.circle initial={false} animate={{ cx: sx(alpha), cy: sy(test) }} transition={spring.snappy} r={5.5} fill={C.pos} stroke="var(--bg)" strokeWidth={1.5} />
         </svg>
       )}
     </div>

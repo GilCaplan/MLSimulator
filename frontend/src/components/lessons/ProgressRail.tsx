@@ -35,9 +35,9 @@ export function ProgressRail({ active, flags, onJump, title, emoji, compact }: {
             return (
               <button key={s.id} onClick={() => onJump(s.id)}
                 style={{ position: "relative", height: 32, padding: "0 12px", border: "none", background: "transparent", cursor: "pointer", borderRadius: 999, fontSize: 13, fontWeight: on ? 650 : 520, color: on ? "var(--text)" : "var(--text-2)", display: "flex", alignItems: "center", gap: 6 }}>
-                {on && <motion.span layoutId="lesson-rail-pill" transition={spring.snappy} style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--accent-soft)", border: "1px solid rgba(10,132,255,.35)" }} />}
+                {on && <motion.span layoutId="lesson-rail-pill" transition={spring.snappy} style={{ position: "absolute", inset: 0, borderRadius: 999, background: "var(--accent-soft)", border: "1px solid color-mix(in srgb, var(--accent) 35%, transparent)" }} />}
                 <span style={{ position: "relative", width: 18, height: 18, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, fontWeight: 750,
-                  background: flags[s.id] ? "var(--success)" : on ? "var(--accent)" : "var(--fill-2)", color: flags[s.id] || on ? "white" : "var(--text-2)", transition: "background .25s" }}>
+                  background: flags[s.id] ? "var(--success)" : on ? "var(--accent)" : "var(--fill-2)", color: flags[s.id] ? "var(--on-accent)" : on ? "var(--accent-contrast)" : "var(--text-2)", transition: "background .25s" }}>
                   {flags[s.id] ? "✓" : i + 1}
                 </span>
                 <span style={{ position: "relative" }}>{s.label}</span>

@@ -67,8 +67,8 @@ export function LongTailCard({ profile }: { profile: DatasetProfile }) {
         sub={<>Just <b className="num">{fmtInt(head)}</b> of {fmtInt(sorted.length)} items (<b className="num">{Math.round((head / sorted.length) * 100)}%</b>) collect half of all ratings.</>} />
       <LongTailChart values={sorted} height={200} />
       <div className="row wrap" style={{ gap: 10, marginTop: 12 }}>
-        <span className="badge" style={{ background: "rgba(255,159,10,.15)", color: "#E08A00" }}>🍿 {fmtInt(head)} blockbusters</span>
-        <span className="badge" style={{ background: "rgba(94,92,230,.14)", color: "#5E5CE6" }}>🔭 {fmtInt(sorted.length - head)} niche items</span>
+        <span className="badge" style={{ background: "color-mix(in srgb, var(--warning) 15%, transparent)", color: "color-mix(in srgb, var(--warning) 70%, var(--text))" }}>🍿 {fmtInt(head)} blockbusters</span>
+        <span className="badge" style={{ background: "color-mix(in srgb, #5E5CE6 14%, transparent)", color: "color-mix(in srgb, #5E5CE6 72%, var(--text))" }}>🔭 {fmtInt(sorted.length - head)} niche items</span>
         {rare > 0 && <span className="badge warning">{fmtInt(rare)} items with fewer than 5 ratings</span>}
       </div>
     </Glass>

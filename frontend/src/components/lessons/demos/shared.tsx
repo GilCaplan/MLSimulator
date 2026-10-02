@@ -170,7 +170,7 @@ export function MiniConfusion({ tp, fn, fp, tn, posLabel, negLabel }: { tp: numb
   const max = Math.max(1, tp, fn, fp, tn);
   const cell = (v: number, good: boolean, title: string) => (
     <div title={title} style={{ height: 46, borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      background: v === 0 ? "var(--fill)" : good ? `rgba(48, 209, 88, ${0.14 + 0.5 * (v / max)})` : `rgba(255, 69, 58, ${0.14 + 0.5 * (v / max)})`, transition: "background .4s" }}>
+      background: v === 0 ? "var(--fill)" : `color-mix(in srgb, var(${good ? "--success" : "--danger"}) ${Math.round((0.14 + 0.5 * (v / max)) * 100)}%, transparent)`, transition: "background .4s" }}>
       <span className="num" style={{ fontWeight: 700, fontSize: 16 }}><AnimatedNumber value={v} /></span>
       <span className="tiny muted" style={{ fontSize: 9.5, marginTop: -2 }}>{title}</span>
     </div>

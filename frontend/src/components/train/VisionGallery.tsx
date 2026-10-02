@@ -71,7 +71,7 @@ function Tile({ it, k, wrong, datasetId, classes, cls, scale, onOpen }: {
   it: Item; k: number; wrong: boolean; datasetId: string; classes?: string[] | null; cls: boolean; scale: number; onOpen: () => void;
 }) {
   const predColor = cls ? classColor(String(it.pred), classes) : errColor(it.error ?? 0, scale);
-  const ring = wrong ? "rgba(255,69,58,.55)" : "rgba(48,209,88,.5)";
+  const ring = wrong ? "color-mix(in srgb, var(--danger) 55%, transparent)" : "color-mix(in srgb, var(--success) 50%, transparent)";
   return (
     <motion.button
       initial={{ opacity: 0, y: 12, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }}

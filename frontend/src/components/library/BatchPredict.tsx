@@ -119,7 +119,7 @@ export function BatchPredict({ model }: { model: SavedModel }) {
                   ) : null}
                 </div>
                 {res.metrics && (
-                  <div className="inset" style={{ padding: 16, background: "linear-gradient(135deg, rgba(48,209,88,0.10), rgba(10,132,255,0.08))" }}>
+                  <div className="inset" style={{ padding: 16, background: "linear-gradient(135deg, color-mix(in srgb, var(--success) 10%, transparent), color-mix(in srgb, var(--accent) 8%, transparent))" }}>
                     <div className="row" style={{ gap: 8, marginBottom: 4 }}>
                       <motion.span initial={{ scale: 0, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={{ ...spring.pop, delay: 0.3 }} style={{ fontSize: 20 }}>🎯</motion.span>
                       <h4>Your file had the true answers!</h4>

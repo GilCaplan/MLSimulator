@@ -60,7 +60,7 @@ export function ProgressOverRuns({ project, baselineModel, baselineLabel = "🎯
       <AnimatePresence>
         {improved && (
           <motion.div initial={{ opacity: 0, scale: 0.9, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 18 }}
-            className="row" style={{ gap: 14, padding: "12px 16px", borderRadius: 16, background: "linear-gradient(135deg, rgba(48,209,88,.16), rgba(10,132,255,.12))", border: "1px solid rgba(48,209,88,.35)" }}>
+            className="row" style={{ gap: 14, padding: "12px 16px", borderRadius: 16, background: "linear-gradient(135deg, color-mix(in srgb, var(--success) 16%, transparent), color-mix(in srgb, var(--accent) 12%, transparent))", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
             <span style={{ position: "relative", fontSize: 26, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 34 }}>
               <span style={{ position: "absolute", left: "50%", top: "50%" }}><Burst /></span>
               <motion.span animate={{ rotate: [0, -14, 14, 0], scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.6, repeatDelay: 2 }}>🎉</motion.span>

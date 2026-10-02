@@ -38,7 +38,7 @@ export function TrainResults({ result, onOptions }: { result: RunResult; onOptio
       <AnimatePresence>
         {dirty && (
           <motion.div initial={{ opacity: 0, height: 0, y: -10 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0 }} transition={spring.gentle}>
-            <Glass variant="strong" style={{ padding: "12px 16px", borderColor: "rgba(255,159,10,.5)" }}>
+            <Glass variant="strong" style={{ padding: "12px 16px", borderColor: "color-mix(in srgb, var(--warning) 50%, transparent)" }}>
               <div className="row between wrap" style={{ gap: 12 }}>
                 <span className="row" style={{ gap: 10 }}>
                   <motion.span animate={{ rotate: [0, 15, -10, 0] }} transition={{ repeat: Infinity, duration: 2.2, repeatDelay: 1 }} style={{ fontSize: 20 }}>🔁</motion.span>

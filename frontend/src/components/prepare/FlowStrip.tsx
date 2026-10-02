@@ -126,7 +126,7 @@ export function FlowStripView({ items, running, onPick, header }: {
               animate={{ opacity: 1, left: ["-12%", "100%"] }}
               exit={{ opacity: 0 }}
               transition={{ left: { duration: 1.6, repeat: Infinity, ease: "easeInOut" }, opacity: { duration: 0.3 } }}
-              style={{ position: "absolute", top: "50%", width: "12%", height: 46, marginTop: -23, pointerEvents: "none", borderRadius: 30, background: "radial-gradient(ellipse at center, rgba(10,132,255,.55), rgba(191,90,242,.25) 45%, transparent 70%)", filter: "blur(6px)", mixBlendMode: "screen" }}
+              style={{ position: "absolute", top: "50%", width: "12%", height: 46, marginTop: -23, pointerEvents: "none", borderRadius: 30, background: "radial-gradient(ellipse at center, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--accent-2) 25%, transparent) 45%, transparent 70%)", filter: "blur(6px)", mixBlendMode: "screen" }}
             />
           )}
         </AnimatePresence>

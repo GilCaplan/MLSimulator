@@ -156,7 +156,7 @@ function PortChip({ port, state, selected, onPick }: { port: number; state: "cur
   const variants = { hidden: { opacity: 0, scale: 0.7 }, show: { opacity: 1, scale: 1, transition: spring.pop } };
   if (state === "current") {
     return (
-      <motion.div variants={variants} style={{ ...base, background: "var(--accent)", color: "white", borderColor: "transparent", boxShadow: "0 4px 14px rgba(10,132,255,0.35)" }} title="ML Playground is running here">
+      <motion.div variants={variants} style={{ ...base, background: "var(--accent)", color: "var(--accent-contrast)", borderColor: "transparent", boxShadow: "0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent)" }} title="ML Playground is running here">
         ★ {port}
       </motion.div>
     );
@@ -176,7 +176,7 @@ function PortChip({ port, state, selected, onPick }: { port: number; state: "cur
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.94 }}
       onClick={onPick}
-      style={{ ...base, cursor: "pointer", background: selected ? "rgba(48,209,88,0.18)" : "var(--glass-strong)", borderColor: selected ? "var(--success)" : "var(--hairline)", boxShadow: selected ? "0 0 0 3px rgba(48,209,88,0.25)" : undefined }}
+      style={{ ...base, cursor: "pointer", background: selected ? "color-mix(in srgb, var(--success) 18%, transparent)" : "var(--glass-strong)", borderColor: selected ? "var(--success)" : "var(--hairline)", boxShadow: selected ? "0 0 0 3px color-mix(in srgb, var(--success) 25%, transparent)" : undefined }}
     >
       {selected && <motion.span layoutId="port-check" transition={spring.snappy} style={{ color: "var(--success)" }}>✓</motion.span>}
       {port}
@@ -221,7 +221,7 @@ function MoveModal({ phase, onClose, onRetry }: { phase: Phase | null; onClose: 
           </div>
           <AnimatePresence>
             {failed && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="inset" style={{ padding: 14, borderColor: "rgba(255,69,58,0.35)", background: "rgba(255,69,58,0.08)" }}>
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="inset" style={{ padding: 14, borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)", background: "color-mix(in srgb, var(--danger) 8%, transparent)" }}>
                 <span className="small" style={{ lineHeight: 1.5 }}>⚠️ {phase.error}</span>
               </motion.div>
             )}

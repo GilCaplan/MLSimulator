@@ -173,7 +173,7 @@ function AptChart({ apts, q, nb, radius, scaled, sR, sD, rentExt, onPick }: {
               <g key={a.id} className="mlp-apt" style={{ transform: `translate(${sx(a.dist)}px, ${sy(a.rooms + a.jitter * 0.3)}px)`, cursor: "pointer" }} onClick={() => onPick(a.id)}>
                 <circle r={12} fill="transparent" />
                 {(isQ || isN) && <circle r={isQ ? 10 : 8} fill="none" stroke={isQ ? "var(--text)" : C.purple} strokeWidth={isQ ? 2.4 : 1.8} />}
-                <circle r={isQ ? 6.5 : 5} fill={c} stroke="white" strokeWidth={1} />
+                <circle r={isQ ? 6.5 : 5} fill={c} stroke="var(--bg)" strokeWidth={1} />
                 <title>{`${a.rooms} rooms · ${(a.dist / 1000).toFixed(1)} km · ${money(a.rent)}/month`}</title>
               </g>
             );

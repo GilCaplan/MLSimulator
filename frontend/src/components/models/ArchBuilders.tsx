@@ -125,7 +125,7 @@ function KnnGraph({ k }: { k: number }) {
         })}
       </AnimatePresence>
       {pts.map((p, i) => (
-        <motion.circle key={i} cx={p.x} cy={p.y} r={3.6} fill="#30D158" stroke="white" strokeWidth={1}
+        <motion.circle key={i} cx={p.x} cy={p.y} r={3.6} fill="#30D158" stroke="var(--bg)" strokeWidth={1}
           animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.15 }} style={{ originX: `${p.x}px`, originY: `${p.y}px` }} />
       ))}
     </svg>

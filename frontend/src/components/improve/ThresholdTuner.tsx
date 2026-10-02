@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { spring } from "../../design/motion";
-import { withAlpha } from "../../lib/colors";
+import { colorAt } from "../../lib/colors";
 import { METRIC_HELP } from "../../lib/format";
 import { toast, useProject } from "../../lib/store";
 import type { RunResult } from "../../lib/types";
@@ -36,10 +36,10 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
   const neg = result.classes?.[0] ?? "no";
   const total = row.tp + row.fp + row.fn + row.tn || 1;
   const readouts = [
-    { k: "precision", label: "Precision", v: row.precision, color: "#0A84FF" },
-    { k: "recall", label: "Recall", v: row.recall, color: "#FF375F" },
-    { k: "f1", label: "F1", v: row.f1, color: "#BF5AF2" },
-    { k: "accuracy", label: "Accuracy", v: row.accuracy, color: "#30D158" },
+    { k: "precision", label: "Precision", v: row.precision, color: colorAt(0) },
+    { k: "recall", label: "Recall", v: row.recall, color: colorAt(1) },
+    { k: "f1", label: "F1", v: row.f1, color: colorAt(4) },
+    { k: "accuracy", label: "Accuracy", v: row.accuracy, color: "var(--success)" },
   ];
   const cells = [
     { label: "Caught", sub: `real ${pos}, flagged`, v: row.tp, good: true },
@@ -80,7 +80,7 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
         {readouts.map((r) => (
           <div key={r.k} className="inset col" style={{ padding: 12, gap: 6 }}>
             <span className="row small muted" style={{ gap: 5 }}>{r.label}<InfoTip text={METRIC_HELP[r.k]} /></span>
-            <b style={{ fontSize: 22, color: r.color }}><AnimatedNumber value={r.v * 100} format={(v) => `${v.toFixed(1)}%`} duration={0.4} /></b>
+            <b style={{ fontSize: 22, color: `color-mix(in srgb, ${r.color} 72%, var(--text))` }}><AnimatedNumber value={r.v * 100} format={(v) => `${v.toFixed(1)}%`} duration={0.4} /></b>
             <div style={{ height: 5, borderRadius: 3, background: "var(--fill-2)", overflow: "hidden" }}>
               <motion.div style={{ height: "100%", background: r.color, borderRadius: 3 }} animate={{ width: `${r.v * 100}%` }} transition={spring.snappy} />
             </div>
@@ -96,11 +96,11 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
           </div>
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 6 }}>
             {cells.map((c) => {
-              const base = c.good ? "#30D158" : "#FF453A";
+              const base = c.good ? "var(--success)" : "var(--danger)";
               const frac = c.v / total;
               return (
-                <motion.div key={c.label} className="col center" animate={{ background: withAlpha(base, 0.1 + Math.min(0.6, frac * 1.6)) }} transition={{ duration: 0.3 }}
-                  style={{ borderRadius: 14, padding: "14px 8px", gap: 2, textAlign: "center", minHeight: 92 }}>
+                <motion.div key={c.label} className="col center"
+                  style={{ background: `color-mix(in srgb, ${base} ${Math.round((0.1 + Math.min(0.6, frac * 1.6)) * 100)}%, transparent)`, transition: "background 0.3s", borderRadius: 14, padding: "14px 8px", gap: 2, textAlign: "center", minHeight: 92 }}>
                   <b style={{ fontSize: 24 }}><AnimatedNumber value={c.v} duration={0.4} /></b>
                   <span className="small" style={{ fontWeight: 600 }}>{c.label}</span>
                   <span className="tiny muted">{c.sub}</span>
@@ -112,9 +112,9 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
         <div className="inset" style={{ padding: 8 }}>
           <LineChart height={210} xLabel="Threshold" yDomain={[0, 1]} marker={{ x: row.t, label: row.t.toFixed(2) }}
             series={[
-              { name: "Precision", color: "#0A84FF", points: rows.map((r) => ({ x: r.t, y: r.precision })) },
-              { name: "Recall", color: "#FF375F", points: rows.map((r) => ({ x: r.t, y: r.recall })) },
-              { name: "F1", color: "#BF5AF2", points: rows.map((r) => ({ x: r.t, y: r.f1 })), dashed: true },
+              { name: "Precision", color: colorAt(0), points: rows.map((r) => ({ x: r.t, y: r.precision })) },
+              { name: "Recall", color: colorAt(1), points: rows.map((r) => ({ x: r.t, y: r.recall })) },
+              { name: "F1", color: colorAt(4), points: rows.map((r) => ({ x: r.t, y: r.f1 })), dashed: true },
             ]} />
         </div>
       </div>

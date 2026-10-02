@@ -297,7 +297,7 @@ function SliceBars({ slices, overall, byProc }: { slices: { name: string; icon: 
                       <div key={j} style={{ width: "34%", maxWidth: 38, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center" }}>
                         <motion.div initial={false} animate={{ height: Math.max(2, y(b.v)) }} transition={{ type: "spring", stiffness: 140, damping: 22, bounce: 0 }}
                           style={{ width: "100%", borderRadius: "5px 5px 2px 2px", background: `linear-gradient(180deg, ${b.c}, ${b.c}bb)`, display: "flex", justifyContent: "center", overflow: "hidden" }}>
-                          <span className="tiny num" style={{ fontWeight: 700, color: "white", marginTop: 4, textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{Math.round(b.v * 100)}</span>
+                          <span className="tiny num" style={{ fontWeight: 700, color: "var(--on-accent)", marginTop: 4, textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{Math.round(b.v * 100)}</span>
                         </motion.div>
                       </div>
                     ))}

@@ -83,8 +83,8 @@ export function LongTailChart({ values, height = 190, share = 0.5, unit = "ratin
           <motion.line x1={xh} x2={xh} y1={PADT - 8} y2={PADT + h} stroke="var(--text-3)" strokeWidth={1.2} strokeDasharray="3 3"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} />
           <motion.g initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.9 }}>
-            <text x={Math.max(PADL + 2, xh - 6)} y={PADT - 12} fontSize={11} fontWeight={700} fill="#FF9F0A" textAnchor="end">🍿 Blockbusters</text>
-            <text x={xh + 8} y={PADT - 12} fontSize={11} fontWeight={700} fill="#5E5CE6">🔭 The long tail — niche picks</text>
+            <text x={Math.max(PADL + 2, xh - 6)} y={PADT - 12} fontSize={11} fontWeight={700} fill="color-mix(in srgb, var(--warning) 70%, var(--text))" textAnchor="end">🍿 Blockbusters</text>
+            <text x={xh + 8} y={PADT - 12} fontSize={11} fontWeight={700} fill="color-mix(in srgb, #5E5CE6 72%, var(--text))">🔭 The long tail — niche picks</text>
           </motion.g>
           <text x={PADL} y={height - 5} fontSize={10} fill="var(--text-3)">most {unit}</text>
           <text x={PADL + w} y={height - 5} fontSize={10} fill="var(--text-3)" textAnchor="end">fewest {unit} → each step is one item</text>

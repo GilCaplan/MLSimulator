@@ -120,7 +120,7 @@ export function LongTail({ data, coverage, novelty, height = 250 }: {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.9 }} className="inset row"
-        style={{ gap: 10, padding: "10px 12px", alignItems: "flex-start", background: amplifies ? "rgba(255,159,10,.08)" : spreads ? "rgba(48,209,88,.08)" : undefined }}>
+        style={{ gap: 10, padding: "10px 12px", alignItems: "flex-start", background: amplifies ? "color-mix(in srgb, var(--warning) 8%, transparent)" : spreads ? "color-mix(in srgb, var(--success) 8%, transparent)" : undefined }}>
         <span style={{ fontSize: 18 }}>{amplifies ? "📢" : spreads ? "🌱" : "⚖️"}</span>
         <span className="small" style={{ lineHeight: 1.55 }}>
           {amplifies

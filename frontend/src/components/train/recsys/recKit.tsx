@@ -140,7 +140,7 @@ export function Poster({ item, rank, rating, hit, because, width = 116, delay = 
         {hit && (
           <motion.span initial={{ scale: 0, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} transition={{ ...spring.pop, delay: delay + 0.35 }}
             title="A hit: this viewer really went on to like it (it was hidden from the model)"
-            style={{ position: "absolute", right: 6, top: 5, width: 24, height: 24, borderRadius: 12, background: "var(--success)", color: "white", fontWeight: 900, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(48,209,88,.6)" }}>
+            style={{ position: "absolute", right: 6, top: 5, width: 24, height: 24, borderRadius: 12, background: "var(--success)", color: "white", fontWeight: 900, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px color-mix(in srgb, var(--success) 60%, transparent)" }}>
             ✓
           </motion.span>
         )}
@@ -164,7 +164,7 @@ export function FilmRow({ item, right, rank, hit, because, delay = 0 }: { item: 
   const c = genreColor(item.genre);
   return (
     <motion.div layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} transition={{ ...spring.gentle, delay }}
-      className="row" style={{ gap: 10, padding: "6px 8px", borderRadius: 12, background: hit ? "rgba(48,209,88,.08)" : "transparent" }}>
+      className="row" style={{ gap: 10, padding: "6px 8px", borderRadius: 12, background: hit ? "color-mix(in srgb, var(--success) 8%, transparent)" : "transparent" }}>
       {rank !== undefined && <span className="num tiny faint" style={{ width: 18, textAlign: "right", fontWeight: 700 }}>{rank}</span>}
       <span style={{ width: 30, height: 42, borderRadius: 6, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, background: `linear-gradient(160deg, ${withAlpha(c, 0.95)}, ${withAlpha(c, 0.35)})`, boxShadow: `0 2px 8px ${withAlpha(c, 0.3)}` }}>
         {genreIcon(item.genre)}

@@ -173,7 +173,7 @@ function TxPlot({ real, synth, model }: { real: Tx[]; synth: Tx[]; model: { w0: 
             return (
               <g key={p.id} className={`mlp-tx ${p.synthetic || p.fraud ? "mlp-txpop" : ""}`} style={{ transform: t, ["--t" as string]: t, animationDelay: p.synthetic ? `${(i % 50) * 14}ms` : undefined }}>
                 {p.synthetic && <circle r={6.4} fill="none" stroke={c} strokeWidth={1.2} opacity={0.75} />}
-                <circle r={p.fraud && !p.synthetic ? 4.6 : 3.6} fill={c} fillOpacity={p.synthetic ? 0.55 : p.fraud ? 0.95 : 0.45} stroke={p.fraud && !p.synthetic ? "white" : "none"} strokeWidth={1} />
+                <circle r={p.fraud && !p.synthetic ? 4.6 : 3.6} fill={c} fillOpacity={p.synthetic ? 0.55 : p.fraud ? 0.95 : 0.45} stroke={p.fraud && !p.synthetic ? "var(--bg)" : "none"} strokeWidth={1} />
               </g>
             );
           })}

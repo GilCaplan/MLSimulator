@@ -104,7 +104,7 @@ export function ScaleDemo({ method }: { method: PipelineSpec["scale"]["method"] 
             <text x={0} y={r.y + 4} fontSize={11} fill="var(--text-2)" fontWeight={600}>{r.name}</text>
             <line x1={L} x2={R} y1={r.y} y2={r.y} stroke="var(--hairline)" strokeWidth={2} strokeLinecap="round" />
             {r.vals.map((v, i) => (
-              <motion.circle key={i} r={5} cy={r.y} fill={r.c} fillOpacity={0.85} stroke="white" strokeOpacity={0.7} strokeWidth={1}
+              <motion.circle key={i} r={5} cy={r.y} fill={r.c} fillOpacity={0.85} stroke="var(--bg)" strokeOpacity={0.7} strokeWidth={1}
                 initial={false} animate={{ cx: x(v) }} transition={{ ...spring.gentle, delay: i * 0.02 }} />
             ))}
           </g>
@@ -151,7 +151,7 @@ export function SmoteDemo({ color = PALETTE[1], other = PALETTE[0] }: { color?: 
           return (
             <g key={`r${i}`}>
               {hot && <motion.circle cx={p.x} cy={p.y} fill="none" stroke={color} strokeWidth={1.5} initial={{ r: 5, opacity: 0.9 }} animate={{ r: 13, opacity: 0 }} transition={{ duration: 1, repeat: Infinity }} />}
-              <circle cx={p.x} cy={p.y} r={hot ? 6.5 : 5.5} fill={color} stroke="white" strokeWidth={1.2} style={{ transition: "r .2s" }} />
+              <circle cx={p.x} cy={p.y} r={hot ? 6.5 : 5.5} fill={color} stroke="var(--bg)" strokeWidth={1.2} style={{ transition: "r .2s" }} />
             </g>
           );
         })}
@@ -170,7 +170,7 @@ export function SmoteDemo({ color = PALETTE[1], other = PALETTE[0] }: { color?: 
               <motion.g key={`s${k}`} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }}
                 transition={{ ...spring.pop, delay: fresh && !reduce ? 0.45 : 0 }}>
                 <circle cx={p.x} cy={p.y} r={8} fill="none" stroke={color} strokeWidth={1.3} opacity={0.75} />
-                <circle cx={p.x} cy={p.y} r={4.5} fill={color} stroke="white" strokeWidth={1} />
+                <circle cx={p.x} cy={p.y} r={4.5} fill={color} stroke="var(--bg)" strokeWidth={1} />
               </motion.g>
             );
           })}

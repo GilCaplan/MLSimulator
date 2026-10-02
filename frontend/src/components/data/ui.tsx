@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import { spring } from "../../design/motion";
 import { AnimatedNumber, InfoTip } from "../glass";
+import { textOn } from "./contrast";
 
 /** Small click-to-expand section with a rotating chevron and height animation. */
 export function Disclosure({ title, children, defaultOpen = false, open: openProp, onToggle, right }: {
@@ -130,7 +131,7 @@ export function ShareBar({ labels, shares, colors }: { labels: string[]; shares:
       {labels.map((l, i) => (
         <motion.div key={i} animate={{ flexGrow: shares[i] / total }} transition={spring.gentle}
           title={`${l}: ${Math.round((shares[i] / total) * 100)}%`}
-          style={{ flexBasis: 0, height: "100%", background: colors[i], display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 650, overflow: "hidden", whiteSpace: "nowrap", minWidth: 4 }}>
+          style={{ flexBasis: 0, height: "100%", background: colors[i], display: "flex", alignItems: "center", justifyContent: "center", color: textOn(colors[i]), fontSize: 11, fontWeight: 650, overflow: "hidden", whiteSpace: "nowrap", minWidth: 4 }}>
           {shares[i] / total > 0.09 ? `${Math.round((shares[i] / total) * 100)}%` : ""}
         </motion.div>
       ))}

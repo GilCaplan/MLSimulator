@@ -67,7 +67,7 @@ export function TrialChart({ trials, n, baseline, height = 240 }: { trials: { i:
                   <motion.circle cx={sx(t.i)} cy={sy(t.score)} fill="none" stroke="#FFD60A" strokeWidth={2}
                     initial={{ r: 4, opacity: 0.9 }} animate={{ r: [6, 14], opacity: [0.9, 0] }} transition={{ repeat: Infinity, duration: 1.6 }} />
                 )}
-                <motion.circle cx={sx(t.i)} cy={sy(t.score)} fill={isBest ? "#FFD60A" : bestIdx.has(t.i) ? "#BF5AF2" : "#0A84FF"} fillOpacity={isBest ? 1 : 0.7} stroke="white" strokeWidth={1.2}
+                <motion.circle cx={sx(t.i)} cy={sy(t.score)} fill={isBest ? "#FFD60A" : bestIdx.has(t.i) ? "#BF5AF2" : "#0A84FF"} fillOpacity={isBest ? 1 : 0.7} stroke="var(--bg)" strokeWidth={1.2}
                   initial={{ r: 0, cy: sy(t.score) - 18 }} animate={{ r: isBest ? 6 : 4.2, cy: sy(t.score) }} transition={{ type: "spring", stiffness: 420, damping: 18 }} />
               </g>
             );

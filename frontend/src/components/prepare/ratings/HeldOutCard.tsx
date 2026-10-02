@@ -96,7 +96,7 @@ function Timeline({ k, recent }: { k: number; recent: boolean }) {
               <line x1={30} x2={W + 22} y1={y} y2={y} stroke="var(--hairline)" />
               {/* the hidden stretch of a person's history */}
               {recent && tx.length > 0 && (
-                <motion.rect key={`pill-${k}`} y={y - 10} height={20} rx={10} fill="rgba(255,159,10,.14)" stroke="rgba(255,159,10,.45)" strokeDasharray="3 2"
+                <motion.rect key={`pill-${k}`} y={y - 10} height={20} rx={10} style={{ fill: "color-mix(in srgb, var(--warning) 14%, transparent)", stroke: "color-mix(in srgb, var(--warning) 45%, transparent)" }} strokeDasharray="3 2"
                   initial={{ opacity: 0, x: Math.min(...tx) - 9, width: 0 }} animate={{ opacity: 1, x: Math.min(...tx) - 9, width: Math.max(...tx) - Math.min(...tx) + 18 }}
                   transition={{ ...spring.gentle, delay: 0.2 + row * 0.05 }} />
               )}
@@ -109,7 +109,7 @@ function Timeline({ k, recent }: { k: number; recent: boolean }) {
                     animate={{ scale: 1, opacity: 1, fill: isTest ? "#FF9F0A" : "#0A84FF", cy: isTest ? [y, y - 4, y] : y }}
                     transition={{ ...spring.pop, delay: j * 0.025 + row * 0.04, cy: isTest ? { duration: 1.6, repeat: Infinity, delay: j * 0.05 } : spring.pop }}
                     style={{ originX: `${cx}px`, originY: `${y}px` }}
-                    stroke="white" strokeWidth={1} />
+                    stroke="var(--bg)" strokeWidth={1} />
                 );
               })}
               {!p.tested && <text x={X(p.xs[0]) - 10} y={y + 3.5} fontSize={9.5} fill="var(--text-3)" textAnchor="end">too few ratings — all train</text>}
@@ -123,8 +123,8 @@ function Timeline({ k, recent }: { k: number; recent: boolean }) {
       </svg>
       <span className="tiny muted" style={{ lineHeight: 1.5 }}>
         {recent
-          ? <>The model learns from the <b style={{ color: "#0A84FF" }}>blue</b> past and must guess each person's <b style={{ color: "#E08A00" }}>last {k}</b> — like predicting next week's watch list.</>
-          : <>Any <b style={{ color: "#E08A00" }}>{k}</b> of each person's ratings are hidden — the model may learn from ratings that came later, so scores look a little rosier.</>}
+          ? <>The model learns from the <b style={{ color: "#0A84FF" }}>blue</b> past and must guess each person's <b style={{ color: "color-mix(in srgb, var(--warning) 70%, var(--text))" }}>last {k}</b> — like predicting next week's watch list.</>
+          : <>Any <b style={{ color: "color-mix(in srgb, var(--warning) 70%, var(--text))" }}>{k}</b> of each person's ratings are hidden — the model may learn from ratings that came later, so scores look a little rosier.</>}
       </span>
     </div>
   );

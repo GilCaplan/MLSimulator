@@ -63,14 +63,15 @@ function LengthChart({ hist, maxLen }: { hist: H; maxLen: number }) {
             const inside = hist.edges[k + 1] <= maxLen;
             return (
               <motion.rect key={k} x={x0 + 0.5} width={Math.max(1, x1 - x0 - 1.5)} rx={2.5} y={h - 20 - bh} height={bh}
-                initial={{ opacity: 0 }} animate={{ opacity: 1, fill: inside ? "#0A84FF" : hist.edges[k] < maxLen ? "#64D2FF" : "rgba(142,142,147,.35)" }}
+                style={{ fill: inside ? "var(--accent)" : hist.edges[k] < maxLen ? "color-mix(in srgb, var(--accent) 50%, transparent)" : "var(--fill-2)", transition: "fill .25s" }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ duration: 0.25 }} />
             );
           })}
           <motion.g animate={{ x: mx }} initial={false} transition={spring.snappy}>
-            <line y1={6} y2={h - 18} stroke="#FF9F0A" strokeWidth={2} strokeDasharray="4 3" />
-            <rect x={-30} y={-6} width={60} height={18} rx={9} fill="#FF9F0A" />
-            <text y={7} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="white">{maxLen} words</text>
+            <line y1={6} y2={h - 18} stroke="var(--warning)" strokeWidth={2} strokeDasharray="4 3" />
+            <rect x={-30} y={-6} width={60} height={18} rx={9} fill="var(--warning)" />
+            <text y={7} textAnchor="middle" fontSize={10.5} fontWeight={700} fill="#1d1d1f">{maxLen} words</text>
           </motion.g>
           <text x={pad} y={h - 4} fontSize={10} fill="var(--text-3)">{Math.round(lo)}</text>
           <text x={x(hi)} y={h - 4} fontSize={10} fill="var(--text-3)" textAnchor="end">{Math.round(hi)} words</text>

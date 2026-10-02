@@ -123,7 +123,7 @@ export function TextArchPreview({ arch, task }: { arch: TextArch; task: Task | n
       <AnimatePresence mode="popLayout">
         {errors.length > 0 && (
           <motion.div key="err" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="small" style={{ padding: "10px 12px", borderRadius: 12, lineHeight: 1.5, background: "rgba(255,69,58,.12)", color: "var(--danger)" }}>
+            className="small" style={{ padding: "10px 12px", borderRadius: 12, lineHeight: 1.5, background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)" }}>
             ⚠️ {errors.join(" ")}
           </motion.div>
         )}
@@ -242,7 +242,7 @@ export function TextNetDiagram({ arch, nOut }: { arch: TextArch; nOut: number })
             </g>
           ))}
           {/* memory pulse travelling along the row */}
-          <motion.circle r={3.4} cy={rowY(r) - 2} fill="white" stroke={color} strokeWidth={1.5}
+          <motion.circle r={3.4} cy={rowY(r) - 2} fill="var(--bg)" stroke={color} strokeWidth={1.5}
             animate={{ cx: WORDS.map((_, i) => TX(i)), opacity: [0, 1, 1, 1, 0] }}
             transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut", delay: r * 0.35 }} />
         </g>
@@ -263,7 +263,7 @@ export function TextNetDiagram({ arch, nOut }: { arch: TextArch; nOut: number })
           {WORDS.map((_, i) => (
             <g key={i}>
               <line x1={TX(i)} y1={(r === 0 ? EMB_TOP : rowY(r - 1)) - 1} x2={TX(i)} y2={rowY(r) + 5} stroke="var(--text-3)" strokeWidth={1} />
-              <motion.circle cx={TX(i)} cy={rowY(r)} r={5.5} fill={color} stroke="white" strokeWidth={1.2}
+              <motion.circle cx={TX(i)} cy={rowY(r)} r={5.5} fill={color} stroke="var(--bg)" strokeWidth={1.2}
                 initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ ...spring.pop, delay: 0.04 * i + 0.08 * r }}
                 style={{ originX: `${TX(i)}px`, originY: `${rowY(r)}px` }} />
             </g>
@@ -287,7 +287,7 @@ export function TextNetDiagram({ arch, nOut }: { arch: TextArch; nOut: number })
         return (
           <g key={`o${k}`}>
             <line x1={POOL.x + 11} y1={POOL.y} x2={OUT_X - 6} y2={y} stroke="var(--text-3)" strokeWidth={1} opacity={0.6} />
-            <motion.circle cx={OUT_X} cy={y} r={6} fill="#30D158" stroke="white" strokeWidth={1.2}
+            <motion.circle cx={OUT_X} cy={y} r={6} fill="#30D158" stroke="var(--bg)" strokeWidth={1.2}
               animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 2, repeat: Infinity, delay: k * 0.25 }} style={{ originX: `${OUT_X}px`, originY: `${y}px` }} />
           </g>
         );

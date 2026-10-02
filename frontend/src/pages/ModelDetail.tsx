@@ -69,7 +69,7 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
       <div className="row" style={{ gap: 20, alignItems: "flex-start" }}>
         <motion.div
           initial={{ scale: 0.5, rotate: -20, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ ...spring.pop, delay: 0.1 }}
-          style={{ width: 72, height: 72, borderRadius: 22, background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, flexShrink: 0, boxShadow: "0 10px 30px rgba(94,92,230,0.35), 0 1px 0 rgba(255,255,255,0.4) inset" }}
+          style={{ width: 72, height: 72, borderRadius: 22, background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, flexShrink: 0, boxShadow: "0 10px 30px color-mix(in srgb, var(--accent) 35%, transparent), 0 1px 0 rgba(255,255,255,0.4) inset" }}
         >
           {emojiFor(registry, model)}
         </motion.div>

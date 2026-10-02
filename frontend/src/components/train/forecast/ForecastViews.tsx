@@ -123,7 +123,7 @@ export function ForecastTab({ fc, metrics, height = 300 }: { fc: ForecastResult;
   return (
     <div className="col" style={{ gap: 12 }}>
       {random && (
-        <div className="inset row" style={{ gap: 10, padding: "10px 12px", alignItems: "flex-start", background: "rgba(255,69,58,.08)", borderColor: "rgba(255,69,58,.3)" }}>
+        <div className="inset row" style={{ gap: 10, padding: "10px 12px", alignItems: "flex-start", background: "color-mix(in srgb, var(--danger) 8%, transparent)", borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)" }}>
           <span style={{ fontSize: 18 }}>🙈</span>
           <span className="small" style={{ lineHeight: 1.55 }}>
             <b>This view is misleading — on purpose.</b>{" "}

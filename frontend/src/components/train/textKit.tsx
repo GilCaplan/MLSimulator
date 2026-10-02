@@ -64,7 +64,7 @@ export function InfluenceSentence({ tokens, pred, size = 15, onHover, hovered, a
             style={{
               display: "inline-flex", alignItems: "center", padding: `${size * 0.22}px ${size * 0.5}px`, borderRadius: size * 0.55,
               border: "1px solid", fontSize: size, fontWeight: c.strength > 0.45 ? 650 : 500, color: "var(--text)", cursor: "default",
-              boxShadow: c.strength > 0.6 ? `0 2px 10px ${tok.w >= 0 ? "rgba(48,209,88,.25)" : "rgba(255,69,58,.25)"}` : undefined,
+              boxShadow: c.strength > 0.6 ? `0 2px 10px ${tok.w >= 0 ? "color-mix(in srgb, var(--success) 25%, transparent)" : "color-mix(in srgb, var(--danger) 25%, transparent)"}` : undefined,
             }}
           >
             {tok.t}
@@ -96,7 +96,7 @@ export function InfluenceLegend({ width = 150, style }: { width?: number; style?
   return (
     <div className="row tiny faint wrap" style={{ gap: 8, ...style }}>
       <span>pushed against</span>
-      <span style={{ width, height: 8, borderRadius: 4, background: "linear-gradient(90deg, rgba(255,69,58,.85), rgba(255,69,58,.15) 40%, rgba(120,120,128,.18) 50%, rgba(48,209,88,.15) 60%, rgba(48,209,88,.85))" }} />
+      <span style={{ width, height: 8, borderRadius: 4, background: "linear-gradient(90deg, color-mix(in srgb, var(--danger) 85%, transparent), color-mix(in srgb, var(--danger) 15%, transparent) 40%, rgba(120,120,128,.18) 50%, color-mix(in srgb, var(--success) 15%, transparent) 60%, color-mix(in srgb, var(--success) 85%, transparent))" }} />
       <span>pushed towards the answer</span>
     </div>
   );

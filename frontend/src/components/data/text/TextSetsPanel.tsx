@@ -129,8 +129,8 @@ function NegationNote({ rate }: { rate: number }) {
       <span className="tiny muted" style={{ lineHeight: 1.5 }}>How often reviews say <b>“not …”</b> — out of every 10 reviews, <b className="num">{n}</b> {n === 1 ? "says" : "say"} things like “not good” or “not bad”.</span>
       <div className="row" style={{ gap: 4 }}>
         {Array.from({ length: 10 }, (_, k) => (
-          <motion.span key={k} animate={{ background: k < n ? "rgba(255,159,10,.9)" : "var(--fill-2)", scale: k < n ? 1 : 0.9 }} transition={spring.snappy}
-            style={{ flex: 1, height: 18, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "white" }}>
+          <motion.span key={k} animate={{ background: k < n ? "color-mix(in srgb, var(--warning) 90%, transparent)" : "var(--fill-2)", scale: k < n ? 1 : 0.9 }} transition={spring.snappy}
+            style={{ flex: 1, height: 18, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#1d1d1f" }}>
             {k < n ? "not" : ""}
           </motion.span>
         ))}

@@ -10,6 +10,7 @@ import { ScaleDemo } from "./illustrations";
 import { SplitInfoView, SplitMethodPicker, SplitMethodSettings } from "./SplitMethod";
 import { Note, StageCard, SubHead } from "./StageCard";
 import { MODELS_NEED_SCALING, patchPipeline } from "./state";
+import { textOn } from "../data/contrast";
 
 export const SPLIT_COLORS = { train: "#0A84FF", val: "#BF5AF2", test: "#FF9F0A", resampled: "#30D158" };
 
@@ -127,7 +128,7 @@ function DistanceNote({ off }: { off: boolean }) {
       <div className="row" style={{ height: 26, borderRadius: 9, overflow: "hidden", gap: 2 }}>
         {rows.map((r) => (
           <motion.div key={r.name} animate={{ flexGrow: r.w }} transition={spring.gentle}
-            style={{ flexBasis: 0, height: "100%", background: r.color, color: "white", fontSize: 11, fontWeight: 650, display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap", overflow: "hidden", minWidth: 4 }}>
+            style={{ flexBasis: 0, height: "100%", background: r.color, color: textOn(r.color), fontSize: 11, fontWeight: 650, display: "flex", alignItems: "center", justifyContent: "center", whiteSpace: "nowrap", overflow: "hidden", minWidth: 4 }}>
             {r.w > 0.15 ? `${r.name} · ${Math.round(r.w * 100)}%` : ""}
           </motion.div>
         ))}

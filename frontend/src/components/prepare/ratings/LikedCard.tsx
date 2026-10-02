@@ -52,7 +52,7 @@ export function LikedCard({ spec, hist, open, onToggle, flash }: {
           {share !== null && (
             <div className="col" style={{ gap: 6 }}>
               <div style={{ height: 10, borderRadius: 6, background: "var(--fill)", overflow: "hidden" }}>
-                <motion.div style={{ height: "100%", borderRadius: 6, background: "linear-gradient(90deg, #9BDB4D, #30D158)" }} animate={{ width: `${share * 100}%` }} transition={spring.gentle} />
+                <motion.div style={{ height: "100%", borderRadius: 6, background: "linear-gradient(90deg, color-mix(in srgb, var(--success) 65%, #ffd60a), var(--success))" }} animate={{ width: `${share * 100}%` }} transition={spring.gentle} />
               </div>
               <span className="tiny muted" style={{ lineHeight: 1.5 }}>
                 <b className="num" style={{ color: "var(--text)" }}>{Math.round(share * 100)}%</b> of all ratings count as liked.

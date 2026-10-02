@@ -176,7 +176,7 @@ export function FeaturesResult({ report }: { report: PrepareReport }) {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="col" style={{ gap: 6, marginTop: 14 }}>
             <span className="eyebrow">Heads-up</span>
             {report.warnings.map((w) => (
-              <div key={w} className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "7px 10px", borderRadius: 10, background: "rgba(255,159,10,.12)" }}>
+              <div key={w} className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "7px 10px", borderRadius: 10, background: "color-mix(in srgb, var(--warning) 12%, transparent)" }}>
                 <span>⚠️</span><span className="muted" style={{ lineHeight: 1.45 }}>{w}</span>
               </div>
             ))}

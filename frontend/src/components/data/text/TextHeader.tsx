@@ -4,6 +4,7 @@ import type { DatasetProfile, DatasetSummary, Project } from "../../../lib/types
 import { AnimatedNumber, Glass, InfoTip, Select } from "../../glass";
 import { labelCandidates, lengthStats, textCandidates } from "./textData";
 import { textClassColor } from "./TextInsights";
+import { textOn } from "../contrast";
 
 /** Text dataset card: name and size, and the two choices that matter — which column is the text, which is the answer. */
 export function TextHeader({ dataset, project, profile, textCol, pickerOpen, onTogglePicker, onTextCol, onLabel, highlight }: {
@@ -69,7 +70,7 @@ export function TextHeader({ dataset, project, profile, textCol, pickerOpen, onT
               className="row" style={{ gap: 8, maxWidth: 420, minWidth: 0 }}>
               <span className="small truncate" style={{ padding: "7px 12px", borderRadius: "14px 14px 14px 4px", background: "var(--fill)", border: "1px solid var(--hairline)", minWidth: 0 }}>“{sample}”</span>
               <span className="faint">→</span>
-              <span className="badge" style={{ background: textClassColor(classes[0], classes), color: "white", flexShrink: 0 }}>{classes[0]}</span>
+              <span className="badge" style={{ background: textClassColor(classes[0], classes), color: textOn(textClassColor(classes[0], classes)), flexShrink: 0 }}>{classes[0]}</span>
             </motion.div>
           )}
         </AnimatePresence>

@@ -98,7 +98,7 @@ export function StepEditor(props: StepEditorProps) {
           <AnimatePresence mode="wait" initial={false}>
             {error ? (
               <motion.div key="err" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: [0, -4, 4, -2, 0] }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}
-                className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "9px 12px", borderRadius: 12, background: "rgba(255,69,58,.12)", color: "var(--danger)", lineHeight: 1.45 }}>
+                className="row small" style={{ gap: 8, alignItems: "flex-start", padding: "9px 12px", borderRadius: 12, background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)", lineHeight: 1.45 }}>
                 <span>⛔</span><span>{error}</span>
               </motion.div>
             ) : todo ? (

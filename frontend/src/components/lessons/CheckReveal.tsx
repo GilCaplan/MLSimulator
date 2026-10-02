@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import { spring } from "../../design/motion";
+import { colorAt } from "../../lib/colors";
 import { METRIC_LABELS, fmt, pct } from "../../lib/format";
 import { useProject } from "../../lib/store";
 import type { ChallengeCheck } from "../../lib/types";
@@ -188,7 +189,7 @@ export function CheckReveal({ check, reveal = false, compact = false, lessonId }
         </div>
 
         <div className="inset col" style={{ gap: 4, padding: compact ? 12 : 18, borderRadius: 18, position: "relative", overflow: "hidden",
-          background: landed ? (passedSide ? "rgba(48,209,88,.12)" : "rgba(255,69,58,.10)") : undefined, borderColor: landed ? (passedSide ? "rgba(48,209,88,.4)" : "rgba(255,69,58,.35)") : undefined, transition: "background .4s, border-color .4s" }}>
+          background: landed ? (passedSide ? "color-mix(in srgb, var(--success) 12%, transparent)" : "color-mix(in srgb, var(--danger) 10%, transparent)") : undefined, borderColor: landed ? (passedSide ? "color-mix(in srgb, var(--success) 40%, transparent)" : "color-mix(in srgb, var(--danger) 35%, transparent)") : undefined, transition: "background .4s, border-color .4s" }}>
           <span className="eyebrow">{h.right.eyebrow}</span>
           <AnimatePresence mode="wait">
             {!landed ? (
@@ -234,7 +235,7 @@ export function CheckReveal({ check, reveal = false, compact = false, lessonId }
               <div className="row between" style={{ gap: 10 }}>
                 <span className="row" style={{ gap: 10, minWidth: 0 }}>
                   <motion.span initial={reveal ? { scale: 0, rotate: -40 } : false} animate={landed ? { scale: 1, rotate: 0 } : {}} transition={{ ...spring.pop, delay: reveal ? 0.5 + i * 0.12 : 0 }}
-                    style={{ width: 24, height: 24, borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 13, background: g.passed ? OK : BAD }}>
+                    style={{ width: 24, height: 24, borderRadius: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--on-accent)", fontWeight: 800, fontSize: 13, background: g.passed ? OK : BAD }}>
                     {g.passed ? "✓" : "✕"}
                   </motion.span>
                   <span className="col" style={{ gap: 0, minWidth: 0 }}>
@@ -384,7 +385,6 @@ function GroupBars({ perGroup, passed, compact, animate }: { perGroup: Record<st
   const entries = Object.entries(perGroup);
   const vals = entries.map(([, v]) => v);
   const gap = Math.max(...vals) - Math.min(...vals);
-  const colors = ["#ff375f", "#0a84ff", "#bf5af2", "#30d158"];
   return (
     <div className="inset col" style={{ gap: 10, padding: compact ? 12 : 16 }}>
       <div className="row between">
@@ -399,7 +399,7 @@ function GroupBars({ perGroup, passed, compact, animate }: { perGroup: Record<st
           <span className="small" style={{ width: 70, fontWeight: 600, textTransform: "capitalize" }}>{name}</span>
           <div className="grow" style={{ height: compact ? 14 : 18, borderRadius: 9, background: "var(--fill)", overflow: "hidden" }}>
             <motion.div initial={{ width: 0 }} animate={{ width: animate ? `${Math.max(0.01, v) * 100}%` : 0 }} transition={{ ...spring.soft, delay: 0.3 + i * 0.15 }}
-              style={{ height: "100%", borderRadius: 9, background: colors[i % colors.length] }} />
+              style={{ height: "100%", borderRadius: 9, background: colorAt(i) }} />
           </div>
           <b className="num small" style={{ width: 44, textAlign: "right" }}>{(v * 100).toFixed(0)}%</b>
         </div>

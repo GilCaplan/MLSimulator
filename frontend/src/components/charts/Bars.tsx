@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { spring } from "../../design/motion";
 import { colorAt } from "../../lib/colors";
 import { AnimatedNumber } from "../glass";
+import { textOn, tint } from "./contrast";
 
 /** Horizontal labelled bars (class balance, category counts, importances). */
 export function BarList({ labels, values, colors, max, format = (v) => String(Math.round(v)), height = 22, ghost }: {
@@ -56,7 +57,7 @@ export function ClassBars({ labels, before, after, colors, height = 160 }: { lab
                 <motion.div style={{ position: "absolute", bottom: 0, left: 0, right: 0, borderRadius: 10, border: `2px dashed ${c}`, opacity: 0.45 }}
                   animate={{ height: `${((before[i] ?? 0) / max) * 100}%` }} transition={spring.gentle} />
               )}
-              <motion.div style={{ width: "100%", borderRadius: 10, background: `linear-gradient(180deg, ${c}, ${c}cc)`, boxShadow: `0 6px 18px ${c}55` }}
+              <motion.div style={{ width: "100%", borderRadius: 10, background: `linear-gradient(180deg, ${c}, ${tint(c, 80)})`, boxShadow: `0 6px 18px ${tint(c, 33)}` }}
                 initial={{ height: 0 }} animate={{ height: `${((after[i] ?? 0) / max) * 100}%` }} transition={{ ...spring.gentle, delay: i * 0.05 }} />
             </div>
             <span className="small truncate muted" style={{ maxWidth: "100%" }} title={l}>{l}</span>
@@ -75,7 +76,7 @@ export function SplitBar({ parts }: { parts: { label: string; value: number; col
       <div className="row" style={{ height: 30, borderRadius: 10, overflow: "hidden", gap: 3 }}>
         {parts.map((p) => (
           <motion.div key={p.label} animate={{ flexGrow: p.value / total }} transition={spring.gentle}
-            style={{ flexBasis: 0, height: "100%", background: p.color, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11.5, fontWeight: 650, minWidth: p.value ? 34 : 0, overflow: "hidden" }}>
+            style={{ flexBasis: 0, height: "100%", background: p.color, display: "flex", alignItems: "center", justifyContent: "center", color: textOn(p.color), fontSize: 11.5, fontWeight: 650, minWidth: p.value ? 34 : 0, overflow: "hidden" }}>
             {Math.round((p.value / total) * 100)}%
           </motion.div>
         ))}

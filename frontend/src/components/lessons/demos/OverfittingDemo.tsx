@@ -153,7 +153,7 @@ function FitPlot({ train, test, curve }: { train: { x: number; y: number }[]; te
             <motion.path initial={false} animate={{ d: path(curve) }} transition={{ type: "spring", stiffness: 120, damping: 20 }}
               fill="none" stroke={C.purple} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 2px 6px ${C.purple}55)` }} />
           </g>
-          {train.map((p, i) => <circle key={`r${i}`} cx={sx(p.x)} cy={sy(p.y)} r={4.6} fill={C.neg} stroke="white" strokeWidth={1.2} />)}
+          {train.map((p, i) => <circle key={`r${i}`} cx={sx(p.x)} cy={sy(p.y)} r={4.6} fill={C.neg} stroke="var(--bg)" strokeWidth={1.2} />)}
         </svg>
       )}
     </div>
@@ -196,8 +196,8 @@ function UCurve({ all, deg, zones }: { all: { d: number; train: number; test: nu
           <text x={(m.l + width - m.r) / 2} y={height - 3} textAnchor="middle" fontSize={10.5} fill="var(--text-2)">complexity (degree)</text>
           <text transform={`translate(11 ${(m.t + height - m.b) / 2}) rotate(-90)`} textAnchor="middle" fontSize={10.5} fill="var(--text-2)">error (log scale)</text>
           <motion.line initial={false} animate={{ x1: sx(deg), x2: sx(deg) }} transition={spring.snappy} y1={m.t} y2={height - m.b} stroke="var(--text-3)" strokeDasharray="3 3" />
-          <motion.circle initial={false} animate={{ cx: sx(deg), cy: sy(cur.train) }} transition={spring.snappy} r={5} fill={C.neg} stroke="white" strokeWidth={1.5} />
-          <motion.circle initial={false} animate={{ cx: sx(deg), cy: sy(cur.test) }} transition={spring.snappy} r={5.5} fill={C.pos} stroke="white" strokeWidth={1.5} />
+          <motion.circle initial={false} animate={{ cx: sx(deg), cy: sy(cur.train) }} transition={spring.snappy} r={5} fill={C.neg} stroke="var(--bg)" strokeWidth={1.5} />
+          <motion.circle initial={false} animate={{ cx: sx(deg), cy: sy(cur.test) }} transition={spring.snappy} r={5.5} fill={C.pos} stroke="var(--bg)" strokeWidth={1.5} />
           <g fontSize={10} fontWeight={600}>
             <text x={width - m.r} y={sy(all[MAX_DEG - 1].train) - 6} textAnchor="end" fill={C.neg}>train</text>
             <text x={sx(Math.min(MAX_DEG - 1, zones.hi + 1)) - 8} y={sy(all[Math.min(MAX_DEG - 1, zones.hi)].test) - 2} textAnchor="end" fill={C.pos}>test</text>

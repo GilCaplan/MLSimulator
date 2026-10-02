@@ -45,7 +45,7 @@ export function ImageMap({ datasetId, points, classes, continuous, size = 64, he
     <g className={`mlp-imap${hover !== null ? " dim" : ""}`}>
       <style>{`.mlp-imap circle{animation:mlpImapPop .55s cubic-bezier(.34,1.56,.64,1) both;transform-box:fill-box;transform-origin:center;transition:fill-opacity .2s}.mlp-imap.dim circle{fill-opacity:.32}@keyframes mlpImapPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}`}</style>
       {points.map((p, k) => (
-        <circle key={p.i ?? k} cx={sx(p.x)} cy={sy(p.y)} r={3} fill={color(p)} fillOpacity={0.85} stroke="white" strokeOpacity={0.6} strokeWidth={0.6}
+        <circle key={p.i ?? k} cx={sx(p.x)} cy={sy(p.y)} r={3} fill={color(p)} fillOpacity={0.85} stroke="var(--bg)" strokeOpacity={0.6} strokeWidth={0.6}
           style={{ animationDelay: `${Math.min(900, (k % 150) * 6)}ms` }} />
       ))}
     </g>
@@ -66,7 +66,7 @@ export function ImageMap({ datasetId, points, classes, continuous, size = 64, he
             {hp && (
               <g pointerEvents="none">
                 <circle cx={sx(hp.x)} cy={sy(hp.y)} r={7} fill="none" stroke={color(hp)} strokeWidth={2} />
-                <circle cx={sx(hp.x)} cy={sy(hp.y)} r={3.6} fill={color(hp)} stroke="white" strokeWidth={1.2} />
+                <circle cx={sx(hp.x)} cy={sy(hp.y)} r={3.6} fill={color(hp)} stroke="var(--bg)" strokeWidth={1.2} />
               </g>
             )}
           </svg>

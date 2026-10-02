@@ -198,7 +198,7 @@ function Reveal({ children }: { children: ReactNode }) {
 
 function RatioTile({ label, value, good }: { label: string; value: number; good?: boolean }) {
   return (
-    <div className="col" style={{ gap: 0, alignItems: "center", padding: "6px 10px", borderRadius: 12, background: good ? "rgba(48,209,88,.14)" : value > 4 ? "rgba(255,159,10,.14)" : "var(--fill)" }}>
+    <div className="col" style={{ gap: 0, alignItems: "center", padding: "6px 10px", borderRadius: 12, background: good ? "color-mix(in srgb, var(--success) 14%, transparent)" : value > 4 ? "color-mix(in srgb, var(--warning) 14%, transparent)" : "var(--fill)" }}>
       <span className="tiny faint">{label}</span>
       <AnimatePresence mode="wait">
         <motion.b key={value.toFixed(1)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }} className="num" style={{ fontSize: 17 }}>

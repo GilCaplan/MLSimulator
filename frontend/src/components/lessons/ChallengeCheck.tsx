@@ -63,9 +63,9 @@ export function ChallengeCheck() {
   const latestHint = shown > 0 ? hints[Math.min(shown, hints.length) - 1] : null;
 
   return (
-    <Glass ref={panel} animate_in variant="strong" style={{ borderColor: check ? (check.passed ? "rgba(48,209,88,.55)" : "rgba(255,159,10,.5)") : "rgba(94,92,230,.35)", overflow: "hidden" }}>
+    <Glass ref={panel} animate_in variant="strong" style={{ borderColor: check ? (check.passed ? "color-mix(in srgb, var(--success) 55%, transparent)" : "color-mix(in srgb, var(--warning) 50%, transparent)") : "color-mix(in srgb, var(--accent) 35%, transparent)", overflow: "hidden" }}>
       <Confetti burst={burst.n} x={burst.x} y={burst.y} />
-      <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 100% 0%, rgba(94,92,230,.14), transparent 55%)" }} />
+      <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 55%)" }} />
 
       <div className="row between wrap" style={{ gap: 12, marginBottom: 14 }}>
         <div className="row" style={{ gap: 12 }}>
@@ -150,7 +150,7 @@ function Outcome({ check, lessonId, hint, hintIndex, hintCount }: { check: Check
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 1.6 }} style={{ marginTop: 18 }}>
       {check.passed ? (
-        <div className="col" style={{ gap: 14, padding: 20, borderRadius: 20, background: "linear-gradient(135deg, rgba(48,209,88,.16), rgba(10,132,255,.12) 60%, rgba(191,90,242,.14))", border: "1px solid rgba(48,209,88,.35)" }}>
+        <div className="col" style={{ gap: 14, padding: 20, borderRadius: 20, background: "linear-gradient(135deg, color-mix(in srgb, var(--success) 16%, transparent), color-mix(in srgb, var(--accent) 12%, transparent) 60%, color-mix(in srgb, var(--accent-2) 14%, transparent))", border: "1px solid color-mix(in srgb, var(--success) 35%, transparent)" }}>
           <div className="row" style={{ gap: 14 }}>
             <motion.span initial={{ scale: 0, rotate: -30 }} animate={{ scale: [0, 1.3, 1], rotate: 0 }} transition={{ duration: 0.7, delay: 1.7 }} style={{ fontSize: 44 }}>🏆</motion.span>
             <div className="col" style={{ gap: 2 }}>
@@ -170,7 +170,7 @@ function Outcome({ check, lessonId, hint, hintIndex, hintCount }: { check: Check
           </div>
         </div>
       ) : (
-        <div className="col" style={{ gap: 12, padding: 18, borderRadius: 20, background: "rgba(255,159,10,.10)", border: "1px solid rgba(255,159,10,.35)" }}>
+        <div className="col" style={{ gap: 12, padding: 18, borderRadius: 20, background: "color-mix(in srgb, var(--warning) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--warning) 35%, transparent)" }}>
           <div className="row" style={{ gap: 12, alignItems: "flex-start" }}>
             <span style={{ fontSize: 28 }}>🧭</span>
             <div className="col" style={{ gap: 3 }}>

@@ -293,7 +293,7 @@ function HeatLegend() {
   return (
     <span className="row tiny muted" style={{ gap: 6 }}>
       <span>bad</span>
-      <span style={{ width: 70, height: 8, borderRadius: 4, background: "linear-gradient(90deg, rgba(255,69,58,.65), transparent 50%, rgba(48,209,88,.65))", border: "1px solid var(--hairline)" }} />
+      <span style={{ width: 70, height: 8, borderRadius: 4, background: "linear-gradient(90deg, color-mix(in srgb, var(--danger) 65%, transparent), transparent 50%, color-mix(in srgb, var(--success) 65%, transparent))", border: "1px solid var(--hairline)" }} />
       <span>good</span>
     </span>
   );

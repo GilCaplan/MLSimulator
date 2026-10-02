@@ -4,7 +4,7 @@ import { spring } from "../../design/motion";
 import type { LessonSummary } from "../../lib/types";
 import { useSize } from "../charts";
 import { LessonCard, Station } from "./LessonNode";
-import { lessonStatus, stageTint } from "./shared";
+import { inkOf, lessonStatus, stageTint, tintOf } from "./shared";
 
 const STATION = 64;
 const GAP = 22;
@@ -50,9 +50,9 @@ export function LessonPath({ lessons, upNextId, onOpen }: { lessons: LessonSumma
       <svg width={size.width} height={size.height} style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "visible", zIndex: 0 }}>
         <defs>
           <linearGradient id="lesson-path-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2={size.height || 1}>
-            <stop offset="0%" stopColor="#0a84ff" />
-            <stop offset="50%" stopColor="#5e5ce6" />
-            <stop offset="100%" stopColor="#bf5af2" />
+            <stop offset="0%" style={{ stopColor: "var(--accent)" }} />
+            <stop offset="50%" style={{ stopColor: "color-mix(in srgb, var(--accent) 50%, var(--accent-2))" }} />
+            <stop offset="100%" style={{ stopColor: "var(--accent-2)" }} />
           </linearGradient>
         </defs>
         {full && (
@@ -62,7 +62,7 @@ export function LessonPath({ lessons, upNextId, onOpen }: { lessons: LessonSumma
         {pts.slice(1).map((p, i) => lessonStatus(lessons[i].progress) === "done" && (
           <motion.path key={`done-${i}-${size.width}`} d={seg(pts[i], p)} fill="none" stroke="url(#lesson-path-grad)" strokeWidth={5} strokeLinecap="round"
             initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.7, ease: "easeInOut", delay: 0.5 + i * 0.18 }}
-            style={{ filter: "drop-shadow(0 0 6px rgba(94,92,230,.5))" }} />
+            style={{ filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))" }} />
         ))}
         {lead && (
           <circle r={5} fill="var(--accent)" style={{ filter: "drop-shadow(0 0 6px var(--accent))" }}>
@@ -107,9 +107,9 @@ function StageMarker({ stage, count, wide, first }: { stage: string; count: numb
   return (
     <motion.div initial={{ opacity: 0, scale: 0.85 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={spring.pop}
       className="row" style={{ justifyContent: wide ? "center" : "flex-start", marginTop: first ? 0 : 10, paddingLeft: wide ? 0 : STATION / 2 - 14 }}>
-      <span className="glass strong row" style={{ gap: 8, padding: "6px 14px 6px 10px", borderRadius: 999, border: `1px solid ${t.color}55` }}>
+      <span className="glass strong row" style={{ gap: 8, padding: "6px 14px 6px 10px", borderRadius: 999, border: `1px solid ${tintOf(t.color, 33)}` }}>
         <span style={{ width: 10, height: 10, borderRadius: 5, background: t.color, boxShadow: `0 0 10px ${t.color}` }} />
-        <b style={{ fontSize: 12.5, letterSpacing: "0.02em", textTransform: "uppercase", color: t.color }}>{stage}</b>
+        <b style={{ fontSize: 12.5, letterSpacing: "0.02em", textTransform: "uppercase", color: inkOf(t.color, 80) }}>{stage}</b>
         <span className="tiny faint">{count} lesson{count === 1 ? "" : "s"}</span>
       </span>
     </motion.div>

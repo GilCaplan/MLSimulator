@@ -37,7 +37,7 @@ export function QuitPanel() {
         footer={
           <>
             <button className="btn ghost" onClick={() => setConfirm(false)} disabled={quitting}>Stay</button>
-            <button className="btn primary" style={{ background: "var(--danger)", boxShadow: "0 6px 18px rgba(255,69,58,0.35)" }} onClick={quit} disabled={quitting}>
+            <button className="btn primary" style={{ background: "var(--danger)", boxShadow: "0 6px 18px color-mix(in srgb, var(--danger) 35%, transparent)" }} onClick={quit} disabled={quitting}>
               {quitting ? <Spinner size={14} /> : "⏻"} Quit
             </button>
           </>

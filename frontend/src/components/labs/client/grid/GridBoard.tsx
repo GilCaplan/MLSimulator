@@ -1,16 +1,16 @@
 import { motion } from "framer-motion";
 import { useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { spring } from "../../../../design/motion";
-import { withAlpha } from "../../../../lib/colors";
 import { ARROW_DEG, CELLS, EMPTY, GOAL, N, PIT, WALL, confidence, maxQ, rc, type Cell, type World } from "./qlearn";
 
-const GREEN = "#30D158", RED = "#FF453A";
+const GREEN = "var(--success)", RED = "var(--danger)";
+const wash = (c: string, a: number) => `color-mix(in srgb, ${c} ${Math.round(a * 100)}%, transparent)`;
 
 /** Cell colour for a state value (max Q): green for good, red for bad, stronger = further from 0. */
 function heat(v: number) {
   const t = Math.max(-1, Math.min(1, v / 10));
   if (Math.abs(t) < 0.004) return "transparent";
-  return withAlpha(t > 0 ? GREEN : RED, 0.08 + 0.6 * Math.abs(t) ** 0.75);
+  return wash(t > 0 ? GREEN : RED, 0.08 + 0.6 * Math.abs(t) ** 0.75);
 }
 
 /** The editable 8×8 world with the value heatmap, best-action arrows, the robot and its trail. */
@@ -113,8 +113,8 @@ export function GridBoard({ world, Q, qVersion, robot, trail, showHeat, showArro
 function CellView({ type, isStart, value, showHeat, touched }: { type: Cell; isStart: boolean; value: number; showHeat: boolean; touched: boolean }) {
   let bg = "transparent", icon: string | null = null, tag: string | null = null;
   if (type === WALL) bg = "color-mix(in srgb, var(--text) 36%, transparent)";
-  else if (type === PIT) { bg = withAlpha(RED, 0.22); icon = "🕳️"; tag = "−10"; }
-  else if (type === GOAL) { bg = withAlpha(GREEN, 0.28); icon = "💎"; tag = "+10"; }
+  else if (type === PIT) { bg = wash(RED, 0.22); icon = "🕳️"; tag = "−10"; }
+  else if (type === GOAL) { bg = wash(GREEN, 0.28); icon = "💎"; tag = "+10"; }
   else if (showHeat && touched) bg = heat(value);
   return (
     <div title={type === EMPTY && touched ? `value ${value.toFixed(2)}` : undefined}

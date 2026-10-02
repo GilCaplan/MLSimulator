@@ -201,7 +201,7 @@ export function ColdStartDemo({ onDone }: DemoProps) {
                 <AnimatePresence>
                   {on && (
                     <motion.span key="n" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={spring.pop}
-                      style={{ position: "absolute", top: 4, left: 4, width: 18, height: 18, borderRadius: 9, background: COL.taste, color: "white", fontSize: 10.5, fontWeight: 800,
+                      style={{ position: "absolute", top: 4, left: 4, width: 18, height: 18, borderRadius: 9, background: COL.taste, color: "var(--on-accent)", fontSize: 10.5, fontWeight: 800,
                         display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 6px rgba(0,0,0,.25)" }}>{k + 1}</motion.span>
                   )}
                 </AnimatePresence>

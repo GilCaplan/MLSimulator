@@ -108,7 +108,7 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 18, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring.gentle, delay: index * 0.05 }}
       style={{ gridColumn: wide ? "span 2" : undefined, minWidth: 0 }}>
-      <Glass style={{ height: "100%", padding: 16, opacity: m.state === "queued" ? 0.7 : 1, borderColor: m.state === "done" ? "rgba(48,209,88,.45)" : undefined, transition: "border-color .4s, opacity .4s" }}>
+      <Glass style={{ height: "100%", padding: 16, opacity: m.state === "queued" ? 0.7 : 1, borderColor: m.state === "done" ? "color-mix(in srgb, var(--success) 45%, transparent)" : undefined, transition: "border-color .4s, opacity .4s" }}>
         <div className="row" style={{ gap: 12, marginBottom: 12 }}>
           <ProgressRing value={m.state === "done" ? 1 : m.pct} size={46} color={st.color}>
             <motion.span key={m.state === "done" ? "d" : "e"} initial={{ scale: 0.4, rotate: -30 }} animate={{ scale: 1, rotate: 0 }} transition={spring.pop} style={{ fontSize: 18 }}>

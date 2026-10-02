@@ -62,12 +62,12 @@ export function ChallengeSection({ lesson }: { lesson: Lesson }) {
       <AnimatePresence>
         {completed && (
           <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={spring.gentle}>
-            <Glass pad="lg" variant="strong" style={{ borderColor: "rgba(48,209,88,.5)", boxShadow: "var(--glass-shadow), 0 0 40px rgba(48,209,88,.2)", overflow: "hidden" }}>
-              <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "linear-gradient(135deg, rgba(48,209,88,.16), rgba(10,132,255,.08) 55%, rgba(191,90,242,.12))" }} />
+            <Glass pad="lg" variant="strong" style={{ borderColor: "color-mix(in srgb, var(--success) 50%, transparent)", boxShadow: "var(--glass-shadow), 0 0 40px color-mix(in srgb, var(--success) 20%, transparent)", overflow: "hidden" }}>
+              <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "linear-gradient(135deg, color-mix(in srgb, var(--success) 16%, transparent), color-mix(in srgb, var(--accent) 8%, transparent) 55%, color-mix(in srgb, var(--accent-2) 12%, transparent))" }} />
               <div className="row wrap" style={{ gap: 18 }}>
                 <motion.span animate={{ rotate: [0, -8, 8, 0], y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 3, repeatDelay: 1 }} style={{ fontSize: 52 }}>🏆</motion.span>
                 <div className="col grow" style={{ gap: 4, minWidth: 240 }}>
-                  <span className="eyebrow" style={{ color: "#1f9e46" }}>Challenge complete</span>
+                  <span className="eyebrow" style={{ color: "color-mix(in srgb, var(--success) 72%, var(--text))" }}>Challenge complete</span>
                   <h2 className="gradient-text" style={{ fontSize: 26 }}>You beat “{ch.title}”!</h2>
                   <span className="muted small">
                     Solved {timeAgo(prog.completed_at!)}{prog.attempts ? ` · ${prog.attempts} real-world check${prog.attempts === 1 ? "" : "s"}` : ""}
@@ -86,11 +86,11 @@ export function ChallengeSection({ lesson }: { lesson: Lesson }) {
       </AnimatePresence>
 
       <Glass pad="lg" style={{ overflow: "hidden" }}>
-        <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 0% 0%, rgba(94,92,230,.12), transparent 50%)" }} />
+        <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 50%)" }} />
         <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
           <div className="col" style={{ gap: 14 }}>
             <div className="row" style={{ gap: 12 }}>
-              <span style={{ width: 48, height: 48, borderRadius: 15, background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, boxShadow: "0 6px 18px rgba(94,92,230,.35)" }}>🎯</span>
+              <span style={{ width: 48, height: 48, borderRadius: 15, background: "var(--grad)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, boxShadow: "0 6px 18px color-mix(in srgb, var(--accent) 35%, transparent)" }}>🎯</span>
               <div className="col" style={{ gap: 0 }}>
                 <span className="eyebrow">Practice challenge</span>
                 <h3 style={{ fontSize: 21 }}>{ch.title}</h3>
@@ -119,10 +119,10 @@ export function ChallengeSection({ lesson }: { lesson: Lesson }) {
                 const ok = completed || r?.passed;
                 return (
                   <motion.div key={g.metric} initial={{ opacity: 0, x: 10 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ ...spring.gentle, delay: i * 0.08 }}
-                    className="row" style={{ gap: 10, padding: "10px 12px", borderRadius: 14, background: ok ? "rgba(48,209,88,.12)" : "var(--glass-strong)", border: `1px solid ${ok ? "rgba(48,209,88,.4)" : "var(--hairline)"}` }}>
+                    className="row" style={{ gap: 10, padding: "10px 12px", borderRadius: 14, background: ok ? "color-mix(in srgb, var(--success) 12%, transparent)" : "var(--glass-strong)", border: `1px solid ${ok ? "color-mix(in srgb, var(--success) 40%, transparent)" : "var(--hairline)"}` }}>
                     <motion.span key={String(ok)} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={spring.pop}
                       style={{ width: 22, height: 22, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0,
-                        background: ok ? "var(--success)" : "transparent", border: ok ? "none" : "2px solid var(--fill-2)", color: "white" }}>
+                        background: ok ? "var(--success)" : "transparent", border: ok ? "none" : "2px solid var(--fill-2)", color: "var(--on-accent)" }}>
                       {ok ? "✓" : ""}
                     </motion.span>
                     <span className="grow" style={{ fontWeight: 560 }}>{g.label}</span>
@@ -195,7 +195,7 @@ export function ChallengeSection({ lesson }: { lesson: Lesson }) {
 
 function Meta({ icon, label, value, warn }: { icon: string; label: string; value: React.ReactNode; warn?: boolean }) {
   return (
-    <span className="inset row" style={{ gap: 8, padding: "7px 11px", borderRadius: 12, borderColor: warn ? "rgba(255,159,10,.45)" : undefined, background: warn ? "rgba(255,159,10,.10)" : undefined }}>
+    <span className="inset row" style={{ gap: 8, padding: "7px 11px", borderRadius: 12, borderColor: warn ? "color-mix(in srgb, var(--warning) 45%, transparent)" : undefined, background: warn ? "color-mix(in srgb, var(--warning) 10%, transparent)" : undefined }}>
       <span>{icon}</span>
       <span className="col" style={{ gap: 0 }}>
         <span className="tiny faint">{label}</span>

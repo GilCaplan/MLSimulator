@@ -38,7 +38,7 @@ export function ClassificationArt({ active }: { active: boolean }) {
       {dots.map((d, i) => {
         const color = d.cls ? "#FF375F" : "#0A84FF";
         return (
-          <motion.circle key={i} r={5.5} stroke="white" strokeWidth={1.4}
+          <motion.circle key={i} r={5.5} stroke="var(--bg)" strokeWidth={1.4}
             initial={{ cx: d.x0, cy: d.y0, fill: "#8e8e93" }}
             animate={{ cx: [d.x0, d.x1, d.x1, d.x0], cy: [d.y0, d.y1, d.y1, d.y0], fill: ["#8e8e93", color, color, "#8e8e93"] }}
             transition={{ duration: DUR, times, repeat: Infinity, ease: [0.32, 0.72, 0, 1], delay: (i % 6) * 0.03 }} />
@@ -72,7 +72,7 @@ export function RegressionArt({ active }: { active: boolean }) {
         animate={{ y1: [mid, mid, yL + 3, yL + 3, mid], y2: [mid, mid, yR - 3, yR - 3, mid], opacity: [0, 1, 1, 1, 0] }}
         transition={{ ...t, times: [0, 0.3, 0.62, 0.88, 1] }} />
       {pts.map((p, i) => (
-        <motion.circle key={i} cx={p.x} cy={p.y} r={5.5} fill="#5E5CE6" stroke="white" strokeWidth={1.4}
+        <motion.circle key={i} cx={p.x} cy={p.y} r={5.5} fill="#5E5CE6" stroke="var(--bg)" strokeWidth={1.4}
           animate={{ scale: [0, 1, 1, 1, 0], opacity: [0, 1, 1, 1, 0] }}
           transition={{ ...t, times: [0, 0.05 + i * 0.014, 0.5, 0.9, 1] }}
           style={{ originX: `${p.x}px`, originY: `${p.y}px` }} />
@@ -198,7 +198,7 @@ export function ClusteringArt({ active }: { active: boolean }) {
           style={{ originX: `${g.cx}px`, originY: `${g.cy}px`, fillOpacity: active ? 0.14 : 0.09, strokeOpacity: 0.5 }} />
       ))}
       {dots.map((d, i) => (
-        <motion.circle key={i} r={5} stroke="white" strokeWidth={1.3}
+        <motion.circle key={i} r={5} stroke="var(--bg)" strokeWidth={1.3}
           initial={{ cx: d.x0, cy: d.y0, fill: "#8e8e93" }}
           animate={{ cx: [d.x0, d.x1, d.x1, d.x0], cy: [d.y0, d.y1, d.y1, d.y0], fill: ["#8e8e93", d.g.color, d.g.color, "#8e8e93"] }}
           transition={{ duration: DUR, times, repeat: Infinity, ease: [0.32, 0.72, 0, 1], delay: (i % 7) * 0.025 }} />
@@ -248,7 +248,7 @@ export function MapArt({ active }: { active: boolean }) {
         ))}
       </motion.g>
       {pts.map((p, i) => (
-        <motion.circle key={i} fill={p.color} stroke="white" strokeWidth={1.1}
+        <motion.circle key={i} fill={p.color} stroke="var(--bg)" strokeWidth={1.1}
           initial={{ cx: p.px, cy: p.py, r: p.rz }}
           animate={{ cx: [p.px, p.mx, p.mx, p.px], cy: [p.py, p.my, p.my, p.py], r: [p.rz, 4.2, 4.2, p.rz], opacity: active ? 1 : 0.9 }}
           transition={{ ...t, times, delay: (i % 6) * 0.03 }} />
@@ -278,7 +278,7 @@ export function AnomalyArt({ active }: { active: boolean }) {
         animate={{ pathLength: [0, 1, 1, 1], opacity: [0, 0.8, 0.8, 0] }}
         transition={{ duration: DUR, times: [0, 0.3, 0.85, 1], repeat: Infinity, ease: "easeInOut" }} />
       {crowd.map((c, i) => (
-        <motion.circle key={i} cx={c.x} cy={c.y} r={4.6} fill="#64D2FF" stroke="white" strokeWidth={1.2}
+        <motion.circle key={i} cx={c.x} cy={c.y} r={4.6} fill="#64D2FF" stroke="var(--bg)" strokeWidth={1.2}
           animate={{ cx: [c.x, c.x + (c.k - 0.5) * 6, c.x], cy: [c.y, c.y + (0.5 - c.k) * 5, c.y] }}
           transition={{ duration: 2.6 + c.k * 1.6, repeat: Infinity, ease: "easeInOut" }} />
       ))}
@@ -288,7 +288,7 @@ export function AnomalyArt({ active }: { active: boolean }) {
       <motion.circle cx={ox} cy={oy} fill="none" stroke="#FF453A" strokeWidth={2}
         animate={{ r: [7, 22], opacity: [active ? 0.9 : 0.6, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }} />
       <circle cx={ox} cy={oy} r={11} fill="#FF453A" opacity={0.18} style={{ filter: "blur(3px)" }} />
-      <motion.circle cx={ox} cy={oy} r={6} fill="#FF453A" stroke="white" strokeWidth={1.4}
+      <motion.circle cx={ox} cy={oy} r={6} fill="#FF453A" stroke="var(--bg)" strokeWidth={1.4}
         animate={{ scale: [1, 1.25, 1] }} transition={{ duration: 1.5, repeat: Infinity }} style={{ originX: `${ox}px`, originY: `${oy}px` }} />
       <motion.g animate={{ opacity: [0, 0, 1, 1, 0], y: [4, 4, 0, 0, 4] }} transition={{ duration: DUR, times: [0, 0.45, 0.55, 0.85, 1], repeat: Infinity }}>
         <rect x={ox - 30} y={oy + 13} width={60} height={20} rx={10} fill="#FF453A" />
@@ -390,7 +390,7 @@ function Star({ cx, cy, r, fill }: { cx: number; cy: number; r: number; fill: st
     const rr = i % 2 ? r * 0.45 : r;
     return `${cx + Math.cos(a) * rr},${cy + Math.sin(a) * rr}`;
   }).join(" ");
-  return <polygon points={pts} fill={fill} stroke="white" strokeWidth={0.8} strokeLinejoin="round" />;
+  return <polygon points={pts} fill={fill} stroke="var(--bg)" strokeWidth={0.8} strokeLinejoin="round" />;
 }
 
 /** A person stars a few posters, then a row of suggested posters slides in underneath — "you'll like these". Loops. */

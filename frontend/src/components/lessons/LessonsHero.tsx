@@ -21,7 +21,7 @@ export function LessonsHero({ lessons, next, onContinue }: { lessons: LessonSumm
 
   return (
     <Glass pad="lg" animate_in style={{ overflow: "hidden" }}>
-      <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 85% 20%, rgba(191,90,242,.16), transparent 50%), radial-gradient(ellipse at 10% 100%, rgba(10,132,255,.12), transparent 55%)" }} />
+      <div aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "inherit", pointerEvents: "none", background: "radial-gradient(ellipse at 85% 20%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 50%), radial-gradient(ellipse at 10% 100%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%)" }} />
       <div className="row wrap" style={{ gap: 28, alignItems: "center" }}>
         <div className="col" style={{ gap: 16, flex: "1 1 520px", minWidth: 0 }}>
           <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="badge accent" style={{ alignSelf: "flex-start" }}>
@@ -89,15 +89,15 @@ function BigRing({ value, steps, children }: { value: number; steps: number; chi
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)", overflow: "visible" }}>
         <defs>
           <linearGradient id="lessons-ring" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#0a84ff" />
-            <stop offset="55%" stopColor="#5e5ce6" />
-            <stop offset="100%" stopColor="#bf5af2" />
+            <stop offset="0%" style={{ stopColor: "var(--accent)" }} />
+            <stop offset="55%" style={{ stopColor: "color-mix(in srgb, var(--accent) 50%, var(--accent-2))" }} />
+            <stop offset="100%" style={{ stopColor: "var(--accent-2)" }} />
           </linearGradient>
         </defs>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--fill)" strokeWidth={stroke} />
         <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="url(#lessons-ring)" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c}
           initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - Math.max(0.0001, value)) }} transition={{ ...spring.soft, delay: 0.4 }}
-          style={{ filter: "drop-shadow(0 0 8px rgba(94,92,230,.45))" }} />
+          style={{ filter: "drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 45%, transparent))" }} />
         <circle cx={size / 2} cy={size / 2} r={r2} fill="none" stroke="var(--fill)" strokeWidth={5} />
         <motion.circle cx={size / 2} cy={size / 2} r={r2} fill="none" stroke="var(--success)" strokeWidth={5} strokeLinecap="round" strokeDasharray={c2}
           initial={{ strokeDashoffset: c2 }} animate={{ strokeDashoffset: c2 * (1 - Math.max(0.0001, steps)) }} transition={{ ...spring.soft, delay: 0.6 }} />

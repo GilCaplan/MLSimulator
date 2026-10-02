@@ -153,10 +153,10 @@ const BIN = 0.05, GW = 15, GH = 11;
 function Glyph({ spam }: { spam: boolean }) {
   return (
     <g>
-      <rect x={-GW / 2} y={-GH / 2} width={GW} height={GH} rx={2.2} fill={spam ? C.pos : C.neg} stroke="white" strokeWidth={0.8} />
+      <rect x={-GW / 2} y={-GH / 2} width={GW} height={GH} rx={2.2} fill={spam ? C.pos : C.neg} stroke="var(--bg)" strokeWidth={0.8} />
       {spam
-        ? <text x={0} y={3.4} textAnchor="middle" fontSize={9} fontWeight={800} fill="white">!</text>
-        : <path d={`M${-GW / 2 + 1.5},${-GH / 2 + 1.5} L0,1 L${GW / 2 - 1.5},${-GH / 2 + 1.5}`} fill="none" stroke="white" strokeWidth={1.1} strokeLinejoin="round" />}
+        ? <text x={0} y={3.4} textAnchor="middle" fontSize={9} fontWeight={800} fill="var(--on-accent)">!</text>
+        : <path d={`M${-GW / 2 + 1.5},${-GH / 2 + 1.5} L0,1 L${GW / 2 - 1.5},${-GH / 2 + 1.5}`} fill="none" stroke="var(--on-accent)" strokeWidth={1.1} strokeLinejoin="round" />}
     </g>
   );
 }
@@ -252,7 +252,7 @@ function Folders({ emails, t }: { emails: Email[]; t: number }) {
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 2, fontSize: 10.5, fontWeight: 650, color: "var(--text)", transition: "background .3s, border-color .3s, box-shadow .3s" }}>
                 <span aria-hidden style={{ fontSize: 11 }}>{e.spam ? "🎣" : "✉️"}</span>
                 <span className="num">{Math.round(e.p * 100)}</span>
-                {wrong && <span aria-label="mistake" style={{ position: "absolute", top: -6, right: -5, width: 14, height: 14, borderRadius: 7, background: C.warn, color: "white", fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>!</span>}
+                {wrong && <span aria-label="mistake" style={{ position: "absolute", top: -6, right: -5, width: 14, height: 14, borderRadius: 7, background: C.warn, color: "var(--on-accent)", fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>!</span>}
               </motion.div>
             );
           })}
@@ -310,7 +310,7 @@ function PRCurve({ emails, t }: { emails: Email[]; t: number }) {
           <path d={d} fill="none" stroke={C.indigo} strokeWidth={2.2} strokeLinejoin="round" />
           <text x={(m.l + width - m.r) / 2} y={height - 3} textAnchor="middle" fontSize={10.5} fill="var(--text-2)">recall (spam caught) →</text>
           <text transform={`translate(10 ${(m.t + height - m.b) / 2}) rotate(-90)`} textAnchor="middle" fontSize={10.5} fill="var(--text-2)">precision ↑</text>
-          <motion.circle initial={false} animate={{ cx: sx(cur.recall), cy: sy(curP) }} transition={spring.snappy} r={6.5} fill={C.indigo} stroke="white" strokeWidth={2} style={{ filter: `drop-shadow(0 2px 6px ${C.indigo}88)` }} />
+          <motion.circle initial={false} animate={{ cx: sx(cur.recall), cy: sy(curP) }} transition={spring.snappy} r={6.5} fill={C.indigo} stroke="var(--bg)" strokeWidth={2} style={{ filter: `drop-shadow(0 2px 6px ${C.indigo}88)` }} />
         </svg>
       )}
     </div>

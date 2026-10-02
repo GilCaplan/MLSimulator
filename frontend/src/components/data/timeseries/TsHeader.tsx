@@ -85,7 +85,7 @@ export function TsHeader({ dataset, profile, roles, pickerOpen, onTogglePicker, 
       <AnimatePresence>
         {ready && profile?.error && (
           <motion.div key="err" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} style={{ overflow: "hidden" }}>
-            <div className="row small" style={{ gap: 10, alignItems: "flex-start", marginTop: 14, padding: "10px 14px", borderRadius: 12, background: "rgba(255,159,10,.13)", lineHeight: 1.5 }}>
+            <div className="row small" style={{ gap: 10, alignItems: "flex-start", marginTop: 14, padding: "10px 14px", borderRadius: 12, background: "color-mix(in srgb, var(--warning) 13%, transparent)", lineHeight: 1.5 }}>
               <span style={{ fontSize: 18 }}>🧐</span>
               <span className="col" style={{ gap: 2 }}>
                 <b>These columns can't be forecast yet</b>
