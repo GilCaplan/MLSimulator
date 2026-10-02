@@ -9,3 +9,6 @@ __pycache__/
 .DS_Store
 frontend/tsconfig.tsbuildinfo
 *.tsbuildinfo
+ML Playground.desktop
+ML Playground.lnk
+launcher/icon.ico

@@ -17,8 +17,11 @@ from .train_classic import Cancelled
 def pick_device(kind: str, n_rows: int, n_features: int) -> torch.device:
     if kind == "gcn":
         return torch.device("cpu")  # sparse ops are CPU-only on Apple Silicon
-    if torch.backends.mps.is_available() and (kind in ("cnn2d", "tiny_resnet", "ft_transformer") and n_rows * n_features > 2e5 or n_rows * n_features > 2e6):
-        return torch.device("mps")
+    big = kind in ("cnn2d", "tiny_resnet", "ft_transformer") and n_rows * n_features > 2e5 or n_rows * n_features > 2e6
+    if big and torch.cuda.is_available():
+        return torch.device("cuda")  # NVIDIA GPU (Linux / Windows)
+    if big and torch.backends.mps.is_available():
+        return torch.device("mps")  # Apple GPU
     return torch.device("cpu")
 
 

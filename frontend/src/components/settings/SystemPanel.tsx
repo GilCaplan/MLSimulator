@@ -62,9 +62,9 @@ export function SystemPanel() {
             <Fact icon="💻" label="Machine" value={`${info.machine} · ${info.cpu_count} CPU cores`} />
             <Fact
               icon="⚡️"
-              label="Apple GPU (MPS)"
-              help="On Apple-silicon Macs, neural networks can train on the built-in graphics chip (Metal Performance Shaders), which is often several times faster."
-              value={info.mps ? <span style={{ color: "var(--success)" }}>● Available</span> : <span className="muted">Not available</span>}
+              label="GPU"
+              help="Big neural networks train on a graphics chip when one is available: the built-in Apple GPU on Apple-silicon Macs (MPS), or an NVIDIA card with CUDA on Linux/Windows. Otherwise the CPU is used, which is fine for everything in this app."
+              value={(info.gpu ?? (info.mps ? "Apple GPU (MPS)" : null)) ? <span style={{ color: "var(--success)" }}>● {info.gpu ?? "Apple GPU (MPS)"}</span> : <span className="muted">CPU only</span>}
             />
           </motion.div>
 
@@ -88,7 +88,7 @@ export function SystemPanel() {
               <PathRow
                 label="Data folder (projects, datasets, saved models)"
                 path={info.data_dir}
-                action={<button className="btn sm" onClick={() => api.revealData().catch(toast.error)}>Show in Finder</button>}
+                action={<button className="btn sm" onClick={() => api.revealData().catch(toast.error)}>{info.os === "Windows" ? "Show in Explorer" : info.os === "Linux" ? "Open folder" : "Show in Finder"}</button>}
               />
               <PathRow label="Log file" path={info.log_path} />
               <p className="tiny faint" style={{ lineHeight: 1.5 }}>Back up the data folder to keep your work; delete it to start completely fresh.</p>

@@ -144,7 +144,7 @@ few labels), **slot machines** (explore vs exploit) and a **robot in a maze** th
 - **Server & port**: see which ports are free and move the running app to another. The page follows automatically,
   and the desktop icon always finds the running app.
 - **Appearance**: light, dark or auto; reduce motion.
-- **System**: versions, Apple GPU (MPS) availability, data folder (*Show in Finder*) and log file.
+- **System**: versions, GPU availability (Apple MPS or NVIDIA CUDA), data folder (*Show in Finder* / Explorer / *Open folder*) and log file.
 - **Quit** stops the background server.
 
 ## Troubleshooting

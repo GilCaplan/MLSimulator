@@ -22,3 +22,39 @@ jobs:
       - run: pip install scikit-learn xgboost lightgbm imbalanced-learn pandas numpy openpyxl fastapi joblib pillow
       - name: Lesson challenges are present and solvable
         run: PYTHONPATH=. python scripts/validate_lessons.py --seeds 7,11 --no-torch   # image lessons need torch; run locally
+
+  platforms:
+    name: install + launch (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { shell: bash } }
+    env: { BROWSER: "true", PYTHONUTF8: "1" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - name: Python environment (.venv, as the setup scripts create it)
+        run: |
+          python -m venv .venv
+          if [ "$RUNNER_OS" = "Windows" ]; then PY=.venv/Scripts/python; else PY=.venv/bin/python; fi
+          echo "PY=$PY" >> "$GITHUB_ENV"
+          $PY -m pip install -q --upgrade pip
+          if [ "$RUNNER_OS" = "Linux" ]; then $PY -m pip install -q torch --index-url https://download.pytorch.org/whl/cpu; fi
+          $PY -m pip install -q -r requirements.txt
+      - name: Build the interface
+        run: cd frontend && npm ci && npm run build
+      - name: The API process never imports torch / xgboost / lightgbm
+        run: $PY tests/test_process_isolation.py
+      - name: Launch, train classic + PyTorch models, predict, stop
+        run: |
+          $PY launcher/launch.py
+          $PY scripts/smoke_platform.py
+          $PY launcher/launch.py --stop
+      - name: Server log
+        if: always()
+        run: cat data/logs/server.log data/logs/launcher.log || true

@@ -690,6 +690,8 @@ export interface PortsInfo { free: number[]; busy: number[]; range: [number, num
 export interface SystemInfo {
   version: string; port: number; pid: number; data_dir: string; log_path: string; python: string; machine: string;
   cpu_count: number; versions: Record<string, string | null>; mps: boolean;
+  /** "Darwin" | "Linux" | "Windows"; gpu = accelerator name or null */
+  os?: string; gpu?: string | null;
 }
 export interface ArchSummary { ok: boolean; errors: string[]; layers: { name: string; out_shape: number[]; params: number }[]; total_params: number }
 

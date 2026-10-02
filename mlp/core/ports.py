@@ -69,8 +69,10 @@ def spawn_successor(new_port: int, current_port: int, server) -> dict:
     handoff.target, handoff.token = new_port, token
     handoff.goodbye.clear()
     log = open(SERVER_LOG, "ab")
+    detach = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW}
+              if os.name == "nt" else {"start_new_session": True})
     subprocess.Popen([sys.executable, "-m", "mlp.main", "--port", str(new_port), "--handoff-from", str(current_port),
-                      "--handoff-token", token], cwd=str(ROOT), stdout=log, stderr=log, start_new_session=True)
+                      "--handoff-token", token], cwd=str(ROOT), stdout=log, stderr=log, stdin=subprocess.DEVNULL, **detach)
 
     def watch():
         t0 = time.time()

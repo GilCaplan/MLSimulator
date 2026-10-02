@@ -32,7 +32,8 @@ def info(request: Request):
             versions[pkg] = None
     return {"version": VERSION, "port": request.app.state.port, "pid": os.getpid(), "data_dir": str(DATA_DIR),
             "log_path": str(SERVER_LOG), "python": platform.python_version(), "machine": platform.machine(),
-            "cpu_count": os.cpu_count(), "versions": versions, "mps": platform.machine() == "arm64"}
+            "cpu_count": os.cpu_count(), "versions": versions, "mps": platform.system() == "Darwin" and platform.machine() == "arm64", "os": platform.system(),
+            "gpu": _gpu()}
 
 
 @router.get("/system/ports")
@@ -77,8 +78,25 @@ def shutdown(request: Request):
     return {"ok": True}
 
 
+def _gpu() -> str | None:
+    """Which accelerator PyTorch can use — detected without importing torch in the API process."""
+    import shutil
+    if platform.system() == "Darwin" and platform.machine() == "arm64":
+        return "Apple GPU (MPS)"
+    if shutil.which("nvidia-smi"):
+        return "NVIDIA GPU (CUDA)"
+    return None
+
+
 @router.post("/system/reveal-data")
 def reveal_data():
-    if platform.system() == "Darwin":
-        subprocess.Popen(["open", str(DATA_DIR)])
+    try:
+        if platform.system() == "Darwin":
+            subprocess.Popen(["open", str(DATA_DIR)])
+        elif platform.system() == "Windows":
+            os.startfile(str(DATA_DIR))  # noqa: S606
+        else:
+            subprocess.Popen(["xdg-open", str(DATA_DIR)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        pass  # no file manager available — the path is still returned
     return {"ok": True, "path": str(DATA_DIR)}

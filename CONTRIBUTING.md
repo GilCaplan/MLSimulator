@@ -5,8 +5,8 @@ agree that your contribution is provided under the same license.
 
 ## Development setup
 ```sh
-zsh scripts/setup.sh                 # or follow the manual steps in the README
-zsh scripts/dev.sh                   # backend on :8765 + Vite dev server on :5173 (hot reload, proxies /api)
+bash scripts/setup.sh                # Windows: scripts\setup.bat (or follow the manual steps in the README)
+zsh scripts/dev.sh                   # macOS/Linux: backend on :8765 + Vite dev server on :5173 (hot reload, proxies /api)
 ```
 
 ## Checks before a pull request
