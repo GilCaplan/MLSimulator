@@ -1,0 +1,11 @@
+.venv/
+data/
+frontend/node_modules/
+frontend/dist/
+launcher/build/
+ML Playground.app/
+__pycache__/
+*.pyc
+.DS_Store
+frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
