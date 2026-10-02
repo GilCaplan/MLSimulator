@@ -6,7 +6,8 @@ import { Modal } from "../glass";
 import { ArchPreview } from "./ArchPreview";
 import { GcnBuilder, TransformerBuilder } from "./ArchBuilders";
 import { LayerBuilder } from "./LayerBuilder";
-import { badgesFor, familyOf, modalityOf } from "./meta";
+import { badgesFor, familyOf, isTextKind, modalityOf } from "./meta";
+import { asTextArch, TextArchPreview, TextNetBuilder, type TextArch } from "./TextBuilders";
 import { ResNetBuilder } from "./VisionBuilders";
 
 /** Write a patch back into one ModelConfig of the current project (debounced autosave via the store). */
@@ -25,6 +26,8 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
   const arch = cfg?.nn_arch ?? spec?.default_arch ?? null;
 
   const setArch = (a: NNArch) => cfg && patchModel(cfg.key, { nn_arch: a });
+  const setTextArch = (a: TextArch) => setArch(a as unknown as NNArch);
+  const textNet = !!arch && isTextKind(arch.kind);
   const reset = () => {
     if (!cfg || !spec) return;
     const params: Record<string, any> = {};
@@ -70,13 +73,16 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
                 <div className="col" style={{ gap: 12 }}>
-                  {arch.kind === "ft_transformer" ? <TransformerBuilder arch={arch} onChange={setArch} />
+                  {textNet ? <TextNetBuilder arch={asTextArch(arch)} onChange={setTextArch} />
+                    : arch.kind === "ft_transformer" ? <TransformerBuilder arch={arch} onChange={setArch} />
                     : arch.kind === "gcn" ? <GcnBuilder arch={arch} onChange={setArch} />
                     : arch.kind === "tiny_resnet" ? <ResNetBuilder arch={arch} onChange={setArch} />
                     : <LayerBuilder arch={arch} onChange={setArch} />}
                 </div>
                 <div style={{ position: "sticky", top: 0 }}>
-                  <ArchPreview arch={arch} task={(project?.task ?? null) as Task | null} />
+                  {textNet
+                    ? <TextArchPreview arch={asTextArch(arch)} task={(project?.task ?? null) as Task | null} />
+                    : <ArchPreview arch={arch} task={(project?.task ?? null) as Task | null} />}
                 </div>
               </div>
             </section>

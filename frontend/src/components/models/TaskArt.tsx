@@ -297,3 +297,72 @@ export function AnomalyArt({ active }: { active: boolean }) {
     </svg>
   );
 }
+
+/* ------------------------------------------------------------------ language art */
+
+const MESSAGES: { words: string[]; key: number[]; label: string; color: string }[] = [
+  { words: ["the", "battery", "is", "not", "great"], key: [3, 4], label: "negative", color: "#FF375F" },
+  { words: ["win", "a", "free", "prize", "now"], key: [0, 2, 3], label: "spam", color: "#FF9F0A" },
+  { words: ["love", "this", "lamp", "so", "much"], key: [0], label: "positive", color: "#30D158" },
+  { words: ["my", "parcel", "never", "arrived"], key: [1, 3], label: "shipping", color: "#0A84FF" },
+];
+
+/** A chat bubble types out a message, the telling words light up, then a label chip pops out. Cycles through messages. */
+export function TextClassifyArt({ active }: { active: boolean }) {
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setK((v) => (v + 1) % MESSAGES.length), 3600);
+    return () => clearInterval(t);
+  }, []);
+  const msg = MESSAGES[k];
+  // lay the words out in rows inside the bubble (≈6.3 px per character at 11.5 px)
+  const BX = 10, BY = 22, BW = 128, PAD = 9, GAP = 4, CH = 19;
+  const chips = useMemo(() => {
+    let x = BX + PAD, y = BY + PAD;
+    return msg.words.map((w) => {
+      const wd = w.length * 6.3 + 12;
+      if (x + wd > BX + BW - PAD) { x = BX + PAD; y += CH + GAP; }
+      const c = { w, x, y, wd };
+      x += wd + GAP;
+      return c;
+    });
+  }, [msg]);
+  const BH = chips[chips.length - 1].y + CH + PAD - BY;
+  const midY = BY + BH / 2;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      <path d={`M ${BX + 14} ${BY + BH} l -8 10 l 18 -10 z`} fill="var(--glass-strong)" stroke="var(--hairline)" />
+      <rect x={BX} y={BY} width={BW} height={BH} rx={14} fill="var(--glass-strong)" stroke="var(--hairline)" />
+      <AnimatePresence mode="wait">
+        <motion.g key={k} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.25 }}>
+          {chips.map((c, i) => {
+            const isKey = msg.key.includes(i);
+            return (
+              <motion.g key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 420, damping: 22, delay: 0.1 + i * 0.13 }}>
+                <motion.rect x={c.x} y={c.y} width={c.wd} height={CH} rx={6}
+                  initial={{ fill: "rgba(142,142,147,0.16)" }}
+                  animate={{ fill: isKey ? ["rgba(142,142,147,0.16)", "rgba(142,142,147,0.16)", msg.color] : "rgba(142,142,147,0.16)" }}
+                  transition={{ duration: 1.6, times: [0, 0.75, 1], delay: 0.1 + i * 0.13 }} />
+                <motion.text x={c.x + c.wd / 2} y={c.y + 13.2} textAnchor="middle" fontSize={11.5} fontWeight={600}
+                  initial={{ fill: "var(--text)" }} animate={{ fill: isKey ? ["var(--text)", "var(--text)", "#ffffff"] : "var(--text)" }}
+                  transition={{ duration: 1.6, times: [0, 0.75, 1], delay: 0.1 + i * 0.13 }}>{c.w}</motion.text>
+              </motion.g>
+            );
+          })}
+          {/* reading cursor sweeping across the words */}
+          <motion.rect width={2} height={CH} rx={1} fill="var(--accent)"
+            initial={{ x: chips[0].x, y: chips[0].y, opacity: 0 }}
+            animate={{ x: chips.map((c) => c.x + c.wd + 1), y: chips.map((c) => c.y), opacity: [...chips.map(() => 1).slice(0, -1), 0] }}
+            transition={{ duration: 0.13 * chips.length + 0.2, delay: 0.1, ease: "linear" }} />
+          <motion.line x1={BX + BW + 6} y1={midY} x2={150} y2={midY} stroke="var(--text-3)" strokeWidth={1.6} strokeDasharray="3 3"
+            initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ delay: 1.75, duration: 0.3 }} />
+          <motion.g initial={{ opacity: 0, scale: 0.4 }} animate={{ opacity: 1, scale: active ? 1.06 : 1 }} transition={{ type: "spring", stiffness: 420, damping: 16, delay: 2 }}
+            style={{ originX: "185px", originY: `${midY}px` }}>
+            <rect x={151} y={midY - 15} width={68} height={30} rx={15} fill={msg.color} />
+            <text x={185} y={midY + 4.5} textAnchor="middle" fontSize={12} fontWeight={700} fill="white">{msg.label}</text>
+          </motion.g>
+        </motion.g>
+      </AnimatePresence>
+    </svg>
+  );
+}

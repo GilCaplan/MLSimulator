@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Glass } from "../components/glass";
 import { CheckDot } from "../components/models/ModelCard";
-import { AnomalyArt, ClassificationArt, ClusteringArt, ImageClassifyArt, ImageNumberArt, MapArt, RegressionArt } from "../components/models/TaskArt";
+import { AnomalyArt, ClassificationArt, ClusteringArt, ImageClassifyArt, ImageNumberArt, MapArt, RegressionArt, TextClassifyArt } from "../components/models/TaskArt";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { api } from "../lib/api";
@@ -37,6 +37,11 @@ const LOOK: Record<string, { examples: string[]; art?: (active: boolean) => Reac
     art: (a) => <ImageNumberArt active={a} />,
     tint: "linear-gradient(135deg, rgba(48,209,88,.14), rgba(94,92,230,.12))",
   },
+  text_classification: {
+    examples: ["⭐ Is a review positive or negative", "📵 Spam or a real message", "🎫 Which team should answer a ticket"],
+    art: (a) => <TextClassifyArt active={a} />,
+    tint: "linear-gradient(135deg, rgba(48,209,88,.13), rgba(10,132,255,.12))",
+  },
   clustering: {
     examples: ["🛍️ Customer segments", "🎵 Songs that sound alike", "🧬 Similar patients or cells"],
     art: (a) => <ClusteringArt active={a} />,
@@ -70,8 +75,9 @@ function chooseProblem(taskIn: string, modality: Modality) {
   const st = useProject.getState();
   const p = st.project;
   if (!p) return;
-  // pictures are always supervised: an unsupervised task falls back to image classification
-  const task = (modality === "image" && isUnsupervised(taskIn) ? "classification" : taskIn) as NonNullable<Project["task"]>;
+  // pictures are always supervised (an unsupervised task falls back to image classification); text is classification only
+  const task = ((modality === "image" && isUnsupervised(taskIn)) || modality === "text" ? "classification" : taskIn) as NonNullable<Project["task"]>;
+  if (modality === "text" && taskIn !== "classification") toast.info("Text projects sort messages into categories — predicting numbers from text is coming later.");
   const sameTask = p.task === task;
   const sameModality = modalityOf(p.modality) === modality;
   if (sameTask && sameModality) return;
@@ -84,7 +90,7 @@ function chooseProblem(taskIn: string, modality: Modality) {
   const toUnsup = isUnsupervised(task), fromUnsup = isUnsupervised(p.task);
   if (toUnsup && !fromUnsup && p.target && !p.truth) patch.truth = p.target;
   if (!toUnsup && fromUnsup && !p.target && p.truth) patch.target = p.truth;
-  // a table can't feed an image model (and vice versa): forget the dataset too
+  // a table can't feed an image or text model (and vice versa): forget the dataset too
   if (!sameModality) Object.assign(patch, { dataset_id: null, target: null, truth: null });
   st.update(patch);
   st.setReport(null);
@@ -134,7 +140,7 @@ export function ProblemStep() {
         <CoachPanel
           intro={<>A model learns from examples where the answer is already known, then guesses the answer for new ones.
             <br /><br />The first big choice is <b>what kind of answer</b> it gives: a <b>category</b> (classification) or a <b>number</b> (regression).
-            <br /><br />The second is <b>what the examples are</b>: rows in a table, or <b>pictures</b>. Together they decide which algorithms and scores make sense later on.
+            <br /><br />The second is <b>what the examples are</b>: rows in a table, <b>pictures</b>, or <b>sentences</b>. Together they decide which algorithms and scores make sense later on.
             <br /><br />No answer column at all? That's <b>unsupervised learning</b> — the <b>Discover</b> problems find groups, draw a map of your data or flag the odd rows out, all without being told what's right.</>}
         />
       }
@@ -159,7 +165,7 @@ export function ProblemStep() {
       <Glass animate_in>
         <div className="col" style={{ gap: 4, marginBottom: 14 }}>
           <span className="eyebrow">Not sure?</span>
-          <h3>Three quick questions</h3>
+          <h3>A few quick questions</h3>
         </div>
         <div className="row wrap" style={{ gap: 14, alignItems: "stretch" }}>
           <div className="inset col" style={{ padding: 14, gap: 10, flex: "2 1 380px" }}>
@@ -169,7 +175,7 @@ export function ProblemStep() {
             </p>
             <div className="row wrap" style={{ gap: 10, alignItems: "flex-start" }}>
               <Examples label="Category → Classification" on={task === "classification"} onPick={() => chooseProblem("classification", modality)}
-                items={modality === "image" ? ["Cat or dog", "Digit 0–9", "Ripe or not"] : ["Yes / no", "Cat, dog or bird", "Low · medium · high risk", "Fraud or genuine"]} />
+                items={modality === "image" ? ["Cat or dog", "Digit 0–9", "Ripe or not"] : modality === "text" ? ["Positive or negative", "Spam or not", "Billing · tech · shipping"] : ["Yes / no", "Cat, dog or bird", "Low · medium · high risk", "Fraud or genuine"]} />
               <Examples label="Number → Regression" on={task === "regression"} onPick={() => chooseProblem("regression", modality)}
                 items={modality === "image" ? ["7 dots", "32° tilt", "Age 41"] : ["$312,000", "23.4 °C", "1,240 units", "4.7 stars"]} />
             </div>
@@ -184,10 +190,32 @@ export function ProblemStep() {
               <PictureButton on={modality === "tabular" && !!task} onClick={() => chooseProblem(task ?? "classification", "tabular")}>📋 No, a table</PictureButton>
             </div>
           </div>
+          <TextQuestion on={modality === "text" && !!task} />
           <DiscoverQuestion problems={discover} task={task} />
         </div>
       </Glass>
     </StepLayout>
+  );
+}
+
+/** "Is your data sentences / messages?" → Language. Text projects are always classification. */
+function TextQuestion({ on }: { on: boolean }) {
+  return (
+    <div className="inset col" style={{ padding: 14, gap: 10, flex: "1 1 240px", transition: "border-color .2s", borderColor: on ? "var(--accent)" : undefined }}>
+      <span className="small" style={{ fontWeight: 650 }}>3 · Is your data sentences / messages?</span>
+      <p className="tiny muted" style={{ lineHeight: 1.55 }}>
+        Reviews, emails, chat messages or support tickets → <b>Language</b>. The model learns which <b>words</b> point to which answer.
+      </p>
+      <div className="row wrap" style={{ gap: 6, alignItems: "center" }}>
+        {["“the battery is not great”", "“WIN a free prize”"].map((t, i) => (
+          <motion.span key={t} className="badge" animate={{ y: [0, -2, 0] }} transition={{ duration: 2.6, repeat: Infinity, delay: i * 0.4 }}
+            style={{ height: 24, fontSize: 11.5, borderRadius: "12px 12px 12px 4px", background: on ? "var(--accent-soft)" : "var(--glass-strong)", color: on ? "var(--accent)" : "var(--text-2)" }}>
+            {t}
+          </motion.span>
+        ))}
+        <div className="row" style={{ marginLeft: "auto", minWidth: 150 }}><PictureButton on={on} onClick={() => chooseProblem("classification", "text")}>💬 Yes, text</PictureButton></div>
+      </div>
+    </div>
   );
 }
 
@@ -198,7 +226,7 @@ function DiscoverQuestion({ problems, task }: { problems: ProblemType[]; task: s
   return (
     <div className="inset col" style={{ padding: 14, gap: 10, flex: "1 1 100%", transition: "border-color .2s", borderColor: on ? "var(--accent)" : undefined }}>
       <div className="row wrap" style={{ gap: 10, alignItems: "baseline" }}>
-        <span className="small" style={{ fontWeight: 650 }}>3 · Is there an answer column at all?</span>
+        <span className="small" style={{ fontWeight: 650 }}>4 · Is there an answer column at all?</span>
         <span className="tiny muted" style={{ lineHeight: 1.55 }}>
           No answer column? → <b>Discover</b>. The model looks for structure on its own — you judge whether it makes sense.
         </span>

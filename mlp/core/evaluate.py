@@ -248,7 +248,8 @@ def _cell(v):
 def evaluate(model, prepared, seed=0, with_surface=True, with_importance=True) -> dict:
     task = prepared.task
     is_image = getattr(prepared, "modality", "tabular") == "image"
-    if is_image:
+    is_text = getattr(prepared, "modality", "tabular") == "text"
+    if is_image or is_text:
         with_surface, with_importance = False, False
     pp = prepared.preprocessor
     out: dict = {"metrics": {}}
@@ -328,6 +329,9 @@ def evaluate(model, prepared, seed=0, with_surface=True, with_importance=True) -
     if is_image:
         from .vision_eval import vision_extras
         out["vision"] = vision_extras(model, prepared, raw_pred, test_proba)
+    if is_text:
+        from .text_eval import text_extras
+        out["text"] = text_extras(model, prepared, raw_pred, test_proba)
     try:
         out["mistakes"] = mistakes(prepared, raw_pred, test_proba)
         out["slices"] = slices(prepared, raw_pred)

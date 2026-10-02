@@ -173,10 +173,14 @@ def rows(did: str, offset: int = 0, limit: int = 100):
 
 
 @router.get("/datasets/{did}/profile")
-def get_profile(did: str, target: str | None = None, task: str | None = None):
+def get_profile(did: str, target: str | None = None, task: str | None = None, modality: str | None = None,
+                text_column: str | None = None):
     if datasets.meta(did).get("modality") == "image":
         from .media import image_profile
         return image_profile(did, target)
+    if datasets.meta(did).get("modality") == "text" or modality == "text":
+        from .media import text_profile
+        return text_profile(did, target, text_column)
     df = datasets.get(did)
     prof = profile.dataset_profile(df, target)
     summ = profile.summarize(df, datasets.meta(did))
@@ -208,6 +212,9 @@ def prepare_dataset(did: str, body: dict = Body(...)):
     if meta.get("modality") == "image":
         from ..core.images import prepare_images
         prepared = prepare_images(datasets.images(did), df, spec, did)
+    elif meta.get("modality") == "text" or spec.get("modality") == "text":
+        from ..core.text import prepare_text
+        prepared = prepare_text(df, spec, did)
     elif spec.get("task") in ("clustering", "reduction", "anomaly"):
         from ..core.unsupervised import prepare_unsupervised
         prepared = prepare_unsupervised(df, spec, did)

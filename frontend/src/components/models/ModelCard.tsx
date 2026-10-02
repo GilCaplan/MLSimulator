@@ -2,12 +2,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { fadeUp, spring } from "../../design/motion";
 import { useProject } from "../../lib/store";
 import type { ModelSpec } from "../../lib/types";
-import { badgesFor, modalityOf, UNSUP_HINTS } from "./meta";
+import { badgesFor, modalityOf, TEXT_HINTS, UNSUP_HINTS } from "./meta";
 
 /** Selectable glass card for one algorithm. */
 export function ModelCard({ spec, count, onToggle, onSettings }: { spec: ModelSpec; count: number; onToggle: () => void; onSettings?: () => void }) {
   const selected = count > 0;
   const modality = useProject((s) => modalityOf(s.project?.modality));
+  const hint = UNSUP_HINTS[spec.id] ?? (modality === "text" ? TEXT_HINTS[spec.id] : undefined);
   return (
     <motion.div
       variants={fadeUp}
@@ -41,9 +42,9 @@ export function ModelCard({ spec, count, onToggle, onSettings }: { spec: ModelSp
       <div className="col" style={{ gap: 4 }}>
         <b style={{ fontSize: 14.5, letterSpacing: "-0.01em" }}>{spec.label}</b>
         <span className="small muted" style={{ lineHeight: 1.45 }}>{spec.description}</span>
-        {UNSUP_HINTS[spec.id] && (
+        {hint && (
           <span className="tiny row" style={{ gap: 6, alignItems: "flex-start", marginTop: 2, padding: "6px 8px", borderRadius: 9, background: selected ? "var(--glass-strong)" : "var(--fill)", color: "var(--text-2)", lineHeight: 1.45, transition: "background .2s" }}>
-            <span>👉</span><span>{UNSUP_HINTS[spec.id]}</span>
+            <span>👉</span><span>{hint}</span>
           </span>
         )}
       </div>

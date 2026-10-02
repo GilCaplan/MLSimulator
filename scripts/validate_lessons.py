@@ -19,7 +19,7 @@ if not TORCH_MODE:
 from mlp.core.pipeline import prepare
 from mlp.core.evaluate import cls_metrics, reg_metrics
 from mlp.core.registry import build_estimator, defaults
-from mlp.lessons.generators import GENERATORS, IMAGE_LESSONS, UNSUPERVISED_LESSONS
+from mlp.lessons.generators import GENERATORS, IMAGE_LESSONS, TEXT_LESSONS, UNSUPERVISED_LESSONS
 from mlp.lessons.grading import CHALLENGES, grade
 
 warnings.filterwarnings("ignore")
@@ -77,7 +77,27 @@ def run_unsupervised(lesson, cfg_name, seed):
     return out
 
 
+def run_text(lesson, cfg_name, seed):
+    from mlp.core.text import prepare_text
+    ch = CHALLENGES[lesson]
+    train, hidden = GENERATORS[lesson](seed=seed)
+    pipe = deep_merge({"task": ch["task"], "target": ch["target"]}, ch["preset_pipeline"])
+    models = list(ch["preset_models"])
+    if cfg_name != "naive":
+        pipe = deep_merge(pipe, ch[cfg_name].get("pipeline", {}))
+        models = ch[cfg_name].get("models", models)
+    prepared = prepare_text(train, pipe, "validate")
+    pp = prepared.preprocessor
+    out = {}
+    for mid in models:  # classic (TF-IDF) models only — this mode never imports torch
+        est = build_estimator(mid, ch["task"], defaults(mid), n_classes=len(prepared.classes), seed=42).fit(prepared.X_train, prepared.y_train)
+        out[mid] = grade(lesson, hidden, pp.decode_y(est.predict(pp.transform(hidden))))
+    return out
+
+
 def run(lesson, cfg_name, seed):
+    if lesson in TEXT_LESSONS:
+        return run_text(lesson, cfg_name, seed)
     if lesson in IMAGE_LESSONS:
         return run_image(lesson, cfg_name, seed)
     if lesson in UNSUPERVISED_LESSONS:

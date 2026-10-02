@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { fadeUp, spring, stagger } from "../../design/motion";
 import { navigate } from "../../lib/router";
+import { useProject } from "../../lib/store";
 import type { StepId } from "../../lib/types";
 
 const IDEAS: { icon: string; title: string; text: string; step: StepId | "tune"; cta: string }[] = [
@@ -13,11 +14,23 @@ const IDEAS: { icon: string; title: string; text: string; step: StepId | "tune";
   { icon: "🤝", title: "Ensembles", text: "Many weak models voting together beat one strong one surprisingly often. Random Forest and boosting do exactly that.", step: "models", cta: "Try an ensemble" },
 ];
 
+/** Text projects: the same idea, in words. */
+const TEXT_IDEAS: typeof IDEAS = [
+  { icon: "🔗", title: "Count word pairs", text: "With words only, “not good” looks like “good”. Switch on words + pairs (bigrams) so word-count models can learn short phrases.", step: "prepare", cta: "Open Prepare" },
+  { icon: "📜", title: "Read in order", text: "A GRU or a tiny Transformer reads the words in sequence, so negations and word order count. They need more examples and time.", step: "models", cta: "Add a reader" },
+  { icon: "📖", title: "Bigger vocabulary", text: "Words outside the vocabulary are invisible. Allow more words (or rarer ones) — but too many rare words invite memorising.", step: "prepare", cta: "Adjust vocabulary" },
+  { icon: "📚", title: "More examples", text: "Language is varied: every extra labelled message teaches new words and phrasings. Especially for the classes it confuses.", step: "data", cta: "Add data" },
+  { icon: "🪢", title: "Regularize", text: "If it's perfect on training texts but not on test texts, it memorised: stronger penalty, more smoothing, or more dropout.", step: "models", cta: "Adjust settings" },
+  { icon: "🎛️", title: "Tune it", text: "Let the automatic search above try different settings with cross-validation and keep the best.", step: "tune", cta: "Jump to tuning" },
+];
+
 /** Friendly static cards with general ways to get better results. */
 export function WaysToImprove({ projectId, onTune }: { projectId: string; onTune: () => void }) {
+  const text = useProject((s) => s.project?.modality === "text");
+  const ideas = text ? TEXT_IDEAS : IDEAS;
   return (
     <motion.div variants={stagger(0.05)} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.2 }} className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: 10 }}>
-      {IDEAS.map((idea) => (
+      {ideas.map((idea) => (
         <motion.button key={idea.title} variants={fadeUp} whileHover={{ y: -3 }} transition={spring.snappy}
           onClick={() => (idea.step === "tune" ? onTune() : navigate(`/p/${projectId}/${idea.step}`))}
           className="inset col" style={{ padding: 14, gap: 6, textAlign: "left", cursor: "pointer", alignItems: "flex-start" }}>

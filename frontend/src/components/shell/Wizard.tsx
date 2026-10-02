@@ -56,7 +56,8 @@ export function Stepper({ current }: { current: StepId }) {
       </div>
       {STEPS.map((step, i) => {
         // image projects call the data step "Images"
-        const base = step.id === "data" && project.modality === "image" ? { ...step, label: "Images", icon: "🖼️", blurb: "Pictures to learn from" } : step;
+        const base = step.id === "data" && project.modality === "image" ? { ...step, label: "Images", icon: "🖼️", blurb: "Pictures to learn from" }
+          : step.id === "data" && project.modality === "text" ? { ...step, label: "Texts", icon: "💬", blurb: "Messages to learn from" } : step;
         // the problem type may rename steps (clustering: "Discover" / "Refine")
         const label = problem?.steps?.find(([id]) => id === step.id)?.[1] ?? base.label;
         const unsupBlurb = problem?.unsupervised ? ({ problem: "What do we want to find?", prepare: "Clean & scale" } as Partial<Record<StepId, string>>)[step.id] : undefined;

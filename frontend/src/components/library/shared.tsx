@@ -81,6 +81,9 @@ export const taskMeta = (task: string) => TASK_META[task] ?? { label: task, icon
 /** Saved models of the clustering / map / anomaly kind (SavedModel.task is typed for supervised tasks only). */
 export const isUnsupModel = (m: Pick<SavedModel, "task">) => ["clustering", "reduction", "anomaly"].includes(m.task as string);
 
+/** Saved models that read free text (one text input). */
+export const isTextModel = (m: Pick<SavedModel, "modality" | "input_schema">) => m.modality === "text" || m.input_schema?.[0]?.type === "text";
+
 /* ---------------------------------------------------------------- metrics */
 
 const RATIO = new Set(["accuracy", "balanced_accuracy", "precision", "recall", "f1", "f1_weighted", "roc_auc", "avg_precision", "r2", "explained_variance", "mape",

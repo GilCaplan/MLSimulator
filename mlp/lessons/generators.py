@@ -370,3 +370,14 @@ def noisy_sensors(seed: int = 7, n: int = 1200, n_hidden: int = 1500, n_noise: i
 
 GENERATORS.update({"choosing_k": customer_segments, "curse": noisy_sensors})
 UNSUPERVISED_LESSONS = {"choosing_k", "curse"}
+
+
+# ----------------------------------------------------------------------------- 17. text
+def negated_reviews(seed: int = 7, n: int = 2400, n_hidden: int = 2000):
+    """A third of reviews negate their adjective ('not good'); a linear unigram model can't tell them apart."""
+    from ..core.text import gen_reviews
+    return gen_reviews(n, 0.35, seed=seed), gen_reviews(n_hidden, 0.35, seed=seed + 1000)
+
+
+GENERATORS.update({"bag_of_words": negated_reviews})
+TEXT_LESSONS = {"bag_of_words"}

@@ -6,7 +6,8 @@ import { ImagePlayground } from "../components/library/ImagePlayground";
 import { Performance } from "../components/library/Performance";
 import { Playground } from "../components/library/Playground";
 import { Recipe } from "../components/library/Recipe";
-import { EditableText, PageFrame, emojiFor, headline, isUnsupModel, rise, specFor, taskMeta, useRegistry } from "../components/library/shared";
+import { TextPlayground } from "../components/library/TextPlayground";
+import { EditableText, PageFrame, emojiFor, headline, isTextModel, isUnsupModel, rise, specFor, taskMeta, useRegistry } from "../components/library/shared";
 import { UnsupPlayground } from "../components/library/UnsupPlayground";
 import { spring } from "../design/motion";
 import { ApiError, api } from "../lib/api";
@@ -64,7 +65,8 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
             <span className="badge">{spec?.emoji ?? "⚙️"} {model.label}</span>
             <span className="badge">{model.family === "torch" ? "🔥 PyTorch neural net" : "🧰 scikit-learn"}</span>
             {model.modality === "image" && <span className="badge accent">🖼️ Image model{model.image_shape ? ` · ${model.image_shape[2]}×${model.image_shape[1]}` : ""}</span>}
-            {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} ${model.modality === "image" ? "pictures" : "rows"}` : ""}</span>}
+            {isTextModel(model) && <span className="badge accent">💬 Text model{model.text_column ? ` · reads “${model.text_column}”` : ""}</span>}
+            {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} ${model.modality === "image" ? "pictures" : isTextModel(model) ? "texts" : "rows"}` : ""}</span>}
             {model.n_params != null && <span className="badge accent">🧮 {model.n_params.toLocaleString()} params</span>}
             <span className="badge">🕒 saved {timeAgo(model.created_at)}</span>
           </div>
@@ -145,6 +147,11 @@ export function ModelPage({ modelId }: { modelId: string }) {
       </motion.nav>
       {model.modality === "image" ? (
         <ImagePlayground key={model.id} model={model} />
+      ) : isTextModel(model) ? (
+        <>
+          <TextPlayground key={model.id} model={model} />
+          <BatchPredict model={model} />
+        </>
       ) : isUnsupModel(model) ? (
         <UnsupPlayground key={model.id} model={model} />
       ) : (

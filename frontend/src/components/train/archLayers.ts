@@ -1,5 +1,7 @@
 import type { NNArch } from "../../lib/types";
 import { archToLayers, type DiagramLayer } from "../nn/NetworkDiagram";
+import { useProject } from "../../lib/store";
+import { isTextArch, textLayers, textWeights } from "./textKit";
 
 /** [channels, height, width] from either a 3-item image shape or a 2-item [h, w]. */
 export function imageDims(shape: number[] | null | undefined): { c: number; h: number; w: number } | null {
@@ -17,7 +19,8 @@ export const imageLabel = (shape: number[] | null | undefined) => {
  * Diagram layers for any architecture. Extends the foundation `archToLayers` with the Tiny ResNet
  * (stem → residual stages → global pool) and a friendly "Image · 32×32×3" input label for image models.
  */
-export function diagramLayers(arch: NNArch | null | undefined, nFeatures: number, nOut: number, imageShape?: number[] | null): DiagramLayer[] {
+export function diagramLayers(arch: NNArch | null | undefined, nFeatures: number, nOut: number, imageShape?: number[] | null, textLen?: number | null): DiagramLayer[] {
+  if (arch && isTextArch(arch)) return textLayers(arch, textLen ?? useProject.getState().project?.pipeline?.text?.max_len ?? 40, nOut);
   const d = imageDims(imageShape);
   const inputLabel = d ? `Image · ${d.w}×${d.h}${d.c === 3 ? "×3" : ""}` : null;
   if (arch?.kind === "tiny_resnet") {
@@ -46,7 +49,8 @@ export function diagramLayers(arch: NNArch | null | undefined, nFeatures: number
  * Weight snapshots only cover the linear (dense) layers, which sit at the end of the network. Pad the front with
  * empty matrices so the real weights colour the last connections instead of the first ones.
  */
-export function alignWeights(weights: number[][][] | undefined, layers: DiagramLayer[]): number[][][] | undefined {
+export function alignWeights(weights: number[][][] | undefined, layers: DiagramLayer[], arch?: NNArch | null): number[][][] | undefined {
+  if (arch && isTextArch(arch)) return textWeights(arch, weights, layers);
   if (!weights?.length) return weights;
   const edges = layers.length - 1;
   if (weights.length >= edges) return weights;

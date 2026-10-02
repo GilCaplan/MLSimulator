@@ -15,7 +15,7 @@ from ..core.jobs import manager
 from ..core.registry import MODEL_INDEX, defaults
 from ..core.store import datasets, new_id, prepared_store, projects
 from ..lessons.catalog import LESSON_INDEX, LESSONS
-from ..lessons.generators import GENERATORS, IMAGE_LESSONS, UNSUPERVISED_LESSONS
+from ..lessons.generators import GENERATORS, IMAGE_LESSONS, TEXT_LESSONS, UNSUPERVISED_LESSONS
 from ..lessons.grading import CHALLENGES, goal_label, grade
 from ..util.jsonable import jsonable
 
@@ -88,6 +88,8 @@ def start_challenge(lid: str):
     lesson, ch = LESSON_INDEX[lid], CHALLENGES[lid]
     train, _ = GENERATORS[lid](seed=DATA_SEED)
     meta = {"name": lesson["challenge"]["dataset_name"], "source": "lesson", "lesson": lid, "task_hint": ch["task"], "target_hint": ch["target"]}
+    if lid in TEXT_LESSONS:
+        meta.update(modality="text", text_column=ch["text_column"])
     if lid in IMAGE_LESSONS:
         did = datasets.put(train.frame, meta, images=train.images)
     else:
@@ -131,12 +133,15 @@ def check(lid: str, body: dict = Body(...)):
     d.mkdir(parents=True, exist_ok=True)
     if not (d / "model.joblib").exists():
         import joblib
+        from ..core.library import preprocessor_for
         shutil.copy(src, d / "model.joblib")
-        joblib.dump(prepared.preprocessor, d / "preprocessor.joblib")
+        joblib.dump(preprocessor_for(prepared, res["model_id"]), d / "preprocessor.joblib")
     train, hidden = GENERATORS[lid](seed=DATA_SEED)
     if lid in IMAGE_LESSONS:
         out = procs.call(res["family"], "predict_arrays", model_dir=str(d), images=np.asarray(hidden.images))
         hidden, train = hidden.frame, train.frame
+    elif lid in TEXT_LESSONS:
+        out = procs.call(res["family"], "predict_text", model_dir=str(d), texts=hidden[ch["text_column"]].astype(str).tolist())
     elif lid in UNSUPERVISED_LESSONS:
         a = procs.call(res["family"], "assign", model_dir=str(d), rows=hidden.drop(columns=[ch["truth"]]).to_dict("records"))
         out = {"predictions": a.get("cluster", [])}

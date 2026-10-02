@@ -52,6 +52,15 @@ def predict(mid: str, body: dict = Body(...)):
     return jsonable(library.predict(mid, rows))
 
 
+@router.post("/library/{mid}/predict-text")
+def predict_text(mid: str, body: dict = Body(...)):
+    """Text models: prediction + per-word influence (occlusion) for the first text."""
+    texts = [t for t in (body.get("texts") or []) if isinstance(t, str)][:20]
+    if not texts:
+        raise HTTPException(400, "No text.")
+    return jsonable(library.predict_text(mid, texts))
+
+
 @router.post("/library/{mid}/assign")
 def assign(mid: str, body: dict = Body(...)):
     """Unsupervised models: cluster + distances to centres, anomaly score, and/or 2-D map position for rows."""

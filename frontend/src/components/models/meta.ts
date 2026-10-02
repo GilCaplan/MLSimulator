@@ -44,13 +44,40 @@ export const FIRST_TRY = new Set(["logistic_regression", "linear_regression", "r
 /** Models designed for pictures (shown first, as "Vision", in image projects). */
 export const VISION_IDS = new Set(["cnn2d", "tiny_resnet"]);
 
+/** Text projects: neural networks that read token sequences (they use the Prepare step's sequence length). */
+export const TEXT_NN_IDS = new Set(["embedding_bag", "gru", "text_transformer"]);
+export const TEXT_ORDER_IDS = new Set(["gru", "text_transformer"]);
+export type TextKind = "embedding_bag" | "gru" | "text_transformer";
+export const isTextKind = (k?: string | null): k is TextKind => !!k && TEXT_NN_IDS.has(k);
+
+/** How each kind of text model sees a sentence — shown as groups on the Models page. */
+export const TEXT_GROUPS: { id: string; icon: string; blurb: string; ids: string[] }[] = [
+  { id: "Read in order", icon: "📜", blurb: "Read the words one after another, so “not good” and “good, not bad” mean different things.", ids: ["gru", "text_transformer"] },
+  { id: "Word embeddings", icon: "🧺", blurb: "Learn a little vector of meaning for every word, then average them — fast, but order is lost.", ids: ["embedding_bag"] },
+  { id: "Bag of words", icon: "🛍️", blurb: "Count which words appear — simple and strong, but it forgets their order.", ids: ["logistic_regression", "multinomial_nb", "random_forest", "xgboost", "mlp"] },
+];
+
+/** One-line teaching note per model in a text project. */
+export const TEXT_HINTS: Record<string, string> = {
+  logistic_regression: "Gives every word a plus or minus weight per class and adds them up.",
+  multinomial_nb: "The classic spam filter — fast, and great with little data.",
+  random_forest: "Trees asking “does the text contain ‘refund’?” — many of them voting.",
+  xgboost: "Trees built one after another on word counts, each fixing the last one's mistakes.",
+  mlp: "A neural network on the word counts — it still can't see word order.",
+  embedding_bag: "Similar words get similar vectors, so ‘great’ helps ‘excellent’.",
+  gru: "Carries a memory along the sentence, so ‘not’ can flip ‘good’.",
+  text_transformer: "Every word looks at every other word — a pocket-sized language model.",
+};
+
 export const modalityOf = (m?: Modality | null): Modality => m ?? "tabular";
 export const specModalities = (s: ModelSpec): Modality[] => s.modalities ?? ["tabular"];
 
 export function badgesFor(spec: ModelSpec, modality: Modality = "tabular"): { text: string; tone: "success" | "warning" | "accent" | "" }[] {
   const out: { text: string; tone: "success" | "warning" | "accent" | "" }[] = [];
   const image = modality === "image";
-  if (image ? VISION_IDS.has(spec.id) && spec.id === "cnn2d" : FIRST_TRY.has(spec.id)) out.push({ text: "Great first try", tone: "success" });
+  const text = modality === "text";
+  if (text ? spec.id === "logistic_regression" || spec.id === "multinomial_nb" : image ? VISION_IDS.has(spec.id) && spec.id === "cnn2d" : FIRST_TRY.has(spec.id)) out.push({ text: "Great first try", tone: "success" });
+  if (text && TEXT_ORDER_IDS.has(spec.id)) out.push({ text: "Reads word order", tone: "accent" });
   if (spec.id === "dbscan") out.push({ text: "Finds k itself", tone: "accent" });
   if (spec.id === "tsne") out.push({ text: "Slow on big data", tone: "warning" });
   if (image && VISION_IDS.has(spec.id)) out.push({ text: "Built for pictures", tone: "accent" });
@@ -70,9 +97,13 @@ export const BEGINNER_IMAGE: Record<Task, string[]> = {
   regression: ["cnn2d", "tiny_resnet", "ridge"],
 };
 
-/** Starter line-up for any problem: beginner trio, vision starter or the unsupervised quick pick. */
-export function starterFor(task: string, image: boolean): string[] {
+/** Text projects: two bag-of-words classics and a network that reads in order. */
+export const TEXT_STARTER = ["logistic_regression", "multinomial_nb", "gru"];
+
+/** Starter line-up for any problem: beginner trio, vision / text starter or the unsupervised quick pick. */
+export function starterFor(task: string, image: boolean, modality: Modality = image ? "image" : "tabular"): string[] {
   if (isUnsupervised(task)) return UNSUP_STARTER[task] ?? [];
+  if (modality === "text") return TEXT_STARTER;
   const t = task as Task;
   return (image ? BEGINNER_IMAGE : BEGINNER)[t] ?? [];
 }

@@ -18,6 +18,18 @@ from .store import datasets, new_id, prepared_store
 ROOT = DATA_DIR / "library"
 
 
+def preprocessor_for(prepared, model_id: str):
+    """The fitted preprocessor as this model expects it (neural text models read token ids, classic ones TF-IDF)."""
+    pp = prepared.preprocessor
+    if getattr(prepared, "modality", "tabular") == "text":
+        import copy
+
+        from .registry import MODEL_INDEX
+        pp = copy.copy(pp)
+        pp.mode = "seq" if MODEL_INDEX[model_id].get("arch_kind") in ("embedding_bag", "gru", "text_transformer") else "tfidf"
+    return pp
+
+
 def save(job_id: str, key: str, name: str, notes: str = "", project_id: str | None = None) -> dict:
     result = manager.load_result(job_id)
     if not result or key not in result.get("models", {}):
@@ -34,13 +46,13 @@ def save(job_id: str, key: str, name: str, notes: str = "", project_id: str | No
     d.mkdir(parents=True)
     shutil.copy(src, d / "model.joblib")
     import joblib
-    joblib.dump(prepared.preprocessor, d / "preprocessor.joblib")
+    joblib.dump(preprocessor_for(prepared, res["model_id"]), d / "preprocessor.joblib")
     try:
         ds_meta = datasets.meta(prepared.dataset_id)
     except KeyError:
         ds_meta = {}
     pp = prepared.preprocessor
-    meta = {"id": mid, "name": name or res["label"], "notes": notes, "task": prepared.task, "model_id": res["model_id"],
+    meta = {"id": mid, "text_column": getattr(pp, "text_column", None), "name": name or res["label"], "notes": notes, "task": prepared.task, "model_id": res["model_id"],
             "label": res["label"], "family": res["family"], "params": res.get("params"), "nn_arch": res.get("nn_arch"),
             "target": prepared.target, "classes": prepared.classes, "feature_names": prepared.feature_names,
             "input_schema": pp.input_schema, "metrics": res["metrics"], "pipeline": prepared.spec,
@@ -50,7 +62,7 @@ def save(job_id: str, key: str, name: str, notes: str = "", project_id: str | No
             "modality": getattr(prepared, "modality", "tabular"), "image_shape": prepared.image_shape}
     (d / "meta.json").write_text(json.dumps(jsonable(meta)))
     detail = {k: res.get(k) for k in ("confusion", "roc", "pr", "residuals", "importance", "surface", "curve", "cv", "thresholds", "notes",
-                                      "calibration", "mistakes", "slices", "vision", "clusters", "reduction", "anomaly")}
+                                      "calibration", "mistakes", "slices", "vision", "clusters", "reduction", "anomaly", "text")}
     (d / "result.json").write_text(json.dumps(jsonable(detail)))
     return meta
 
@@ -93,6 +105,10 @@ def _fam(mid: str) -> str:
 
 def predict(mid: str, rows: list[dict]) -> dict:
     return procs.call(_fam(mid), "predict", model_dir=str(ROOT / mid), rows=rows)
+
+
+def predict_text(mid: str, texts: list[str]) -> dict:
+    return procs.call(_fam(mid), "predict_text", model_dir=str(ROOT / mid), texts=texts)
 
 
 def assign(mid: str, rows: list[dict]) -> dict:

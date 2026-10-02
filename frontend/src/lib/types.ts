@@ -54,6 +54,23 @@ export interface AnomalyResult {
   points: { x: number; y: number; score: number; flag: boolean; truth?: string }[];
   surface?: { nx: number; ny: number; x: [number, number]; y: [number, number]; grid: number[] };
 }
+/** Text-model outputs (mlp/core/text_eval.py) */
+export interface TextResult {
+  text_column: string;
+  /** most confident wrong answers with the raw text */
+  mistakes?: { text: string; true: string; pred: string; confidence: number }[];
+  /** per-word influence on the predicted class (occlusion: remove the word, see the probability move) */
+  examples?: { text: string; true: string; pred: string; probability: number; tokens: { t: string; w: number }[] }[];
+  /** linear / naive Bayes models: most indicative words (or phrases) per class */
+  top_words?: { class: string; words: { t: string; w: number }[] }[];
+  note?: string;
+}
+export interface TextSetInfo { label: string; task: Task; emoji: string; blurb: string; params: Record<string, number> }
+export interface TextPredictResponse extends PredictResponse {
+  /** influence of each word of the first text on the predicted class */
+  tokens: { t: string; w: number }[];
+}
+
 export interface SweepResult {
   model_id: string;
   rows: { k: number; silhouette?: number | null; davies_bouldin?: number | null; ari?: number | null; nmi?: number | null; inertia?: number; bic?: number }[];
@@ -108,7 +125,7 @@ export interface DenseLayer { type: "dense"; units: number; activation: string; 
 export interface ConvLayer { type: "conv"; filters: number; kernel: number; activation: string; pool?: number; batchnorm?: boolean }
 export type Layer = DenseLayer | ConvLayer;
 export interface NNArch {
-  kind: "mlp" | "cnn1d" | "cnn2d" | "ft_transformer" | "gcn" | "tiny_resnet";
+  kind: "mlp" | "cnn1d" | "cnn2d" | "ft_transformer" | "gcn" | "tiny_resnet" | "embedding_bag" | "gru" | "text_transformer";
   /** cnn2d: average each feature map over the image instead of flattening (position-independent) */
   global_pool?: boolean;
   /** tiny_resnet */
@@ -116,8 +133,10 @@ export interface NNArch {
   layers?: Layer[];
   // ft_transformer
   d_token?: number; n_blocks?: number; n_heads?: number; ffn_mult?: number; dropout?: number;
-  // gcn
+  // gcn: hidden = layer sizes (text architectures store their head width as a number under the same key at runtime)
   k?: number; hidden?: number[]; activation?: string;
+  /** text models */
+  embed_dim?: number; heads?: number; vocab_size?: number; max_len?: number;  // (text "layers" count is stored under `layers` at runtime)
 }
 
 export interface ModelSpec {
@@ -179,6 +198,8 @@ export interface DatasetSummary {
   target_hint?: string;
   /** samples for unsupervised problems: the hidden comparison column */
   truth_hint?: string;
+  /** text datasets: the column holding the text */
+  text_column?: string;
   image_shape?: [number, number];
   spec?: SyntheticSpec;
   created_at: number;
@@ -216,6 +237,11 @@ export interface DatasetProfile {
   samples?: Record<string, number[]>;
   /** image regression: target value per sample index */
   sample_values?: Record<string, number>;
+  /** text datasets */
+  text_column?: string;
+  length_hist?: Histogram;
+  top_words?: { class: string; words: { t: string; w: number }[] }[];
+  examples?: Record<string, string[]>;
 }
 
 export interface Distribution { label: string; params: Record<string, any> }
@@ -298,6 +324,11 @@ export interface PipelineSpec {
     k_neighbors: number;
   };
   target_transform: "none" | "log1p";
+  /** data modality (the backend dispatches image/text preparation on it) */
+  modality?: Modality;
+  /** text datasets: which column holds the text, bag-of-words settings (ngram_max 1 = words, 2 = words + pairs),
+   *  and the token sequence length used by neural text models */
+  text?: { text_column: string | null; ngram_max: 1 | 2; max_features: number; min_df: number; max_len: number };
   /** unsupervised: hidden comparison column, and an optional held-out share */
   truth?: string | null;
   unsupervised?: { holdout: number };
@@ -366,6 +397,11 @@ export interface PrepareReport {
   /** image datasets: original + augmented variants (data URIs) for a few training images */
   augment_preview?: { i: number; original: string; variants: string[] }[];
   sample_images?: number[];
+  /** text datasets */
+  text_column?: string;
+  vocab_size?: number;
+  length_hist?: Histogram;
+  examples?: { text: string; label: string; tokens: string[] }[];
 }
 
 export interface TrainOptions { cv_folds: number; seed: number; cv_scoring?: string; calibrate?: "none" | "sigmoid" | "isotonic" }
@@ -411,6 +447,7 @@ export interface ModelResult {
   clusters?: ClusterResult | null;
   reduction?: ReductionResult | null;
   anomaly?: AnomalyResult | null;
+  text?: TextResult | null;
   fit_time_s: number;
   n_params?: number | null;
 }
@@ -470,7 +507,7 @@ export interface Project {
 
 export interface InputSchemaItem {
   name: string;
-  type: "numeric" | "categorical" | "datetime";
+  type: "numeric" | "categorical" | "datetime" | "text";
   /** datetime inputs: an example value from the training data */
   example?: string;
   min?: number; max?: number; median?: number; mean?: number; std?: number; integer?: boolean; binary?: boolean;
@@ -501,6 +538,7 @@ export interface SavedModel {
   detail?: Partial<ModelResult>;
   modality?: Modality;
   image_shape?: [number, number, number] | null;
+  text_column?: string | null;
 }
 
 export interface PredictResponse { predictions: (string | number)[]; probabilities?: number[][]; classes?: string[] }

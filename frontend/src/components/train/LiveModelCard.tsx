@@ -7,6 +7,7 @@ import { Glass, ProgressBar, ProgressRing, Tooltip } from "../glass";
 import { LineChart, type Series } from "../charts";
 import { NetworkDiagram } from "../nn/NetworkDiagram";
 import { alignWeights, diagramLayers } from "./archLayers";
+import { isTextArch } from "./textKit";
 import { LiveClusterWalk, WalkExplainer } from "./unsup/LiveClusterWalk";
 import { archFor, fmtMetric, metricHelp, metricLabel, nFeatures, nOutputs, primaryMetric } from "./util";
 import { isUnsupervised } from "../../lib/store";
@@ -44,8 +45,10 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
   const metric = primaryMetric(project?.task);
   const cfg = project?.models.find((c) => c.key === m.key);
   const imageShape = useProject((s) => s.report?.image_shape);
-  const layers = useMemo(() => (m.nn ? diagramLayers(archFor(cfg ?? { model_id: m.model_id, nn_arch: null }), nFeatures(), nOutputs(), imageShape) : null), [m.nn, cfg, m.model_id, imageShape]);
-  const weights = useMemo(() => (layers ? alignWeights(m.weights, layers) : undefined), [layers, m.weights]);
+  const arch = useMemo(() => (m.nn ? archFor(cfg ?? { model_id: m.model_id, nn_arch: null }) : null), [m.nn, cfg, m.model_id]);
+  const textNet = isTextArch(arch);
+  const layers = useMemo(() => (m.nn ? diagramLayers(arch, nFeatures(), nOutputs(), imageShape) : null), [m.nn, arch, imageShape]);
+  const weights = useMemo(() => (layers ? alignWeights(m.weights, layers, arch) : undefined), [layers, m.weights, arch]);
   const { series, kind } = curveSeries(m.points);
   const active = m.state === "running" || m.state === "evaluating";
   const indeterminate = m.state === "running" && !m.epochs && (!m.iter || m.iter.n === 0 || isUnsupervised(project?.task));
@@ -96,7 +99,7 @@ export function LiveModelCard({ m, index }: { m: LiveModel; index: number }) {
             <div className="inset" style={{ padding: 6, overflow: "hidden" }}>
               <NetworkDiagram layers={layers} height={170} compact training={m.state === "running"} weights={weights} speed={1.3} />
               <div className="tiny faint" style={{ textAlign: "center", marginTop: -2 }}>
-                {m.weights ? "Lines = learned weights · blue positive, pink negative" : "Network warming up…"}
+                {textNet ? (weights ? "Words → vectors → answer · last lines = learned weights" : "Words → vectors → answer") : m.weights ? "Lines = learned weights · blue positive, pink negative" : "Network warming up…"}
               </div>
             </div>
           )}

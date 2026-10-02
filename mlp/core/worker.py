@@ -52,9 +52,13 @@ def train_entry(payload: dict, q, cancel):
             joblib.dump(est, payload["model_path"], compress=3)
             q.put(("result", {**result, "curve": None, "notes": {}, "cv": None, "fit_time_s": round(fit_time, 3), "n_params": None}))
             return
+        if getattr(prepared, "modality", "tabular") == "text" and MODEL_INDEX[model_id].get("arch_kind") in ("embedding_bag", "gru", "text_transformer"):
+            use_sequences(prepared)
         if is_nn(model_id):
             from .train_nn import train_nn
-            arch = m.get("nn_arch") or MODEL_INDEX[model_id]["default_arch"]
+            arch = dict(m.get("nn_arch") or MODEL_INDEX[model_id]["default_arch"])
+            if getattr(prepared, "modality", "tabular") == "text":
+                arch.update(vocab_size=prepared.payload["vocab_size"], max_len=prepared.payload["max_len"])
             est, curve, notes = train_nn(model_id, m.get("params"), arch, prepared, emit, cancel, key, seed)
         else:
             from .train_classic import fit_classic
@@ -77,6 +81,14 @@ def train_entry(payload: dict, q, cancel):
         q.put(("cancelled", None))
     except Exception as e:  # noqa: BLE001
         q.put(("error", f"{type(e).__name__}: {e}", traceback.format_exc()))
+
+
+def use_sequences(prepared):
+    """Torch text models read padded token ids instead of TF-IDF vectors (this process's private copy only)."""
+    pl = prepared.payload
+    prepared.X_train, prepared.X_val, prepared.X_test = pl["seq_train"], pl["seq_val"], pl["seq_test"]
+    prepared.X_train_orig = pl["seq_train"]
+    prepared.preprocessor.mode = "seq"
 
 
 def _n_params(est):
@@ -126,6 +138,13 @@ def serve_entry(conn, family: str):
             from .nn.builder import summarize
             return summarize(kw["arch"], kw["n_features"], kw["n_out"], kw.get("image_shape"))
         pp, est = load(kw["model_dir"])
+        if op == "predict_text":
+            from .text_eval import attribute, proba_of
+            texts = [str(t) for t in kw["texts"]]
+            P = proba_of(est, pp, texts)
+            out = {"predictions": [pp.classes[int(i)] for i in P.argmax(1)], "probabilities": np.round(P, 4).tolist(), "classes": pp.classes}
+            out["tokens"] = attribute(est, pp, texts[0])["tokens"] if texts and texts[0].strip() else []
+            return out
         if op == "assign":
             X = pp.transform(pd.DataFrame(kw["rows"]))
             return est.assign(X)

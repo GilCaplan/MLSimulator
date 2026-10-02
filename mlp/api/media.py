@@ -86,3 +86,51 @@ def image_profile(did: str, target: str | None) -> dict:
     out["projection"] = [{"x": round(float(P[k, 0]), 3), "y": round(float(P[k, 1]), 3), "i": int(i),
                           "label": labels[i] if out["task_guess"] == "classification" else round(float(labels[i]), 3)} for k, i in enumerate(idx)]
     return jsonable(out)
+
+
+# ----------------------------------------------------------------------------- text datasets
+@router.get("/datasets/text-sets")
+def text_sets():
+    from ..core.text import TEXT_SETS
+    return TEXT_SETS
+
+
+@router.post("/datasets/text-set")
+def create_text_set(body: dict = Body(...)):
+    from ..core.text import generate
+    df, meta = generate(body["name"], body.get("params") or {}, int(body.get("seed", 42)))
+    did = datasets.put(df, meta)
+    return summary(did)
+
+
+def text_profile(did: str, target: str | None, text_column: str | None) -> dict:
+    """Class balance, text lengths, distinctive words per class and example texts."""
+    from ..core.profile import histogram, value_counts
+    from ..core.text import detect_text_column, tokenize
+    df = datasets.get(did)
+    meta = datasets.meta(did)
+    col = text_column or meta.get("text_column") or detect_text_column(df, exclude=target)
+    out: dict = {"n_rows": int(len(df)), "modality": "text", "text_column": col, "coach": [], "projection": []}
+    if not col:
+        return out
+    texts = df[col].fillna("").astype(str)
+    lens = texts.map(lambda t: len(tokenize(t)))
+    out["length_hist"] = histogram(lens)
+    if target and target in df.columns:
+        out["class_balance"] = value_counts(df[target], top=30)
+        out["task_guess"] = "classification"
+        counts: dict = {}
+        totals: dict = {}
+        for t, y in zip(texts, df[target].astype(str)):
+            for w in set(tokenize(t)):
+                counts.setdefault(y, {}).setdefault(w, 0)
+                counts[y][w] += 1
+                totals[w] = totals.get(w, 0) + 1
+        n_cls = df[target].astype(str).value_counts().to_dict()
+        top = []
+        for y, cw in counts.items():
+            share = {w: (c / n_cls[y]) - (totals[w] - c) / max(1, len(df) - n_cls[y]) for w, c in cw.items() if totals[w] >= 5}
+            top.append({"class": y, "words": [{"t": w, "w": round(v, 3)} for w, v in sorted(share.items(), key=lambda kv: -kv[1])[:12]]})
+        out["top_words"] = top
+        out["examples"] = {y: texts[df[target].astype(str) == y].head(4).tolist() for y in list(n_cls)[:10]}
+    return jsonable(out)

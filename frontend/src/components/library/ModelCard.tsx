@@ -6,7 +6,7 @@ import { navigate } from "../../lib/router";
 import type { SavedModel } from "../../lib/types";
 import { ProgressRing, Tooltip } from "../glass";
 import { Thumb } from "../train/visionKit";
-import { EditableText, headline, taskMeta } from "./shared";
+import { EditableText, headline, isTextModel, taskMeta } from "./shared";
 
 /** One saved model in the library grid. */
 export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: string; onRename: (name: string) => void; onDelete: () => void }>(
@@ -69,6 +69,16 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
             <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }} className="num">{h.text}</span>
             <span className="tiny muted">{["classification", "regression"].includes(model.task) ? "test " : ""}{h.label.toLowerCase()}</span>
           </div>
+          {isTextModel(model) && (
+            <div className="col" style={{ gap: 3, alignItems: "flex-end" }} aria-hidden>
+              {[30, 22].map((w, i) => (
+                <motion.div key={i} animate={{ x: hover ? (i ? -4 : 2) : 0, scale: hover ? 1.06 : 1 }} transition={{ ...spring.gentle, delay: i * 0.04 }}
+                  style={{ width: w + 14, height: 14, borderRadius: i ? "8px 8px 2px 8px" : "8px 8px 8px 2px", background: i ? "var(--accent-soft)" : "var(--glass-strong)", border: "1px solid var(--glass-border)", display: "flex", alignItems: "center", gap: 3, padding: "0 5px" }}>
+                  {[0.55, 0.3].map((f, k) => <span key={k} style={{ height: 3, width: w * f, borderRadius: 2, background: i ? "var(--accent)" : "var(--text-3)", opacity: 0.6 }} />)}
+                </motion.div>
+              ))}
+            </div>
+          )}
           {model.modality === "image" && model.dataset?.id && (
             <div className="row" style={{ gap: 0 }}>
               {[0, 1, 2].map((i) => (
@@ -83,6 +93,7 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
         <div className="row wrap" style={{ gap: 6 }}>
           <span className={`badge ${task.badge}`}>{task.icon} {task.label}</span>
           {model.modality === "image" && <span className="badge">🖼️ Images</span>}
+          {isTextModel(model) && <span className="badge">💬 Text</span>}
           {model.dataset?.name && <span className="badge truncate" style={{ maxWidth: 170 }} title={model.dataset.name}>📊 {model.dataset.name}</span>}
           <span className="grow" />
           <span className="tiny faint">{timeAgo(model.created_at)}</span>

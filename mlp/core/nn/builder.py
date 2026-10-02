@@ -150,8 +150,51 @@ class TinyResNet(nn.Module):
         return self.head(self.body(self.stem(x.reshape(x.shape[0], *self.shape))))
 
 
+class TextNet(nn.Module):
+    """Token ids (B, L) → embeddings → (mean pool | GRU | Transformer) → head. Padding id 0 is masked out."""
+
+    def __init__(self, kind, vocab_size, max_len, n_out, embed_dim=64, hidden=64, layers=1, heads=4, dropout=0.2):
+        super().__init__()
+        self.kind = kind
+        embed_dim = max(heads, int(embed_dim) // max(1, int(heads)) * max(1, int(heads))) if kind == "text_transformer" else int(embed_dim)
+        self.emb = nn.Embedding(int(vocab_size), embed_dim, padding_idx=0)
+        self.drop = nn.Dropout(float(dropout))
+        if kind == "gru":
+            self.rnn = nn.GRU(embed_dim, int(hidden), num_layers=max(1, int(layers)), batch_first=True, bidirectional=True,
+                              dropout=float(dropout) if int(layers) > 1 else 0.0)
+            out_dim = 2 * int(hidden)
+        elif kind == "text_transformer":
+            self.pos = nn.Parameter(torch.randn(1, int(max_len), embed_dim) * 0.02)
+            layer = nn.TransformerEncoderLayer(embed_dim, int(heads), dim_feedforward=2 * embed_dim, dropout=float(dropout),
+                                               batch_first=True, norm_first=True)
+            self.enc = nn.TransformerEncoder(layer, num_layers=max(1, int(layers)), enable_nested_tensor=False)
+            out_dim = embed_dim
+        else:
+            out_dim = embed_dim
+        self.head = nn.Sequential(nn.Linear(out_dim, int(hidden)), nn.ReLU(), nn.Dropout(float(dropout)), nn.Linear(int(hidden), n_out))
+
+    def forward(self, x):
+        ids = x.long().clamp(min=0, max=self.emb.num_embeddings - 1)
+        mask = (ids > 0).float()
+        e = self.drop(self.emb(ids))
+        if self.kind == "gru":
+            e, _ = self.rnn(e)
+        elif self.kind == "text_transformer":
+            pad = ids == 0
+            pad[:, 0] = False  # never mask every position
+            e = self.enc(e + self.pos[:, : e.shape[1]], src_key_padding_mask=pad)
+        pooled = (e * mask[..., None]).sum(1) / mask.sum(1, keepdim=True).clamp(min=1)
+        return self.head(pooled)
+
+
+TEXT_KINDS = ("embedding_bag", "gru", "text_transformer")
+
+
 def build(arch: dict, n_features: int, n_out: int, image_shape=None):
     kind = arch.get("kind", "mlp")
+    if kind in TEXT_KINDS:
+        return TextNet(kind, arch.get("vocab_size", 8000), arch.get("max_len", n_features), n_out, arch.get("embed_dim", 64),
+                       arch.get("hidden", 64), arch.get("layers", 1), arch.get("heads", 4), arch.get("dropout", 0.2)), None
     if kind == "tiny_resnet":
         if not image_shape:
             raise ValueError("The ResNet needs image data.")
@@ -182,6 +225,15 @@ def summarize(arch: dict, n_features: int, n_out: int, image_shape=None) -> dict
             for name, mod in zip(names, model):
                 x = mod(x)
                 layers.append({"name": name, "out_shape": list(x.shape[1:]), "params": sum(p.numel() for p in mod.parameters())})
+    elif kind in TEXT_KINDS:
+        d = model.emb.embedding_dim
+        layers = [{"name": "embedding", "out_shape": [n_features, d], "params": model.emb.weight.numel()}]
+        if kind == "gru":
+            layers.append({"name": "gru", "out_shape": [n_features, model.rnn.hidden_size * 2], "params": sum(p.numel() for p in model.rnn.parameters())})
+        elif kind == "text_transformer":
+            layers.append({"name": "attention", "out_shape": [n_features, d], "params": sum(p.numel() for p in model.enc.parameters())})
+        layers.append({"name": "average", "out_shape": [layers[-1]["out_shape"][-1]], "params": 0})
+        layers.append({"name": "output", "out_shape": [n_out], "params": sum(p.numel() for p in model.head.parameters())})
     elif kind == "tiny_resnet":
         x = torch.zeros(2, n_features)
         with torch.no_grad():

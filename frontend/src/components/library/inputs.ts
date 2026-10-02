@@ -11,7 +11,7 @@ export function typicalRow(schema: InputSchemaItem[]): Row {
   const row: Row = {};
   for (const s of schema) {
     if (s.type === "categorical") row[s.name] = s.mode ?? s.categories?.[0] ?? "";
-    else if (s.type === "datetime") row[s.name] = s.example ?? "";
+    else if (s.type === "datetime" || s.type === "text") row[s.name] = s.example ?? (s.type === "text" ? "Type your text here" : "");
     else if (s.binary) row[s.name] = (s.median ?? 0) >= 0.5 ? (s.max ?? 1) : (s.min ?? 0);
     else {
       const v = s.median ?? s.mean ?? s.min ?? 0;
@@ -30,7 +30,7 @@ export function randomRow(schema: InputSchemaItem[]): Row {
       row[s.name] = cats.length ? cats[Math.floor(Math.random() * cats.length)] : "";
       continue;
     }
-    if (s.type === "datetime") {
+    if (s.type === "datetime" || s.type === "text") {
       row[s.name] = s.example ?? "";
       continue;
     }

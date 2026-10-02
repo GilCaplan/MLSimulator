@@ -4,7 +4,7 @@ import { EmptyState, Glass, Tooltip } from "../components/glass";
 import { LineupTray } from "../components/models/LineupTray";
 import { ModelCard } from "../components/models/ModelCard";
 import { ModelSettingsModal } from "../components/models/ModelSettingsModal";
-import { configsFor, FAMILIES, lineupLabels, modalityOf, specFits, specModalities, starterFor, VISION_IDS } from "../components/models/meta";
+import { configsFor, FAMILIES, lineupLabels, modalityOf, specFits, specModalities, starterFor, TEXT_GROUPS, TEXT_NN_IDS, TEXT_ORDER_IDS, VISION_IDS } from "../components/models/meta";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { navigate } from "../lib/router";
@@ -44,6 +44,7 @@ export function ModelsStep() {
   const task = project?.task ?? null;
   const modality = modalityOf(project?.modality);
   const image = modality === "image";
+  const text = modality === "text";
   const unsup = isUnsupervised(task);
   const models = project?.models ?? [];
   const available = useMemo(
@@ -51,6 +52,14 @@ export function ModelsStep() {
     [registry, task, modality],
   );
   const groups = useMemo(() => {
+    if (text) {
+      // how much of the sentence each kind of model really sees: order → meaning → counts
+      const placed = new Set(TEXT_GROUPS.flatMap((g) => g.ids));
+      const out = TEXT_GROUPS.map((g) => ({ id: g.id, icon: g.icon, blurb: g.blurb, specs: g.ids.map((id) => available.find((s) => s.id === id)).filter((s): s is ModelSpec => !!s) }));
+      const other = available.filter((s) => !placed.has(s.id));
+      if (other.length) out[out.length - 1].specs.push(...other);
+      return out.filter((g) => g.specs.length);
+    }
     if (image) {
       // vision networks first; everything else treats the picture as a long row of unrelated numbers
       const vision = available.filter((s) => VISION_IDS.has(s.id)).sort((a, b) => a.id.localeCompare(b.id));
@@ -64,7 +73,7 @@ export function ModelsStep() {
     const other = available.filter((s) => !FAMILIES.some((f) => f.id === s.family));
     if (other.length) known.push({ id: "Other", icon: "🧩", blurb: "More algorithms to explore.", specs: other });
     return known.filter((g) => g.specs.length);
-  }, [available, image]);
+  }, [available, image, text]);
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const m of models) c[m.model_id] = (c[m.model_id] || 0) + 1;
@@ -91,7 +100,7 @@ export function ModelsStep() {
     update((p) => ({ models: [...p.models, ...configsFor(missing, available)] }));
     toast.success(msg.replace("{n}", String(missing.length)));
   };
-  const starter = starterFor(task, image);
+  const starter = starterFor(task, image, modality);
   const starterNames = starter.map((id) => available.find((s) => s.id === id)?.label ?? id);
   const picks: { label: string; icon: string; tip: string; run: () => void }[] = unsup ? [
     { label: "Starter set", icon: "🌱", tip: `Replace the line-up with ${starterNames.join(", ")} — different ideas of what a ${task === "clustering" ? "group" : task === "reduction" ? "good map" : "weird row"} is.`, run: () => {
@@ -100,6 +109,16 @@ export function ModelsStep() {
     } },
     { label: "Add them all", icon: "📚", tip: "Add every algorithm for this problem and compare them side by side.", run: () =>
       addIds(available.map((s) => s.id), "Added {n} models.") },
+    { label: "Clear", icon: "🧹", tip: "Remove everything from the line-up.", run: () => update({ models: [] }) },
+  ] : text ? [
+    { label: "Text starter", icon: "🌱", tip: "Replace the line-up with two bag-of-words classics (Logistic Regression, Naive Bayes) and a GRU that reads the words in order.", run: () => {
+      update((p) => ({ models: configsFor(starter, available, p.models) }));
+      toast.success("Text starter ready — two word counters and a reader that knows word order.");
+    } },
+    { label: "All bag of words", icon: "🛍️", tip: "Add every model that works on word counts. They're quick — great for a bake-off.", run: () =>
+      addIds(available.filter((s) => !TEXT_NN_IDS.has(s.id)).map((s) => s.id), "Added {n} bag-of-words models.") },
+    { label: "Text networks", icon: "🧠", tip: "Add the averaged word embeddings, the GRU and the tiny Transformer.", run: () =>
+      addIds([...TEXT_NN_IDS].filter((id) => available.some((s) => s.id === id)), "Added {n} text networks.") },
     { label: "Clear", icon: "🧹", tip: "Remove everything from the line-up.", run: () => update({ models: [] }) },
   ] : [
     { label: image ? "Vision starter" : "Beginner trio", icon: "🌱", tip: image
@@ -125,6 +144,8 @@ export function ModelsStep() {
   if (image && models.length && !models.some((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "novision", severity: "warn", title: "Add a vision network", why: "None of your models are built for pictures. Add the Image CNN or Tiny ResNet — they usually beat pixel-by-pixel models by a wide margin.", action: { kind: "add_models", label: "Add CNN + ResNet", model_ids: ["cnn2d", "tiny_resnet"] } });
   if (image && models.length && models.every((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "baseline", severity: "info", title: "Add a baseline to beat", why: "A classic model on raw pixels (like logistic regression) shows how much the vision networks actually add." });
   if (!image && counts.cnn2d && dataset && !dataset.image_shape) suggestions.push({ id: "img", severity: "warn", title: "The image CNN needs pictures", why: "Your dataset isn't image data, so the 2-D CNN won't be able to train. Try the handwritten-digits sample, or remove it." });
+  if (text && models.length && !models.some((m) => TEXT_ORDER_IDS.has(m.model_id))) suggestions.push({ id: "order", severity: "info", title: "Add a model that reads in order", why: "Bag-of-words models see “not good” and “good, not bad” as almost the same bag. A GRU or Transformer reads the words in sequence and can tell them apart.", action: { kind: "add_models", label: "Add GRU", model_ids: ["gru"] } });
+  if (text && models.length && models.every((m) => TEXT_NN_IDS.has(m.model_id))) suggestions.push({ id: "bow", severity: "info", title: "Add a bag-of-words baseline", why: "Logistic Regression or Naive Bayes on word counts trains in a second and is surprisingly hard to beat. It shows how much reading in order really adds.", action: { kind: "add_models", label: "Add Naive Bayes", model_ids: ["multinomial_nb"] } });
   if (models.filter((m) => registry.find((s) => s.id === m.model_id)?.nn).length >= 3) suggestions.push({ id: "slow", severity: "info", title: "Neural nets take a while", why: "Several neural networks will train one after another. That's fine — just expect to wait a little longer." });
 
   return (
@@ -134,13 +155,19 @@ export function ModelsStep() {
         ? task === "clustering" ? "Each algorithm has its own idea of what a “group” is. Try a few and see which grouping makes the most sense."
           : task === "reduction" ? "Each algorithm flattens your columns onto a 2-D map in its own way. Compare the maps side by side."
           : "Each detector learns what “normal” looks like differently. Compare which rows they find suspicious."
+        : text
+        ? "Choose a few algorithms to race on your texts. Some just count words; others read them in order like you do."
         : image
         ? "Choose a few algorithms to race on your pictures. Vision networks are built for images; the rest are a baseline to beat."
         : "Choose a few algorithms to race against each other. Tap a card to add it — you can tweak any of them later."}
       coach={
         <CoachPanel
           suggestions={suggestions}
-          intro={unsup ? UNSUP_INTRO[task] : image
+          intro={unsup ? UNSUP_INTRO[task] : text
+            ? <>Models can't read — so text first becomes numbers. The simplest way is a <b>bag of words</b>: count which words appear and forget their order. It's fast and often surprisingly good.
+              <br /><br />But “the battery is <b>not</b> good” and “<b>not</b> bad — the battery is good” share almost the same words. Networks that <b>read in order</b> (GRU, Transformer) can tell them apart.
+              <br /><br />Not sure? Hit <b>Text starter</b> and see whether word order matters for your data.</>
+            : image
             ? <>Pictures are just grids of numbers — but the <b>arrangement</b> matters. <b>Vision networks</b> slide small filters over the image to find edges, then shapes, then objects.
               <br /><br />Classic models see the same pixels as an unordered list. Racing both shows <b>why convolutions changed computer vision</b>. Not sure? Hit <b>Vision starter</b>.</>
             : <>There's <b>no single best algorithm</b> — which one wins depends on your data. That's why the pros try several and compare.
@@ -151,7 +178,7 @@ export function ModelsStep() {
         <NextBar
           back="problem"
           next="data"
-          nextLabel={image ? "Images" : undefined}
+          nextLabel={image ? "Images" : text ? "Texts" : undefined}
           nextDisabled={models.length === 0}
           status={models.length === 0 ? "Pick at least one model" : `${models.length} model${models.length === 1 ? "" : "s"} selected`}
         />

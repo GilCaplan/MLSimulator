@@ -148,6 +148,17 @@ CHALLENGES.update({
     },
 })
 
+CHALLENGES.update({
+    "bag_of_words": {
+        "kind": "text", "task": "classification", "target": "sentiment", "positive": "positive", "modality": "text",
+        "text_column": "review",
+        "preset_pipeline": {"modality": "text", "text": {"text_column": "review", "ngram_max": 1}},
+        "preset_models": ["logistic_regression", "multinomial_nb"],
+        "goals": [{"metric": "accuracy", "op": ">=", "value": 0.90}],
+        "solution": {"pipeline": {"text": {"text_column": "review", "ngram_max": 2}}},
+    },
+})
+
 METRIC_LABELS = {
     "accuracy": "Accuracy", "balanced_accuracy": "Balanced accuracy", "recall_pos": "Recall ({pos})",
     "precision_pos": "Precision ({pos})", "f1_pos": "F1 ({pos})", "r2": "R²",

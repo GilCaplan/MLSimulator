@@ -143,7 +143,8 @@ def train_nn(model_id, params, arch, prepared, emit, cancel, key, seed=42):
     task = prepared.task
     arch = copy.deepcopy(arch or {})
     arch.setdefault("kind", {"mlp": "mlp", "cnn1d": "cnn1d", "cnn2d": "cnn2d", "ft_transformer": "ft_transformer", "gcn": "gcn",
-                             "tiny_resnet": "tiny_resnet"}[model_id])
+                             "tiny_resnet": "tiny_resnet", "embedding_bag": "embedding_bag", "gru": "gru",
+                             "text_transformer": "text_transformer"}[model_id])
     kind = arch["kind"]
     X, y = prepared.X_train, prepared.y_train
     Xv, yv = prepared.X_val, prepared.y_val

@@ -463,8 +463,39 @@ NEW_LESSONS.update({
     },
 })
 
+NEW_LESSONS.update({
+    "bag_of_words": {
+        "id": "bag_of_words", "stage": "Language", "emoji": "💬", "title": "Bag of words: when order matters",
+        "tagline": "Count words and 'not good' looks exactly like 'good'.",
+        "modeled_on": "Classifying a song's / review's sentiment from its text",
+        "learn": [
+            {"icon": "🧺", "heading": "Text as a bag of words", "body": "The simplest way to turn text into numbers: count which words appear (**TF-IDF** also down-weights common words like 'the'). Each word becomes a column."},
+            {"icon": "🙃", "heading": "Order gets lost", "body": "In a bag of words, 'the battery is **not good**' and 'the battery is good, **not** bad' contain the same kinds of words. A linear model adds up word weights, so it can't learn that *not* flips the meaning of the word after it."},
+            {"icon": "🔗", "heading": "N-grams keep a little order", "body": "Adding **bigrams** — pairs of neighbouring words like 'not good' — gives the model a column for the phrase itself. Suddenly negation is easy."},
+            {"icon": "🧠", "heading": "Neural networks read context", "body": "A **GRU** reads words in order and remembers what came before; a **Transformer** lets every word attend to every other. Both can learn negation without hand-made phrases."},
+        ],
+        "demo": "bag_of_words",
+        "demo_caption": "Type a review and watch a bag-of-words model and a phrase-aware model disagree when you add 'not'.",
+        "quiz": [
+            {"q": "Why does a linear unigram (single-word) model struggle with 'not good'?",
+             "options": ["It doesn't know the word 'good'", "Each word gets one weight, so 'not' can't flip the meaning of 'good'", "It's too slow", "It needs images"],
+             "answer": 1, "explain": "Word weights simply add up; there's no interaction between 'not' and 'good'."},
+            {"q": "What's the cheapest fix that keeps a simple linear model?",
+             "options": ["Remove the word 'not'", "Add bigrams (two-word phrases) as features", "Lowercase the text", "Use fewer words"],
+             "answer": 1, "explain": "'not good' becomes its own feature."},
+        ],
+        "challenge": {
+            "title": "Review reader", "dataset_name": "Product reviews (practice)",
+            "story": "An online shop sorts reviews into positive and negative. A third of the reviews use **negation** — 'not great', 'not bad at all' — and the current word-counting models get confused.",
+            "task": "Classify new reviews with at least 90% accuracy.",
+            "hints": ["Train and open the mistakes: what do the misclassified reviews have in common?", "On **Prepare → Words**, switch from single words to **words + pairs (bigrams)**.", "Or add a model that reads in order — the GRU or the Tiny Transformer."],
+            "solution": "Single-word models plateau around 64% because 'not good' and 'good' share their words. With bigrams a plain logistic regression reaches ≈100%; a GRU or Transformer gets there by reading in order.",
+        },
+    },
+})
+
 ORDER = ["baselines", "missing", "outliers", "leakage", "features", "splits", "scaling", "imbalance", "overfitting",
-         "calibration", "shortcut", "fairness", "choosing_k", "curse", "convolutions", "augmentation"]
+         "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "convolutions", "augmentation"]
 _by_id = {l["id"]: l for l in LESSONS} | NEW_LESSONS
 LESSONS = [{**_by_id[i], "order": n + 1} for n, i in enumerate(ORDER)]
 LESSON_INDEX = {l["id"]: l for l in LESSONS}

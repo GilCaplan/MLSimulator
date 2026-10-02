@@ -108,8 +108,8 @@ function AugmentStrip({ report, grayscale }: { report: PrepareReport; grayscale:
   );
 }
 
-/** Pictures per class in the training and test splits. */
-function ClassSplits({ report, totals }: { report: PrepareReport; totals: Record<string, number> | null }) {
+/** Examples per class in the training, validation and test splits (also used by text projects). */
+export function ClassSplits({ report, totals }: { report: PrepareReport; totals: Record<string, number> | null }) {
   const labels = report.classes ?? Object.keys(report.class_counts_before ?? {});
   const train = labels.map((l) => report.class_counts_before?.[l] ?? 0);
   const test = labels.map((l) => report.class_counts_test?.[l] ?? 0);

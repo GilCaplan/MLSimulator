@@ -59,6 +59,8 @@ export function fullPipeline(p: Project): PipelineSpec | null {
   out.target = p.target ?? null;
   out.task = p.task;
   if (isUnsupervised(p.task)) out.truth = p.truth ?? null;
+  if (p.modality && p.modality !== "tabular") out.modality = p.modality;
+  if (p.modality === "text") out.text = { text_column: null, ngram_max: 1, max_features: 3000, min_df: 2, max_len: 40, ...(saved.text || {}) };
   return out;
 }
 

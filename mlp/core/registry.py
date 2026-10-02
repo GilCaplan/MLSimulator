@@ -162,6 +162,9 @@ def _depth(v):
 def build_estimator(model_id: str, task: str, params: dict | None = None, n_classes: int = 2, seed: int = 42):
     p = {**defaults(model_id), **(params or {})}
     clf = task == "classification"
+    if model_id == "multinomial_nb":
+        from sklearn.naive_bayes import MultinomialNB
+        return MultinomialNB(alpha=float(p["alpha"]))
     if model_id == "baseline":
         from sklearn.dummy import DummyClassifier, DummyRegressor
         return DummyClassifier(strategy="prior") if clf else DummyRegressor(strategy="mean")
@@ -302,9 +305,35 @@ for _m in NN_MODELS:
     MODELS.append(_m)
     MODEL_INDEX[_m["id"]] = _m
 
+TEXT_ARCH_PARAMS = {"embedding_bag": {"embed_dim": 64, "hidden": 64, "dropout": 0.2},
+                    "gru": {"embed_dim": 64, "hidden": 64, "layers": 1, "dropout": 0.2},
+                    "text_transformer": {"embed_dim": 64, "hidden": 64, "layers": 2, "heads": 4, "dropout": 0.1}}
+TEXT_TRAIN_PARAMS = [({**p, "default": 25} if p["name"] == "epochs" else {**p, "default": 6} if p["name"] == "patience" else p)
+                     for p in NN_TRAIN_PARAMS]
+for _id, _label, _emoji, _desc in [
+    ("embedding_bag", "Word embeddings (averaged)", "🧺",
+     "Learns a small vector for every word and averages them — fast, like fastText, but ignores word order."),
+    ("gru", "GRU (reads in order)", "📜",
+     "A recurrent network that reads the words one by one, remembering what came before — so 'not' can change what 'good' means."),
+    ("text_transformer", "Tiny Transformer", "🔮",
+     "Self-attention lets every word look at every other word — the idea behind modern language models, in miniature."),
+]:
+    _m = {"id": _id, "label": _label, "family": "Language", "tasks": ["classification"], "emoji": _emoji, "nn": True, "arch_kind": _id,
+          "modalities": ["text"], "requires": "text", "description": _desc,
+          "default_arch": {"kind": _id, **TEXT_ARCH_PARAMS[_id]}, "params": TEXT_TRAIN_PARAMS}
+    MODELS.append(_m)
+    MODEL_INDEX[_id] = _m
+MODELS.append({"id": "multinomial_nb", "label": "Naive Bayes (word counts)", "family": "Probabilistic", "tasks": ["classification"],
+               "emoji": "🎲", "modalities": ["text"],
+               "description": "The classic spam filter: counts how often each word appears in each class and multiplies the evidence.",
+               "params": [P("alpha", "Smoothing", "float", 0.5, "Prevents unseen words from zeroing out a class.", min=0.01, max=5.0, log=True)]})
+MODEL_INDEX["multinomial_nb"] = MODELS[-1]
+
 # Which models make sense on images ("pixels as a table" for classic models is a deliberate teaching contrast).
 for _id in ("logistic_regression", "linear_regression", "ridge", "svm", "knn", "random_forest", "extra_trees", "mlp", "cnn2d", "baseline"):
     MODEL_INDEX[_id]["modalities"] = ["tabular", "image"]
+for _id in ("logistic_regression", "random_forest", "xgboost", "mlp", "baseline"):  # bag-of-words models for text
+    MODEL_INDEX[_id]["modalities"] = sorted(set(MODEL_INDEX[_id].get("modalities", ["tabular"])) | {"text"})
 MODEL_INDEX["cnn2d"]["description"] = ("The classic image network: small filters slide over the picture to find edges, strokes and shapes, "
                                        "pooling shrinks it, then dense layers decide. Needs image data.")
 

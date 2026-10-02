@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import { spring } from "../../design/motion";
 import { METRIC_LABELS, fmt, pct } from "../../lib/format";
+import { useProject } from "../../lib/store";
 import type { ChallengeCheck } from "../../lib/types";
 import { AnimatedNumber, InfoTip } from "../glass";
 import { OWN_METRIC, SHORT_METRIC, fmtGoal } from "./shared";
@@ -36,6 +37,9 @@ function fmtG(metric: string, v: number | null | undefined) {
   return fmtGoal(metric, v);
 }
 
+/** What the hidden test items are called (text challenges grade messages, not rows). */
+const hiddenNoun = () => (useProject.getState().project?.modality === "text" ? "messages" : "rows");
+
 interface Side { eyebrow: string; value?: number; format: (v: number) => string; caption: ReactNode }
 
 /** The "your test vs the real world" contrast — leads with a failed goal, with special layouts for the newer metrics. */
@@ -45,7 +49,7 @@ function contrast(check: ChallengeCheck) {
   const special = (g: Goal) => g.metric === "estimate_gap" || g.metric === "mae_vs_baseline";
   const comparable = (g: Goal) => !!OWN[g.metric] && own[OWN[g.metric]!] !== undefined;
   const goal = goals.find((x) => !x.passed && (comparable(x) || special(x))) ?? goals.find((x) => !x.passed) ?? goals.find((x) => comparable(x) || special(x)) ?? goals[0];
-  const hidden = `${check.n_hidden.toLocaleString()} hidden rows`;
+  const hidden = `${check.n_hidden.toLocaleString()} hidden ${hiddenNoun()}`;
   if (goal?.metric === "ari") {
     // clustering has no test score: the only number available without answers is silhouette (how crisp the groups look)
     const sil = own.silhouette;
@@ -149,7 +153,7 @@ export function CheckReveal({ check, reveal = false, compact = false }: { check:
             {!landed ? (
               <motion.span key="wait" exit={{ opacity: 0, y: -8 }} className="row" style={{ gap: 10, height: big * 1.05 }}>
                 <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }} style={{ fontSize: big * 0.6, display: "inline-block" }}>🌍</motion.span>
-                <span className="muted small">Testing on {check.n_hidden.toLocaleString()} real-world rows…</span>
+                <span className="muted small">Testing on {check.n_hidden.toLocaleString()} real-world {hiddenNoun()}…</span>
               </motion.span>
             ) : (
               <motion.span key="val" initial={reveal ? { opacity: 0, scale: 0.6, y: 10 } : false} animate={{ opacity: 1, scale: 1, y: 0 }} transition={spring.pop}

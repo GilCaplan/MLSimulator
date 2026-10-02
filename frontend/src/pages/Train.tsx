@@ -37,6 +37,7 @@ export function TrainStep() {
   const mode = live ? "live" : !result || showSetup ? (project.prepared_id ? "setup" : "cta") : "results";
 
   const img = project.modality === "image";
+  const txt = project.modality === "text";
   const unsup = isUnsupervised(project.task);
   const intro = unsup ? {
     cta: <>Before exploring, your data needs to be prepared — cleaned and scaled so every column speaks the same language. (There's nothing to predict, so no test split is needed.)</>,
@@ -58,6 +59,11 @@ export function TrainStep() {
     setup: <>Each model studies the <b>training pictures</b>, then sits an exam on <b>test pictures</b> it has never seen. Classic models see the picture as a long list of pixel numbers; <b>convolutional networks</b> slide little pattern detectors over it — watch which approach wins.</>,
     live: <>Watch them learn! <b>Loss</b> is how wrong a model currently is, so you want those lines heading <b>down</b>. Image networks need more epochs than table models — they're inventing their own edge and shape detectors from scratch.</>,
     results: <>Here's how every model did on pictures it never saw. Open a model and look at its <b>Gallery</b> of mistakes and <b>What it looks at</b> — the pictures tell you far more than the score. Save the ones you like and try them on your own drawings in the library.</>,
+  }[mode] : txt ? {
+    cta: <>Before training, your texts need to be prepared — split into words, given a vocabulary, and split into practice and test messages.</>,
+    setup: <>Each model studies the <b>training messages</b>, then sits an exam on <b>test messages</b> it has never seen. Word-count models (logistic regression, naive Bayes) weigh each word; <b>neural readers</b> (GRU, Transformer) learn what words mean in context — watch which approach wins.</>,
+    live: <>Watch them learn! <b>Loss</b> is how wrong a model currently is, so you want those lines heading <b>down</b>. The word-count models finish in a blink; the neural readers learn a vector for every word, epoch by epoch.</>,
+    results: <>Here's how every model did on messages it never saw. Open a model to read its <b>Mistakes</b>, the <b>Words</b> it relies on, and <b>Explanations</b> that colour each word by how much it mattered. Save one and type your own sentences in the library.</>,
   }[mode] : {
     cta: <>Before training, your data needs to be prepared — cleaned, split into practice and test rows, and scaled.</>,
     setup: <>Each model studies the <b>training rows</b>, then sits an exam on <b>test rows</b> it has never seen. That exam score is what really counts — anyone can ace questions they've memorised.</>,

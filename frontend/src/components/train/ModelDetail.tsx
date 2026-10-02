@@ -16,9 +16,12 @@ import { UnsupDetail } from "./unsup/UnsupDetail";
 import { VisionFilters } from "./VisionFilters";
 import { VisionGallery } from "./VisionGallery";
 import { VisionLooks } from "./VisionLooks";
+import { TextExplain, TextMistakes, TextWords } from "./TextViews";
+import { ClassChip, ExplainedSentence } from "./textKit";
 import { baselineOf, fmtMetric, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
 
-type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters";
+type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters"
+  | "text_mistakes" | "words" | "explain";
 
 const OVERVIEW: Record<string, string[]> = {
   classification: ["accuracy", "balanced_accuracy", "f1", "precision", "recall", "roc_auc"],
@@ -48,7 +51,19 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
   const cls = result.task === "classification";
   const vision = model.vision;
   const isImage = !!vision || useProject.getState().project?.modality === "image";
-  const tabs: { value: Tab; label: string; disabled?: boolean }[] = isBase ? [{ value: "overview", label: "Overview" }] : isImage ? [
+  const text = model.text;
+  const isText = !isImage && (!!text || useProject.getState().project?.modality === "text");
+  const tabs: { value: Tab; label: string; disabled?: boolean }[] = isBase ? [{ value: "overview", label: "Overview" }] : isText ? [
+    // text models: words instead of columns — no decision map, feature table or row mistakes
+    { value: "overview", label: "Overview" },
+    { value: "text_mistakes", label: "💬 Mistakes", disabled: !text },
+    { value: "words", label: "🔤 Words", disabled: !text },
+    { value: "explain", label: "🔍 Explanations", disabled: !text?.examples?.length },
+    { value: "errors", label: "Errors", disabled: !model.confusion && !model.residuals },
+    ...(cls ? [{ value: "calibration" as Tab, label: "Calibration", disabled: !model.calibration }] : []),
+    ...(model.family === "torch" ? [{ value: "curve" as Tab, label: "Learning curve", disabled: !model.curve?.points?.length }] : []),
+    { value: "settings", label: "Settings" },
+  ] : isImage ? [
     // image models: the tabular views (decision map, feature table, row mistakes, slices) don't apply
     { value: "overview", label: "Overview" },
     { value: "gallery", label: "🖼️ Gallery", disabled: !vision?.mistakes?.length && !vision?.correct?.length },
@@ -118,6 +133,9 @@ function SupervisedDetail({ result, model }: { result: RunResult; model: ModelRe
           {tab === "gallery" && vision && <VisionGallery vision={vision} classes={result.classes} task={result.task} />}
           {tab === "looks" && vision && <VisionLooks vision={vision} label={model.label.toLowerCase()} />}
           {tab === "filters" && vision && <VisionFilters vision={vision} />}
+          {tab === "text_mistakes" && text && <TextMistakes text={text} classes={result.classes} onExplain={text.examples?.length ? () => setTab("explain") : undefined} />}
+          {tab === "words" && text && <TextWords text={text} classes={result.classes} family={model.family} label={model.label} onExplain={text.examples?.length ? () => setTab("explain") : undefined} />}
+          {tab === "explain" && text && <TextExplain text={text} classes={result.classes} />}
           {tab === "errors" && <Errors result={result} model={model} />}
           {tab === "mistakes" && <ErrorAnalysis mistakes={model.mistakes} slices={model.slices} classes={result.classes} />}
           {tab === "calibration" && model.calibration && (
@@ -181,7 +199,7 @@ function Overview({ result, model }: { result: RunResult; model: ModelResult }) 
               <b style={{ fontSize: 24, letterSpacing: "-0.02em" }}>
                 <AnimatedNumber value={unit ? test * 100 : test} format={(v) => (unit ? `${v.toFixed(1)}%` : v.toFixed(3))} />
               </b>
-              <span className="tiny faint num">{model.vision ? "training pictures" : "training rows"}: {fmtMetric(m, train)}</span>
+              <span className="tiny faint num">{model.vision ? "training pictures" : model.text ? "training texts" : "training rows"}: {fmtMetric(m, train)}</span>
               {base && base.metrics.test[m] !== undefined && (() => {
                 const vs = vsBaseline(m, test, base.metrics.test[m]);
                 return (
@@ -226,7 +244,21 @@ function Overview({ result, model }: { result: RunResult; model: ModelResult }) 
           {chips.map((c) => <span key={c.text} className="badge" title={c.tip}>{c.icon} {c.text}</span>)}
         </div>
       )}
+      {!model.baseline && model.text?.examples?.length ? <TextPeek example={model.text.examples.find((e) => e.pred === e.true) ?? model.text.examples[0]} classes={result.classes} /> : null}
     </div>
+  );
+}
+
+/** Overview teaser for text models: one test sentence with its word influences. */
+function TextPeek({ example, classes }: { example: NonNullable<NonNullable<ModelResult["text"]>["examples"]>[number]; classes: string[] | null }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.25 }} className="inset col" style={{ padding: "12px 14px", gap: 10 }}>
+      <div className="row between wrap" style={{ gap: 8 }}>
+        <span className="row small" style={{ gap: 6 }}><b>🔍 A peek inside</b><span className="muted">— which words decided this test message</span></span>
+        <span className="row tiny muted" style={{ gap: 6 }}>said <ClassChip label={example.pred} classes={classes} size={11} /> · {Math.round(example.probability * 100)}% sure</span>
+      </div>
+      <ExplainedSentence tokens={example.tokens} pred={example.pred} size={14} />
+    </motion.div>
   );
 }
 

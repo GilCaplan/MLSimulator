@@ -2,6 +2,7 @@ import { useProject } from "../../lib/store";
 import type { ModelResult } from "../../lib/types";
 import { NetworkDiagram } from "../nn/NetworkDiagram";
 import { diagramLayers } from "./archLayers";
+import { isTextArch, textNetCaption } from "./textKit";
 import { archFor, nFeatures, nOutputs } from "./util";
 
 /** The model's settings table (every hyper-parameter, changed ones badged) and its network diagram for neural nets. */
@@ -17,6 +18,7 @@ export function ModelSettings({ model }: { model: ModelResult }) {
       {arch && (
         <div className="inset" style={{ padding: 10 }}>
           <NetworkDiagram layers={diagramLayers(arch, nFeatures(), nOutputs(), model.vision?.image_shape ?? useProject.getState().report?.image_shape)} height={240} />
+          {isTextArch(arch) && <p className="tiny muted" style={{ textAlign: "center", lineHeight: 1.5, margin: "2px 12px 4px" }}>{textNetCaption(arch)}</p>}
         </div>
       )}
       {entries.length === 0 ? (

@@ -1,7 +1,7 @@
 import type {
   ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
-  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
+  Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
 
 export class ApiError extends Error {
@@ -71,8 +71,11 @@ export const api = {
   dataset: (id: string) => get<DatasetSummary>(`/datasets/${id}`),
   rows: (id: string, offset = 0, limit = 100) =>
     get<{ columns: string[]; rows: any[][]; total: number; offset: number }>(`/datasets/${id}/rows?offset=${offset}&limit=${limit}`),
-  profile: (id: string, target?: string | null, task?: Task | null) =>
-    get<DatasetProfile>(`/datasets/${id}/profile?${new URLSearchParams({ ...(target ? { target } : {}), ...(task ? { task } : {}) })}`),
+  profile: (id: string, target?: string | null, task?: string | null, extra: { modality?: string; text_column?: string | null } = {}) =>
+    get<DatasetProfile>(`/datasets/${id}/profile?${new URLSearchParams({
+      ...(target ? { target } : {}), ...(task ? { task } : {}), ...(extra.modality ? { modality: extra.modality } : {}),
+      ...(extra.text_column ? { text_column: extra.text_column } : {}),
+    })}`),
   previewFeatures: (id: string, steps: FeatureStep[]) =>
     post<{ ok: boolean; error?: string; columns: ColumnSummary[] }>(`/datasets/${id}/features/preview`, { steps }),
   prepare: (id: string, pipeline: Partial<PipelineSpec>, model_ids: string[]) =>
@@ -89,6 +92,8 @@ export const api = {
     fd.append("file", file);
     return req<DatasetSummary>("POST", "/datasets/upload-images", fd);
   },
+  textSets: () => get<Record<string, TextSetInfo>>("/datasets/text-sets"),
+  createTextSet: (name: string, params: Record<string, number> = {}, seed = 42) => post<DatasetSummary>("/datasets/text-set", { name, params, seed }),
   /** thumbnail URL for one image of an image dataset (use in <img src>) */
   imageUrl: (datasetId: string, i: number, size = 64, aug = 0) => `/api/datasets/${datasetId}/image/${i}?size=${size}${aug ? `&aug=${aug}` : ""}`,
   validateArch: (arch: NNArch, n_features: number, n_out: number, image_shape?: number[] | null) =>
@@ -115,6 +120,7 @@ export const api = {
   deleteModel: (id: string) => req("DELETE", `/library/${id}`),
   warm: (family: "torch" | "classic") => post("/library/warm", { family }),
   predict: (id: string, rows: Record<string, any>[]) => post<PredictResponse>(`/library/${id}/predict`, { rows }),
+  predictText: (id: string, texts: string[]) => post<TextPredictResponse>(`/library/${id}/predict-text`, { texts }),
   assign: (id: string, rows: Record<string, any>[]) => post<AssignResponse>(`/library/${id}/assign`, { rows }),
   predictImage: (id: string, images: string[]) => post<ImagePredictResponse>(`/library/${id}/predict-image`, { images }),
   sensitivity: (id: string, row: Record<string, any>, class_index?: number | null) =>

@@ -38,6 +38,15 @@ _Last updated: 2026-10-02 (session 2). If a session ends mid-task, start here._
   home templates, demos for choosing_k & curse. 16 lessons. Rule: max 2 concurrent subagents.
 - Next: Phase 3 NLP (text classification) per `docs/expansion_plan.md`, then recommenders, forecasting.
 
+## Phase 3 (NLP) — DONE, session 3
+- Backend done: `mlp/core/text.py` (text sets reviews/tickets/spam, tokenizer, TextPreprocessor TF-IDF|seq,
+  prepare_text), torch TextNet (embedding_bag / gru / text_transformer), multinomial_nb, `mlp/core/text_eval.py`
+  (occlusion word attributions, top words, mistakes with text), predict_text op + `/library/{id}/predict-text`,
+  `library.preprocessor_for`, lesson `bag_of_words` (validated), `scripts/smoke_text.py`.
+- Frontend done: text problem tile, text sets/upload with text-column picker, Words/Sequence-length stages, text model
+  builders, Mistakes/Words/Explanations tabs, text playground with word influence, templates, bag_of_words demo.
+- Next: Phase 4 Recommenders, Phase 5 Forecasting, Phase 6 extras (see `docs/expansion_plan.md`).
+
 ## Next
 - Vision UI is complete (problem picker, image Data/Prepare, results tabs, playground, 14 lessons incl. 2 vision demos);
   pushed to GitHub, CI green (CI validates tabular lessons; image lessons need `validate_lessons.py --torch` locally).

@@ -11,6 +11,7 @@ import { ErrorAnalysis } from "../train/Mistakes";
 import { VisionFilters } from "../train/VisionFilters";
 import { VisionGallery } from "../train/VisionGallery";
 import { VisionLooks } from "../train/VisionLooks";
+import { TextExplain, TextMistakes, TextWords } from "../train/TextViews";
 import { UnsupMetricTiles, UnsupViews } from "../train/unsup/UnsupViews";
 import { MetricTiles, SectionTitle, isUnsupModel, rise } from "./shared";
 
@@ -97,7 +98,7 @@ function SupervisedPerformance({ model }: { model: SavedModel }) {
           <MetricTiles metrics={test} train={model.metrics?.train} />
           <div className="row wrap tiny faint" style={{ gap: 14 }}>
             {model.fit_time_s != null && <span>⏱ trained in {model.fit_time_s < 1 ? `${Math.round(model.fit_time_s * 1000)} ms` : `${model.fit_time_s.toFixed(1)} s`}</span>}
-            {model.dataset?.n_rows != null && <span>📊 {model.dataset.n_rows.toLocaleString()} {model.modality === "image" ? "pictures" : "rows"} in the dataset</span>}
+            {model.dataset?.n_rows != null && <span>📊 {model.dataset.n_rows.toLocaleString()} {model.modality === "image" ? "pictures" : d.text ? "texts" : "rows"} in the dataset</span>}
             {model.n_params != null && <span>🧮 {model.n_params.toLocaleString()} learnable numbers</span>}
             {d.cv && <span>🔁 cross-validation {d.cv.metric}: {fmt(d.cv.mean)} ± {fmt(d.cv.std)}</span>}
           </div>
@@ -149,6 +150,7 @@ function SupervisedPerformance({ model }: { model: SavedModel }) {
           </motion.div>
 
           {d.vision && <VisionSection model={model} />}
+          {d.text && <TextSection model={model} />}
           {isCls && d.calibration && (
             <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} className="col" style={{ gap: 10 }}>
               <div className="divider" />
@@ -166,6 +168,35 @@ function SupervisedPerformance({ model }: { model: SavedModel }) {
         </div>
       </Glass>
     </motion.section>
+  );
+}
+
+type TTab = "mistakes" | "words" | "explain";
+
+/** Text models: the confident mistakes, the words it weighs and per-word explanations. */
+function TextSection({ model }: { model: SavedModel }) {
+  const t = model.detail!.text!;
+  const [tab, setTab] = useState<TTab>(t.examples?.length ? "explain" : "mistakes");
+  const options: { value: TTab; label: string; disabled?: boolean }[] = [
+    { value: "explain", label: "🔍 Explanations", disabled: !t.examples?.length },
+    { value: "words", label: "🔤 Words" },
+    { value: "mistakes", label: "💬 Mistakes" },
+  ];
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} className="col" style={{ gap: 12 }}>
+      <div className="divider" />
+      <div className="row between wrap" style={{ gap: 10 }}>
+        <h4 className="row" style={{ gap: 6 }}>💬 Inside its head<InfoTip text="Real test messages with the model's answers, the words it weighs most and how each word moved its answer." /></h4>
+        <Segmented size="sm" value={tab} onChange={setTab} options={options} />
+      </div>
+      <AnimatePresence mode="wait">
+        <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+          {tab === "explain" && <TextExplain text={t} classes={model.classes} />}
+          {tab === "words" && <TextWords text={t} classes={model.classes} family={model.family} label={model.label} onExplain={t.examples?.length ? () => setTab("explain") : undefined} />}
+          {tab === "mistakes" && <TextMistakes text={t} classes={model.classes} onExplain={t.examples?.length ? () => setTab("explain") : undefined} />}
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

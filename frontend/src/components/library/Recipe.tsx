@@ -6,7 +6,8 @@ import { SplitBar } from "../charts";
 import { Glass, InfoTip } from "../glass";
 import { NetworkDiagram } from "../nn/NetworkDiagram";
 import { diagramLayers, imageDims } from "../train/archLayers";
-import { SectionTitle, rise, specFor, useRegistry } from "./shared";
+import { SectionTitle, isTextModel, rise, specFor, useRegistry } from "./shared";
+import { textNetCaption } from "../train/textKit";
 
 const OVER: Record<string, string> = { random: "random copies", smote: "SMOTE", borderline_smote: "Borderline-SMOTE", adasyn: "ADASYN", svm_smote: "SVM-SMOTE" };
 const UNDER: Record<string, string> = { random: "random removal", nearmiss: "NearMiss", cluster_centroids: "Cluster centroids" };
@@ -226,6 +227,47 @@ function imageSteps(p: PipelineSpec, m: SavedModel): Step[] {
   ];
 }
 
+function textSteps(p: PipelineSpec, m: SavedModel): Step[] {
+  const t = { text_column: null, ngram_max: 1, max_features: 3000, min_df: 2, max_len: 40, ...(p.text ?? {}) } as NonNullable<PipelineSpec["text"]>;
+  const col = m.text_column ?? t.text_column ?? m.input_schema[0]?.name ?? "text";
+  const neural = m.family === "torch";
+  const test = p.split?.test_size ?? 0.2, val = p.split?.val_size ?? 0;
+  const pairs = t.ngram_max >= 2;
+  return [
+    { icon: "🎯", title: `Predict “${m.target}” from text`,
+      text: <>The model reads the <b>{col}</b> column{m.classes?.length ? <> and sorts each message into one of {m.classes.length} answers: {m.classes.join(", ")}</> : null}.</> },
+    { icon: "✂️", title: "Split into words",
+      text: <>Each message is lower-cased and chopped into words (“Not GOOD!” → <span className="mono">not</span> · <span className="mono">good</span>). Punctuation is dropped.</> },
+    neural
+      ? { icon: "📏", title: `Up to ${t.max_len} words per message`,
+          text: <>The network reads at most the first {t.max_len} words, in order. Longer messages are cut; shorter ones are padded with blanks it learns to ignore.</> }
+      : { icon: pairs ? "🔗" : "🔤", title: pairs ? "Count words and word pairs" : "Count single words",
+          text: pairs
+            ? <>Each message becomes counts of its words <i>and</i> neighbouring pairs, so “not good” is its own clue — not just “not” plus “good”.</>
+            : <>Each message becomes a bag of word counts. Order is lost: “not good” and “good, not” look the same.</>,
+          extra: (
+            <div className="row wrap" style={{ gap: 5, marginTop: 6 }}>
+              <span className="badge">not</span><span className="badge">good</span>
+              {pairs && <span className="badge accent">not · good</span>}
+            </div>
+          ) },
+    { icon: "📖", title: `Vocabulary: up to ${t.max_features.toLocaleString()} ${neural ? "words" : pairs ? "words & pairs" : "words"}`,
+      text: <>Only {neural ? "words" : "words and pairs"} seen in at least {t.min_df} training messages are kept{!neural && m.feature_names.length ? <> — {m.feature_names.length.toLocaleString()} made the cut</> : null}. Anything else is invisible to the model.</> },
+    ...(!neural ? [{ icon: "⚖️", title: "Rare words weigh more (TF-IDF)", text: "Words that appear in almost every message (like “the”) are turned down; distinctive ones are turned up." }] : []),
+    { icon: "🧪", title: "Split into train / validation / test",
+      text: <>It learned from {Math.round((1 - test - val) * 100)}% of the messages and was graded on {Math.round(test * 100)}% it never saw.</>,
+      extra: (
+        <div style={{ marginTop: 8, maxWidth: 420 }}>
+          <SplitBar parts={[
+            { label: "Train", value: Math.round((1 - test - val) * 100), color: "#0A84FF" },
+            ...(val > 0 ? [{ label: "Validation", value: Math.round(val * 100), color: "#BF5AF2" }] : []),
+            { label: "Test", value: Math.round(test * 100), color: "#FF9F0A" },
+          ]} />
+        </div>
+      ) },
+  ];
+}
+
 /** "Recipe": the model's settings, its network (if any) and the data-prep steps that feed it. */
 export function Recipe({ model }: { model: SavedModel }) {
   const registry = useRegistry();
@@ -235,7 +277,8 @@ export function Recipe({ model }: { model: SavedModel }) {
     ? spec.params.map((hp) => ({ name: hp.name, label: hp.label, help: hp.help, value: model.params?.[hp.name] ?? hp.default, changed: model.params?.[hp.name] !== undefined && model.params[hp.name] !== hp.default }))
     : Object.entries(model.params ?? {}).map(([k, v]) => ({ name: k, label: k, help: "", value: v, changed: true }));
   const isImage = model.modality === "image";
-  const steps = model.pipeline ? (isImage ? imageSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
+  const isText = isTextModel(model);
+  const steps = model.pipeline ? (isImage ? imageSteps(model.pipeline, model) : isText ? textSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
   const dims = imageDims(model.image_shape);
   const nOut = model.task === "classification" ? model.classes?.length ?? 2 : 1;
 
@@ -299,12 +342,25 @@ export function Recipe({ model }: { model: SavedModel }) {
                 <h3>🧠 Network architecture</h3>
                 {model.n_params != null && <span className="badge accent">{model.n_params.toLocaleString()} parameters</span>}
               </div>
-              <p className="small muted" style={{ marginBottom: 6 }}>{isImage ? "Information flows left to right: the picture, through layers of pattern-detecting filters, to the answer." : "Information flows left to right: your inputs, through the hidden layers, to the answer."}</p>
-              <NetworkDiagram layers={diagramLayers(arch, model.feature_names.length, nOut, model.image_shape)} height={240} />
+              <p className="small muted" style={{ marginBottom: 6 }}>{isImage ? "Information flows left to right: the picture, through layers of pattern-detecting filters, to the answer." : isText ? textNetCaption(arch) : "Information flows left to right: your inputs, through the hidden layers, to the answer."}</p>
+              <NetworkDiagram layers={diagramLayers(arch, model.feature_names.length, nOut, model.image_shape, model.pipeline?.text?.max_len ?? 40)} height={240} />
             </Glass>
           )}
 
-          {isImage ? (
+          {isText ? (
+            <Glass>
+              <h3 style={{ marginBottom: 10 }}>Text it expects</h3>
+              <div className="row" style={{ gap: 14 }}>
+                <span style={{ width: 52, height: 52, borderRadius: 14, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>💬</span>
+                <div className="col" style={{ gap: 4 }}>
+                  <b>One column of free text{model.text_column ? <> · <span className="mono">{model.text_column}</span></> : null}</b>
+                  <span className="small muted" style={{ lineHeight: 1.5 }}>
+                    Any sentence in plain language. {model.family === "torch" ? `Only the first ${model.pipeline?.text?.max_len ?? 40} words are read.` : "Words it never saw in training are simply ignored."}
+                  </span>
+                </div>
+              </div>
+            </Glass>
+          ) : isImage ? (
             <Glass>
               <h3 style={{ marginBottom: 10 }}>Pictures it expects</h3>
               <div className="row" style={{ gap: 14 }}>

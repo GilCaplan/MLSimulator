@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { AugmentationDemo } from "./AugmentationDemo";
+import { BagOfWordsDemo } from "./BagOfWordsDemo";
 import { BaselinesDemo } from "./BaselinesDemo";
 import { CalibrationDemo } from "./CalibrationDemo";
 import { ChoosingKDemo } from "./ChoosingKDemo";
@@ -38,6 +39,7 @@ export const DEMOS: Record<string, ComponentType<DemoProps>> = {
   calibration: CalibrationDemo,
   choosing_k: ChoosingKDemo,
   curse: CurseDemo,
+  bag_of_words: BagOfWordsDemo,
   convolutions: ConvolutionsDemo,
   augmentation: AugmentationDemo,
 };

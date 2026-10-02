@@ -15,6 +15,8 @@ export interface Template {
   preset?: string;
   /** synthetic image set (POST /datasets/image-set) — makes this an image project */
   imageSet?: string;
+  /** synthetic text set (POST /datasets/text-set) — makes this a text project */
+  textSet?: string;
   modality?: Modality;
   /** target column (defaults to the dataset's hint) */
   target?: string;
@@ -35,6 +37,10 @@ export const TEMPLATES: Template[] = [
     imageSet: "shapes", modality: "image", target: "label", models: ["cnn2d", "tiny_resnet", "logistic_regression"], tint: "rgba(255,159,10,.18)" },
   { id: "count_dots", emoji: "🎲", title: "Count the dots", blurb: "Predict how many dots are in a picture — regression straight from pixels.", task: "regression",
     imageSet: "count_dots", modality: "image", target: "value", models: ["cnn2d", "random_forest"], tint: "rgba(100,210,255,.18)" },
+  { id: "reviews", emoji: "💬", title: "Review sentiment (text)", blurb: "Read product reviews and tell happy from unhappy. Can a model learn that “not bad” is good?", task: "classification",
+    textSet: "reviews", modality: "text", target: "sentiment", models: ["logistic_regression", "multinomial_nb", "gru"], tint: "rgba(48,209,88,.16)" },
+  { id: "tickets", emoji: "🎫", title: "Support ticket routing", blurb: "Send each customer message to the right team — billing, technical, shipping or account — from its words alone.", task: "classification",
+    textSet: "tickets", modality: "text", target: "team", models: ["logistic_regression", "multinomial_nb", "text_transformer"], tint: "rgba(94,92,230,.16)" },
   { id: "segments", emoji: "🛍️", title: "Shopping segments", blurb: "No labels at all: let the models discover the natural groups of shoppers — then peek at the real segments.", task: "clustering",
     sample: "customers", truth: "segment", models: ["kmeans", "gmm", "dbscan"], tint: "rgba(255,214,10,.2)" },
   { id: "faults", emoji: "🏭", title: "Factory faults", blurb: "Learn what a healthy machine looks like and flag the sensor readings that don't fit.", task: "anomaly",
@@ -49,6 +55,7 @@ export async function createFromTemplate(t: Template): Promise<Project> {
   const registry = await st.ensureRegistry();
   let dataset;
   if (t.imageSet) dataset = await api.createImageSet(t.imageSet);
+  else if (t.textSet) dataset = await api.createTextSet(t.textSet);
   else if (t.sample) dataset = await api.sample(t.sample);
   else {
     const catalog = await st.ensureCatalog();

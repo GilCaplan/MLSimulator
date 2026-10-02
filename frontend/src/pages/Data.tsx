@@ -4,6 +4,7 @@ import { ColumnsTable } from "../components/data/ColumnsTable";
 import { CombinePanel } from "../components/data/CombinePanel";
 import { DatasetHeader } from "../components/data/DatasetHeader";
 import { ImageDataStep } from "../components/data/image/ImageDataStep";
+import { TextDataStep } from "../components/data/text/TextDataStep";
 import { defaultDesign, fromSpec, type DesignState } from "../components/data/designer/model";
 import { ProfilePanel } from "../components/data/ProfilePanel";
 import { RowsTable } from "../components/data/RowsTable";
@@ -40,8 +41,8 @@ const UNSUP_INTRO: Record<string, React.ReactNode> = {
 };
 
 export function DataStep() {
-  const image = useProject((s) => s.project?.modality === "image");
-  return image ? <ImageDataStep /> : <TabularDataStep />;
+  const modality = useProject((s) => s.project?.modality);
+  return modality === "image" ? <ImageDataStep /> : modality === "text" ? <TextDataStep /> : <TabularDataStep />;
 }
 
 function TabularDataStep() {

@@ -72,7 +72,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
           <span className="small muted">
             {unsup
               ? task === "clustering" ? "No answer key here — models are ranked by how crisp and well-separated their groups are. Click a row to see the groups." : task === "anomaly" ? "Ranked by how well the most unusual scores line up with the real anomalies you hid. Click a row to see what got flagged." : "Ranked by how honestly each map keeps real neighbours together. Click a row to explore the map."
-              : <>Scored on test {project?.modality === "image" ? "pictures" : "rows"} none of the models saw while learning. Click a row for the full report.</>}
+              : <>Scored on test {project?.modality === "image" ? "pictures" : project?.modality === "text" ? "texts" : "rows"} none of the models saw while learning. Click a row for the full report.</>}
           </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
