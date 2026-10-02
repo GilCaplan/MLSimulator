@@ -165,6 +165,9 @@ def run(lesson, cfg_name, seed):
             from sklearn.calibration import CalibratedClassifierCV
             est = CalibratedClassifierCV(est, method=options["calibrate"], cv=3)
         est.fit(prepared.X_train, prepared.y_train)
+        if cfg_name != "naive" and ch[cfg_name].get("thresholds", {}).get(mid):
+            from mlp.core.thresholding import apply_threshold
+            est = apply_threshold(est, ch[cfg_name]["thresholds"][mid], prepared)
         Xh = pp.transform(hidden)
         pred = pp.decode_y(est.predict(Xh))
         proba = est.predict_proba(Xh) if hasattr(est, "predict_proba") and ch["task"] == "classification" else None

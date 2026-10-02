@@ -92,7 +92,7 @@ def run_train(job):
             print(out[2] if len(out) > 2 else "")
             continue
         res = {**out[1], "key": key, "model_id": model_id, "label": spec["label"], "params": m.get("params") or {},
-               "nn_arch": m.get("nn_arch"), "family": family(model_id)}
+               "nn_arch": m.get("nn_arch"), "family": family(model_id), "threshold": m.get("threshold")}
         results[key] = res
         manager.emit(job, "model.finished", {"key": key, "metrics": res["metrics"], "fit_time_s": res["fit_time_s"],
                                              "curve": res.get("curve"), "cv": res.get("cv")})

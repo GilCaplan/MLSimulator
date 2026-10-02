@@ -176,6 +176,8 @@ export interface HyperParam {
   step?: number;
   log?: boolean;
   options?: string[];
+  /** only shown for these tasks (e.g. a regression-only loss) */
+  tasks?: string[];
 }
 
 export interface DenseLayer { type: "dense"; units: number; activation: string; dropout?: number; batchnorm?: boolean }
@@ -219,6 +221,8 @@ export interface ModelConfig {
   model_id: string;
   params: Record<string, any>;
   nn_arch?: NNArch | null;
+  /** binary classification: probability cut-off for the second class (default 0.5), applied when predicting */
+  threshold?: number | null;
 }
 
 export interface Histogram { edges: number[]; counts: number[] }
@@ -567,6 +571,8 @@ export interface ModelResult {
   slices?: { column: string; metric: string; better: "higher" | "lower"; overall: number; spread: number; groups: { label: string; n: number; value: number }[] }[];
   /** true for the automatic 'always guess' reference row */
   baseline?: boolean;
+  /** custom decision threshold the model was trained with (binary classification) */
+  threshold?: number | null;
   vision?: VisionResult | null;
   clusters?: ClusterResult | null;
   reduction?: ReductionResult | null;
@@ -642,6 +648,7 @@ export interface InputSchemaItem {
 
 export interface SavedModel {
   id: string;
+  threshold?: number | null;
   name: string;
   notes: string;
   task: Task | UnsupervisedTask;

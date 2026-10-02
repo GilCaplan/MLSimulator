@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { spring } from "../../design/motion";
 import { withAlpha } from "../../lib/colors";
 import { METRIC_HELP } from "../../lib/format";
+import { toast, useProject } from "../../lib/store";
 import type { RunResult } from "../../lib/types";
+import { patchModel } from "../models/ModelSettingsModal";
 import { AnimatedNumber, InfoTip, Select, Slider } from "../glass";
 import { LineChart } from "../charts";
 
@@ -16,7 +18,18 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
     if (!models.some((m) => m.key === key)) setKey(models[0]?.key ?? "");
   }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
   const model = result.models[key] ?? models[0];
+  const cfg = useProject((st) => st.project?.models.find((m) => m.key === (model?.key ?? "")));
+  useEffect(() => {
+    setT(model?.threshold ?? 0.5);
+  }, [model?.key]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!model?.thresholds) return null;
+  const trained = model.threshold ?? 0.5;
+  const planned = cfg?.threshold ?? 0.5;
+  const apply = (v: number) => {
+    if (!cfg) return toast.error("This model is no longer in the project — add it again on the Models step.");
+    patchModel(cfg.key, { threshold: Math.abs(v - 0.5) < 1e-9 ? null : v });
+    toast.success(`${model.label} will use a threshold of ${v.toFixed(2)} — train again to apply it.`);
+  };
   const rows = model.thresholds;
   const row = rows.reduce((a, b) => (Math.abs(b.t - t) < Math.abs(a.t - t) ? b : a));
   const pos = result.classes?.[1] ?? "yes";
@@ -40,7 +53,7 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
       <p className="small muted" style={{ lineHeight: 1.6 }}>
         Your model doesn't just say <i>{pos}</i> or <i>{neg}</i> — it gives a probability, and anything above the <b>threshold</b> gets flagged as <i>{pos}</i>.
         Think of a bank's fraud alarm: set it <b>low</b> and it catches nearly every fraud but pesters honest customers with false alarms; set it <b>high</b> and alarms are rarely wrong, but some fraud slips through.
-        Slide to find the balance that suits your problem. (Models use 0.5 by default.)
+        Slide to find the balance that suits your problem, then press <b>Use</b> to make the model decide with that threshold (it applies from the next training run, and the saved model keeps it). Models use 0.5 by default.
       </p>
       <div className="row wrap" style={{ gap: 16, alignItems: "flex-end" }}>
         {models.length > 1 && (
@@ -51,6 +64,15 @@ export function ThresholdTuner({ result }: { result: RunResult }) {
         )}
         <div className="grow" style={{ minWidth: 240 }}>
           <Slider label={<>Threshold <span className="faint small">— flag as “{pos}” when probability ≥</span></>} value={t} min={0.05} max={0.95} step={0.05} onChange={setT} format={(v) => v.toFixed(2)} />
+        </div>
+        <div className="col" style={{ gap: 6, alignItems: "flex-start" }}>
+          <span className="tiny faint">
+            Trained with <b className="num">{trained.toFixed(2)}</b>{Math.abs(planned - trained) > 1e-9 && <> · next run uses <b className="num">{planned.toFixed(2)}</b></>}
+          </span>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn primary sm" disabled={Math.abs(t - planned) < 1e-9} onClick={() => apply(t)}>Use {t.toFixed(2)} for this model</button>
+            {planned !== 0.5 && <button className="btn ghost sm" onClick={() => { setT(0.5); apply(0.5); }}>Reset to 0.50</button>}
+          </div>
         </div>
       </div>
 

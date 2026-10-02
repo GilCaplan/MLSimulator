@@ -93,7 +93,7 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
               {spec.nn && <div className="divider" />}
               <h4>{spec.nn ? "⚙️ Training settings" : "⚙️ Settings"}</h4>
               <p className="small faint" style={{ marginTop: -6 }}>The defaults are sensible — hover the little “i” to learn what each one does.</p>
-              <HyperparamForm params={spec.params} values={cfg.params} columns={2}
+              <HyperparamForm params={spec.params.filter((hp) => !hp.tasks || hp.tasks.includes(project?.task ?? ""))} values={cfg.params} columns={2}
                 onChange={(name, value) => patchModel(cfg.key, { params: { ...cfg.params, [name]: value } })} />
             </section>
           )}

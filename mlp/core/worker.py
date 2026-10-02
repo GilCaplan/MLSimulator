@@ -87,6 +87,8 @@ def train_entry(payload: dict, q, cancel):
             est, curve = fit_classic(model_id, m.get("params"), prepared, emit, cancel, key, seed,
                                      calibrate=payload.get("options", {}).get("calibrate"))
         fit_time = time.time() - t0
+        from .thresholding import apply_threshold
+        est = apply_threshold(est, m.get("threshold"), prepared)
         emit("model.evaluating", {"key": key})
         result = evaluate(est, prepared, seed)
         cv = None

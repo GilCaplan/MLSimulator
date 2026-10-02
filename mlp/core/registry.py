@@ -78,11 +78,18 @@ MODELS: list[dict[str, Any]] = [
      "description": "Builds trees one after another, each fixing the previous ones' mistakes.",
      "params": [P("n_estimators", "Number of trees", "int", 150, "More rounds of correction.", min=10, max=1000, step=10), LR,
                 P("max_depth", "Max tree depth", "int", 3, "Boosted trees are usually shallow.", min=1, max=12),
-                P("subsample", "Row sample fraction", "float", 1.0, "Below 1 adds randomness that can reduce overfitting.", min=0.3, max=1.0, step=0.05)]},
+                P("subsample", "Row sample fraction", "float", 1.0, "Below 1 adds randomness that can reduce overfitting.", min=0.3, max=1.0, step=0.05),
+                P("loss", "Loss (what a mistake costs)", "choice", "squared_error",
+                  "squared_error punishes big misses hard (aims at the average, optimises RMSE); absolute_error treats every minute "
+                  "the same (aims at the typical value, optimises MAE); huber is in between.",
+                  options=["squared_error", "absolute_error", "huber"], tasks=["regression"])]},
     {"id": "hist_gradient_boosting", "label": "Histogram Boosting", "family": "Boosting", "tasks": ["classification", "regression"], "emoji": "⚡",
      "description": "scikit-learn's fast boosting for larger datasets; handles missing values natively.",
      "params": [P("max_iter", "Boosting rounds", "int", 200, "Number of trees.", min=10, max=1000, step=10), LR,
-                P("max_leaf_nodes", "Leaves per tree", "int", 31, "Complexity of each tree.", min=4, max=255)]},
+                P("max_leaf_nodes", "Leaves per tree", "int", 31, "Complexity of each tree.", min=4, max=255),
+                P("loss", "Loss (what a mistake costs)", "choice", "squared_error",
+                  "squared_error punishes big misses hard (aims at the average, optimises RMSE); absolute_error treats every unit "
+                  "the same (aims at the typical value, optimises MAE).", options=["squared_error", "absolute_error"], tasks=["regression"])]},
     {"id": "adaboost", "label": "AdaBoost", "family": "Boosting", "tasks": ["classification", "regression"], "emoji": "🎯",
      "description": "Repeatedly re-weights the examples it got wrong so the next learner focuses on them.",
      "params": [P("n_estimators", "Number of learners", "int", 100, "Rounds of boosting.", min=10, max=1000, step=10), LR]},
@@ -276,13 +283,15 @@ def build_estimator(model_id: str, task: str, params: dict | None = None, n_clas
     if model_id == "gradient_boosting":
         from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
         cls = GradientBoostingClassifier if clf else GradientBoostingRegressor
+        extra = {} if clf else {"loss": p.get("loss", "squared_error")}
         return cls(n_estimators=int(p["n_estimators"]), learning_rate=float(p["learning_rate"]),
-                   max_depth=int(p["max_depth"]), subsample=float(p["subsample"]), random_state=seed)
+                   max_depth=int(p["max_depth"]), subsample=float(p["subsample"]), random_state=seed, **extra)
     if model_id == "hist_gradient_boosting":
         from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
         cls = HistGradientBoostingClassifier if clf else HistGradientBoostingRegressor
+        extra = {} if clf else {"loss": p.get("loss", "squared_error") if p.get("loss") != "huber" else "squared_error"}
         return cls(max_iter=int(p["max_iter"]), learning_rate=float(p["learning_rate"]),
-                   max_leaf_nodes=int(p["max_leaf_nodes"]), random_state=seed)
+                   max_leaf_nodes=int(p["max_leaf_nodes"]), random_state=seed, **extra)
     if model_id == "adaboost":
         from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor
         cls = AdaBoostClassifier if clf else AdaBoostRegressor

@@ -15,9 +15,12 @@ import { MissingDemo } from "./MissingDemo";
 import { OutliersDemo } from "./OutliersDemo";
 import { OverfittingDemo } from "./OverfittingDemo";
 import { PopularityBiasDemo } from "./PopularityBiasDemo";
+import { RegressionMetricsDemo } from "./RegressionMetricsDemo";
+import { RegularizationDemo } from "./RegularizationDemo";
 import { ScalingDemo } from "./ScalingDemo";
 import { ShortcutDemo } from "./ShortcutDemo";
 import { SplitsDemo } from "./SplitsDemo";
+import { ThresholdsDemo } from "./ThresholdsDemo";
 
 /** Props every interactive lesson demo receives. Call `onDone` once the learner has meaningfully interacted. */
 export interface DemoProps { onDone?: () => void }
@@ -46,4 +49,7 @@ export const DEMOS: Record<string, ComponentType<DemoProps>> = {
   cold_start: ColdStartDemo,
   convolutions: ConvolutionsDemo,
   augmentation: AugmentationDemo,
+  regularization: RegularizationDemo,
+  regression_metrics: RegressionMetricsDemo,
+  thresholds: ThresholdsDemo,
 };

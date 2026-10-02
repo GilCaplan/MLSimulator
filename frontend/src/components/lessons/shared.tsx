@@ -38,6 +38,8 @@ export const STAGE_TINT: Record<string, { color: string; bg: string }> = {
   Generalization: { color: "#ff375f", bg: "rgba(255,55,95,.14)" },
   "Responsible ML": { color: "#30d158", bg: "rgba(48,209,88,.15)" },
   Recommend: { color: "#5e5ce6", bg: "rgba(94,92,230,.15)" },
+  Evaluation: { color: "#ff9f0a", bg: "rgba(255,159,10,.14)" },
+  Forecast: { color: "#64d2ff", bg: "rgba(100,210,255,.16)" },
 };
 export const stageTint = (stage: string) => STAGE_TINT[stage] ?? { color: "var(--accent)", bg: "var(--accent-soft)" };
 
@@ -76,17 +78,19 @@ export function stepFlags(p: LessonProgress | undefined): Record<LessonStepId, b
 /** Format a goal / check value: R² as a decimal, everything else as a percentage. */
 export const fmtGoal = (metric: string, v: number | null | undefined) =>
   v === null || v === undefined ? "—"
-    : metric === "r2" || metric === "ari" || metric === "roc_auc" ? (Math.abs(v) >= 100 ? v.toExponential(1) : v.toFixed(2))
+    : metric === "r2" || metric === "ari" || metric === "roc_auc" || metric === "mae" || metric === "mase" ? (Math.abs(v) >= 100 ? v.toExponential(1) : v.toFixed(2))
+    : metric === "error_ratio" ? `${v.toFixed(2)}×`
     : pct(v, metric === "tpr_gap" ? 1 : 0);
 
 /** The learner's own-test metric comparable to a hidden-set goal metric (if any). */
-export const OWN_METRIC: Record<string, string | undefined> = { accuracy: "accuracy", balanced_accuracy: "balanced_accuracy", r2: "r2", ari: "ari", recall_at_10: "recall_at_10", coverage: "coverage" };
+export const OWN_METRIC: Record<string, string | undefined> = { accuracy: "accuracy", balanced_accuracy: "balanced_accuracy", r2: "r2", mae: "mae", ari: "ari", recall_at_10: "recall_at_10", coverage: "coverage" };
 
 export const SHORT_METRIC: Record<string, string> = {
   accuracy: "accuracy", balanced_accuracy: "balanced accuracy", r2: "R²", recall_pos: "recall", precision_pos: "precision",
   f1_pos: "F1", tpr_gap: "approval gap", ari: "agreement (ARI)", ece: "calibration error", roc_auc: "ROC-AUC",
   mae_vs_baseline: "gain over baseline", estimate_gap: "estimate gap",
   recall_at_10: "of liked films found in the top 10", coverage: "of the catalogue recommended",
+  mae: "average error", within_tol: "of predictions close enough", mase: "error vs 'same as last season'", error_ratio: "real-world ÷ test error",
 };
 
 /** Headline numbers for the "your test vs the real world" contrast — leads with a failed goal when there is one. */

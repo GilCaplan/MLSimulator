@@ -436,3 +436,56 @@ def shop_forecast(seed=0, horizon=28):
 
 GENERATORS.update({"no_peeking": shop_forecast})
 FORECAST_LESSONS = {"no_peeking"}
+
+
+# ----------------------------------------------------------------------------- metrics & regularization lessons
+def wine_tasting(seed=0, n=170, n_hidden=1500, p=90):
+    """Regularization: 170 tasted wines, 90 lab measurements, only 6 really matter (and many echo each other)."""
+    rng = np.random.default_rng(seed)
+    N = n + n_hidden
+    base = rng.normal(size=(N, 8))
+    X = np.hstack([base, base[:, rng.integers(0, 8, p - 8)] * 0.6 + rng.normal(size=(N, p - 8)) * 0.8])
+    w = np.zeros(p)
+    w[:6] = [3, -2, 1.5, 1, -1, 0.8]
+    y = 80 + X @ w + rng.normal(0, 2.0, N)
+    names = ["acidity", "residual_sugar", "tannin", "alcohol", "sulphites", "aroma_intensity", "colour_depth", "density"]
+    names += [f"lab_{i:02d}" for i in range(9, p + 1)]
+    df = pd.DataFrame(np.round(X, 3), columns=names)
+    df["score"] = np.round(y, 1)
+    return df.iloc[:n].reset_index(drop=True), df.iloc[n:].reset_index(drop=True)
+
+
+def delivery_eta(seed=0, n=2500, n_hidden=2000):
+    """Regression metrics: delivery times with a few genuinely very late orders (real, not errors)."""
+    rng = np.random.default_rng(seed)
+    N = n + n_hidden
+    dist = rng.gamma(2.5, 1.4, N)
+    prep = rng.normal(14, 4, N).clip(4)
+    rush = rng.random(N) < 0.3
+    rain = rng.random(N) < 0.15
+    y = 8 + 3.2 * dist + prep + 7 * rush + 6 * rain + rng.normal(0, 3, N)
+    y = y + (rng.random(N) < 0.08) * rng.uniform(25, 90, N)  # courier problems: unpredictable, very late
+    df = pd.DataFrame({"distance_km": np.round(dist, 2), "kitchen_prep_min": np.round(prep, 1),
+                       "rush_hour": np.where(rush, "yes", "no"), "raining": np.where(rain, "yes", "no"),
+                       "minutes": np.round(y, 1)})
+    return df.iloc[:n].reset_index(drop=True), df.iloc[n:].reset_index(drop=True)
+
+
+def spam_filter(seed=0, n=3000, n_hidden=3000):
+    """Thresholds: ~30% spam; classes overlap, so precision vs recall is a real trade-off."""
+    rng = np.random.default_rng(seed)
+    N = n + n_hidden
+    s = rng.random(N) < 0.3
+    df = pd.DataFrame({
+        "links": rng.poisson(np.where(s, 3.0, 1.0)),
+        "capitals_share": np.round(rng.beta(np.where(s, 3, 2), np.where(s, 6, 9)), 3),
+        "known_sender": np.where(rng.random(N) < np.where(s, 0.15, 0.7), "yes", "no"),
+        "mentions_money": np.where(rng.random(N) < np.where(s, 0.45, 0.08), "yes", "no"),
+        "exclamation_marks": rng.poisson(np.where(s, 2.0, 0.6)),
+        "words": np.round(rng.lognormal(np.where(s, 5.0, 5.6), 0.6)).astype(int),
+        "label": np.where(s, "spam", "ham"),
+    })
+    return df.iloc[:n].reset_index(drop=True), df.iloc[n:].reset_index(drop=True)
+
+
+GENERATORS.update({"regularization": wine_tasting, "regression_metrics": delivery_eta, "thresholds": spam_filter})

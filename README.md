@@ -25,12 +25,13 @@ It runs entirely on your computer. Nothing is uploaded anywhere.
 | **Recommendations.** User–item–rating data (a built-in movie-ratings set or your own CSV): most-popular, item- and user-similarity, SVD and matrix factorisation. Ranking metrics (recall/NDCG@10, coverage, novelty), the long tail, a taste map, and a playground where you rate a few films as a new viewer and get live recommendations with "because you liked…". | ![Lessons](docs/images/lessons.jpg) |
 | **Forecasting.** Time series (shop sales with promotions, hourly electricity demand, airline passengers, website visits, or your own CSV): lag, rolling-average and calendar features, an honest time split, "same as last season" and exponential-smoothing baselines, trees and linear models on lags, and a GRU. Recursive multi-step forecasts with uncertainty bands, error growth by horizon, and a playground for "what if we run a promotion next week?". | ![Lessons](docs/images/lessons.jpg) |
 | **Labs.** Free-play experiments: a GAN forging 2-D shapes, a clickable autoencoder map of handwritten digits, transfer learning with a pre-trained network, slot machines (explore vs exploit) and a maze robot learning by Q-learning. | ![Lessons](docs/images/lessons.jpg) |
-| **Lessons.** 20 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
+| **Lessons.** 22 interactive lessons in pipeline order. Each one teaches a classic pitfall, lets you play with it in a demo, quizzes you, then hands you a dataset with that problem baked in. Your model is graded on a hidden "real world" test set. | ![Lessons](docs/images/lessons.jpg) |
 
 ### Lessons
 
 Baselines · Missing values · Outliers & skewed targets · Data leakage · Feature engineering · Honest splits (groups &
-time) · Feature scaling · Class imbalance · Overfitting · Calibration & error analysis · Spurious shortcuts · Fairness
+time) · Feature scaling · Class imbalance · Overfitting · Regularization · Which error matters? (MAE vs RMSE) ·
+Precision vs recall: the decision threshold · Calibration & error analysis · Spurious shortcuts · Fairness
 & proxy bias · Choosing k · The curse of dimensionality · Bag of words · Popularity bias · Cold start · No peeking at the future · Convolutions · Data augmentation.
 
 ![Your test vs the real world](docs/images/lesson-check.jpg)

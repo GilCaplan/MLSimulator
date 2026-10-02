@@ -187,6 +187,32 @@ CHALLENGES.update({
     },
 })
 
+CHALLENGES.update({
+    "regularization": {
+        "task": "regression", "target": "score",
+        "preset_pipeline": {},
+        "preset_models": ["linear_regression"],
+        "allowed_models": ["linear_regression", "ridge", "lasso", "elastic_net"],
+        "goals": [{"metric": "r2", "op": ">=", "value": 0.62}],
+        "solution": {"models": ["lasso"], "params": {"lasso": {"alpha": 0.3}}},
+        "alt_solution": {"models": ["ridge"], "params": {"ridge": {"alpha": 60}}},
+    },
+    "regression_metrics": {
+        "task": "regression", "target": "minutes",
+        "preset_pipeline": {},
+        "preset_models": ["linear_regression", "random_forest"],
+        "goals": [{"metric": "mae", "op": "<=", "value": 7.6}, {"metric": "within_tol", "tol": 5, "op": ">=", "value": 0.72}],
+        "solution": {"models": ["gradient_boosting"], "params": {"gradient_boosting": {"loss": "absolute_error"}}},
+    },
+    "thresholds": {
+        "task": "classification", "target": "label", "positive": "spam",
+        "preset_pipeline": {},
+        "preset_models": ["logistic_regression"],
+        "goals": [{"metric": "precision_pos", "op": ">=", "value": 0.96}, {"metric": "recall_pos", "op": ">=", "value": 0.6}],
+        "solution": {"thresholds": {"logistic_regression": 0.85}},
+    },
+})
+
 METRIC_LABELS = {
     "accuracy": "Accuracy", "balanced_accuracy": "Balanced accuracy", "recall_pos": "Recall ({pos})",
     "precision_pos": "Precision ({pos})", "f1_pos": "F1 ({pos})", "r2": "R²",
@@ -199,15 +225,17 @@ METRIC_LABELS = {
     "recall_at_10": "Share of liked items found in the top 10 (recall@10)",
     "coverage": "Share of the catalogue ever recommended (coverage)",
     "error_ratio": "Real-world error ÷ your test error",
+    "mae": "Average error (MAE)",
+    "within_tol": "Share of predictions within ±{tol}",
     "mase": "Real-world error vs 'same as last week' (MASE)",
 }
 
-PERCENT_METRICS = {"recall_at_10", "coverage", "accuracy", "balanced_accuracy", "recall_pos", "precision_pos", "f1_pos", "tpr_gap", "mae_vs_baseline",
+PERCENT_METRICS = {"within_tol", "recall_at_10", "coverage", "accuracy", "balanced_accuracy", "recall_pos", "precision_pos", "f1_pos", "tpr_gap", "mae_vs_baseline",
                    "estimate_gap", "ece"}
 
 
 def goal_label(ch: dict, g: dict) -> str:
-    name = METRIC_LABELS[g["metric"]].format(pos=ch.get("positive", ""), group=ch.get("group", ""))
+    name = METRIC_LABELS[g["metric"]].format(pos=ch.get("positive", ""), group=ch.get("group", ""), tol=g.get("tol", ""))
     v = g["value"]
     if g["metric"] == "estimate_gap":
         shown = f"{v * 100:g} pts"
@@ -237,6 +265,11 @@ def metric_value(metric: str, ch: dict, y_true, y_pred, hidden: pd.DataFrame, pr
     extra: dict = {}
     if metric == "ari":
         return float(M.adjusted_rand_score(np.asarray(y_true).astype(str), np.asarray(y_pred).astype(str))), extra
+    if metric == "mae":
+        return float(np.mean(np.abs(np.asarray(y_true, float) - np.asarray(y_pred, float)))), extra
+    if metric == "within_tol":
+        tol = float((goal or {}).get("tol", 5))
+        return float(np.mean(np.abs(np.asarray(y_true, float) - np.asarray(y_pred, float)) <= tol)), extra
     if metric == "mae_vs_baseline":
         yt, yp = np.asarray(y_true, float), np.asarray(y_pred, float)
         base = float(np.mean(np.abs(yt - baseline_value)))

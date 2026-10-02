@@ -54,6 +54,7 @@ def save(job_id: str, key: str, name: str, notes: str = "", project_id: str | No
     pp = prepared.preprocessor
     meta = {"id": mid, "text_column": getattr(pp, "text_column", None), "name": name or res["label"], "notes": notes, "task": prepared.task, "model_id": res["model_id"],
             "label": res["label"], "family": res["family"], "params": res.get("params"), "nn_arch": res.get("nn_arch"),
+            "threshold": res.get("threshold"),
             "target": prepared.target, "classes": prepared.classes, "feature_names": prepared.feature_names,
             "input_schema": pp.input_schema, "metrics": res["metrics"], "pipeline": prepared.spec,
             "dataset": {"id": prepared.dataset_id, "name": ds_meta.get("name"), "n_rows": ds_meta.get("n_rows")},

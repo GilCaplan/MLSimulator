@@ -554,6 +554,96 @@ NEW_LESSONS.update({
 })
 
 NEW_LESSONS.update({
+    "regularization": {
+        "id": "regularization", "stage": "Modeling", "emoji": "🪢", "title": "Regularization: taming wide data",
+        "tagline": "With more columns than the data can support, a model needs a leash.",
+        "modeled_on": "Wine-quality and lab-measurement studies (few samples, many correlated measurements)",
+        "learn": [
+            {"icon": "📐", "heading": "Too many knobs", "body": "A linear model gives every column a weight. With 90 columns and only ~120 rows it can tune those weights to fit the training rows almost perfectly, including their **noise**, then fail on new rows."},
+            {"icon": "🪢", "heading": "A penalty on big weights", "body": "**Regularization** adds a cost for large weights. The model now has to *earn* every weight with real evidence. Turning the penalty (**alpha**) up makes the model simpler and steadier."},
+            {"icon": "🧮", "heading": "Ridge vs Lasso", "body": "**Ridge (L2)** shrinks all weights smoothly towards zero. **Lasso (L1)** pushes unhelpful weights to *exactly* zero, so it also picks features. **Elastic Net** mixes the two."},
+            {"icon": "🎚️", "heading": "Too much is also bad", "body": "With an alpha that's too large, even the useful weights get squashed and the model *underfits*. Pick alpha by validation (or cross-validation): the sweet spot sits between memorising and ignoring."},
+        ],
+        "demo": "regularization",
+        "demo_caption": "Fit a wiggly curve to a few noisy points, then raise the penalty. Watch the curve calm down and the weights shrink. Switch to Lasso and watch weights snap to zero.",
+        "quiz": [
+            {"q": "What does increasing alpha (the penalty) do to a Ridge model?",
+             "options": ["Adds more features", "Shrinks the weights, making the model simpler", "Makes training rows count twice", "Increases the learning rate"],
+             "answer": 1, "explain": "Larger weights cost more, so the model keeps only what the data clearly supports."},
+            {"q": "Which method can set some feature weights to exactly zero?",
+             "options": ["Ridge (L2)", "Lasso (L1)", "Plain linear regression", "Standard scaling"],
+             "answer": 1, "explain": "The L1 penalty has a 'corner' at zero, so weak features drop out entirely."},
+            {"q": "Your training R² is 0.97 but the test R² is 0.10. What should you try first?",
+             "options": ["Remove the penalty", "Add a penalty (Ridge/Lasso) and tune alpha", "Train for more epochs", "Use fewer test rows"],
+             "answer": 1, "explain": "A huge train–test gap with many features is classic overfitting; regularization reins it in."},
+        ],
+        "challenge": {
+            "title": "The wine panel", "dataset_name": "Wine tastings (practice)",
+            "story": "A winery measured **90 lab properties** for 170 wines and recorded the tasting panel's score. Their linear model looks perfect on its own data but predicts new wines badly.",
+            "task": "Predict the panel's score for new wines with R² ≥ 0.62, using a linear model.",
+            "hints": ["Train the preset linear regression and compare its training and test scores: what does the gap tell you?", "On **Models**, add **Ridge** or **Lasso**, which are linear models with a penalty.", "Open the model's settings and raise **alpha** (e.g. Lasso 0.1–0.3, Ridge 30–100). Compare a few values."],
+            "solution": "Plain linear regression scores R² ≈ 0.0–0.4 on new wines (it memorised noise in 90 columns). Lasso with alpha ≈ 0.3 keeps the handful of real signals and reaches ≈ 0.72–0.78; Ridge with alpha ≈ 60 reaches ≈ 0.63–0.71.",
+        },
+    },
+    "regression_metrics": {
+        "id": "regression_metrics", "stage": "Evaluation", "emoji": "📏", "title": "Which error matters? MAE vs RMSE",
+        "tagline": "The metric you're judged on should decide how you train.",
+        "modeled_on": "Delivery-time (ETA) prediction for food and parcel apps",
+        "learn": [
+            {"icon": "📏", "heading": "Three ways to score a number", "body": "**MAE** = the average miss (in minutes). **RMSE** squares misses before averaging, so a few huge misses dominate it. **R²** compares your errors with always guessing the average."},
+            {"icon": "🐢", "heading": "Rare, huge misses", "body": "Some deliveries are an hour late because of a courier problem nobody could predict. RMSE (and squared-error training) obsesses over them; MAE treats them like any other miss."},
+            {"icon": "🎯", "heading": "Average vs typical", "body": "A model trained with **squared error** aims at the *average* outcome, and a few disasters drag that average up for everyone. A model trained with **absolute error** aims at the *typical* (median) outcome, which is what most customers experience."},
+            {"icon": "🧭", "heading": "Match the loss to the goal", "body": "If the business cares about typical accuracy (\"most ETAs within 5 minutes\"), score with MAE and train with an absolute-error loss. If huge misses are catastrophic, RMSE and squared error are the right choice."},
+        ],
+        "demo": "regression_metrics",
+        "demo_caption": "Drag one prediction line through a cloud of delivery times with a few disasters. Watch how MAE and RMSE disagree about where the 'best' line is.",
+        "quiz": [
+            {"q": "Which metric is pulled hardest by a few very large errors?",
+             "options": ["MAE", "RMSE", "Accuracy", "The share within ±5 minutes"],
+             "answer": 1, "explain": "Squaring makes a 60-minute miss count 3,600 times more than a 1-minute miss."},
+            {"q": "Customers mostly care that the ETA is right for a typical order. Which training loss fits?",
+             "options": ["Squared error", "Absolute error", "Log-loss", "Hinge loss"],
+             "answer": 1, "explain": "Absolute error aims at the median, the typical case, and ignores how extreme the rare disasters are."},
+        ],
+        "challenge": {
+            "title": "Honest ETAs", "dataset_name": "Food deliveries (practice)",
+            "story": "A delivery app shows customers an ETA. About 8% of orders are very late because of courier problems, and nobody can predict which. The current model's ETAs feel padded and wrong for most customers.",
+            "task": "Predict delivery times with an average error (MAE) ≤ 7.6 minutes and at least 72% of ETAs within ±5 minutes.",
+            "hints": ["Train the presets and look at the Residuals tab: where do the big misses come from?", "Squared-error models aim at the average, which the late orders drag upward. You want the *typical* delivery.", "Add **Gradient Boosting** (or Histogram Boosting) and set its **Loss** to **absolute_error**."],
+            "solution": "Squared-error models (linear regression, random forest) get MAE ≈ 8–9.7 min with only ≈ 45–65% of ETAs within ±5 minutes. Gradient boosting with an absolute-error loss gets MAE ≈ 6.7–7.2 with ≈ 80% within ±5 minutes.",
+        },
+    },
+    "thresholds": {
+        "id": "thresholds", "stage": "Evaluation", "emoji": "🎚️", "title": "Precision vs recall: the decision threshold",
+        "tagline": "A model gives probabilities; *you* decide where 'yes' starts.",
+        "modeled_on": "Email spam filtering (false positives are very costly)",
+        "learn": [
+            {"icon": "🎲", "heading": "Scores, not verdicts", "body": "A classifier outputs a probability (\"82% spam\"). The yes/no answer comes from a **threshold**, 50% by default, which is rarely the right choice."},
+            {"icon": "⚖️", "heading": "Two kinds of mistakes", "body": "**Precision**: of everything flagged as spam, how much really was spam? **Recall**: of all real spam, how much did we catch? Raising the threshold flags less: precision goes up, recall goes down."},
+            {"icon": "💸", "heading": "Mistakes have different prices", "body": "Losing an important email in the spam folder is far worse than seeing one extra spam. When false alarms are costly, demand **high precision** and accept lower recall. Cancer screening is the opposite."},
+            {"icon": "🎚️", "heading": "Pick the operating point", "body": "Use the **threshold tuner** (Improve step) to see precision and recall at every threshold, choose the one that meets your requirement, and apply it to the model."},
+        ],
+        "demo": "thresholds",
+        "demo_caption": "Slide the threshold across spam scores and watch emails jump between Inbox and Spam. Set the price of a lost email vs a missed spam and find the cheapest threshold.",
+        "quiz": [
+            {"q": "You raise the threshold from 0.5 to 0.9. What usually happens?",
+             "options": ["Precision up, recall down", "Precision down, recall up", "Both go up", "Nothing: the model is the same"],
+             "answer": 0, "explain": "Only very confident cases are flagged: fewer false alarms, but more misses."},
+            {"q": "For a spam filter where losing a real email is unacceptable, which should you prioritise?",
+             "options": ["Recall", "Precision", "Accuracy", "Training speed"],
+             "answer": 1, "explain": "High precision = when we say spam, we're almost always right."},
+        ],
+        "challenge": {
+            "title": "Don't lose the invoice", "dataset_name": "Emails (practice)",
+            "story": "A company's spam filter keeps sending real customer emails to the spam folder. Management says: \"when you call it spam, be right at least 96% of the time\", but it still has to catch most spam.",
+            "task": "Flag spam with precision ≥ 96% while still catching at least 60% of it (recall ≥ 60%).",
+            "hints": ["Train the preset and check precision and recall for 'spam' in the results.", "Open **Improve → Decision threshold** and slide it: where does precision reach 96%?", "Apply that threshold to the model (about 0.8–0.85), retrain, then check again."],
+            "solution": "At the default 50% threshold, logistic regression has precision ≈ 90–92% (recall ≈ 86–89%). A threshold of ≈ 0.85 gives precision ≈ 97–98% with recall ≈ 69–75%.",
+        },
+    },
+})
+
+NEW_LESSONS.update({
     "no_peeking": {
         "id": "no_peeking", "stage": "Forecast", "emoji": "🔮", "title": "No peeking at the future",
         "tagline": "A forecast can only use what you'd actually know on the day you make it.",
@@ -585,7 +675,7 @@ NEW_LESSONS.update({
 })
 
 ORDER = ["baselines", "missing", "outliers", "leakage", "features", "splits", "scaling", "imbalance", "overfitting",
-         "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "popularity_bias", "cold_start",
+         "regularization", "regression_metrics", "thresholds", "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "popularity_bias", "cold_start",
          "convolutions", "augmentation"]
 _by_id = {l["id"]: l for l in LESSONS} | NEW_LESSONS
 LESSONS = [{**_by_id[i], "order": n + 1} for n, i in enumerate(ORDER)]

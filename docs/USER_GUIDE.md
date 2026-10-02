@@ -90,7 +90,8 @@ Choose cross-validation (off / 3 / 5 / 10 folds), the CV metric, a random seed a
 - **Automatic tuning**: pick a model and the settings to search (ranges are pre-filled). The app tries many
   combinations with cross-validation and shows each trial live. *Apply best settings* updates your model.
 - **Decision threshold** (binary classification): slide the cut-off and see precision, recall, F1 and the 2×2
-  outcomes change.
+  outcomes change. Press **Use … for this model** to make the model decide with that threshold from the next training
+  run on; saved models keep it.
 - **Ways to improve**: a checklist of ideas, each linking to the right step.
 
 ## The coach
@@ -133,7 +134,7 @@ handwritten digits you can click to decode, **transfer learning** (re-using a pr
 few labels), **slot machines** (explore vs exploit) and a **robot in a maze** that learns by Q-learning.
 
 ## Lessons
-20 lessons in pipeline order, each **Learn → Try it → Quiz → Practice**.
+22 lessons in pipeline order, each **Learn → Try it → Quiz → Practice**.
 - **Practice** creates a challenge project with the problem baked in.
 - Work through the normal steps. On the Train results press **Check against the real world**: your model is graded
   on a hidden test set that represents real use. You'll see your own test score next to the real-world score;

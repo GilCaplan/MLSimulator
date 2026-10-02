@@ -69,6 +69,22 @@ _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
 - **Hidden until the UI lands:** `problems.py` forecasting `enabled: False` and `no_peeking` not in `ORDER` (catalog.py).
   Re-enable both when the forecasting UI is merged.
 
+## Lessons: regularization / regression metrics / thresholds — session 4
+- Lessons `regularization` (wine tastings, 90 lab columns; Lasso α≈0.3 or Ridge α≈60; R² ≥ 0.62),
+  `regression_metrics` (delivery ETAs with 8% unpredictable very late orders; gradient boosting with
+  `loss=absolute_error`; MAE ≤ 7.6 and ≥ 72% within ±5 min), `thresholds` (spam filter; decision threshold ≈ 0.85;
+  precision ≥ 96%, recall ≥ 60%). All validated on 5 seeds; `scripts/smoke_lessons_metrics.py PORT`.
+- Engine: `mlp/core/thresholding.py` (`ThresholdClassifier`, `apply_threshold`), model config `threshold` applied in
+  the worker and saved with library models; boosting `loss` param (regression only, `tasks` on the param — the model
+  settings form filters by task); grading metrics `mae`, `within_tol`.
+- UI: ThresholdTuner "Use 0.85 for this model" (patches model config; retrain applies). Demos: agent building.
+
+## QUEUED NEXT (user request, session 4): UI customization + site templates
+- Settings → Appearance: per-control renderers (numeric: slider/stepper/number/dropdown; choices:
+  segmented/dropdown/radio/chips; on-off: switch/checkbox/yes-no), colours, shape, direction, density, applied
+  everywhere via pref-aware primitives; plus whole-site templates (glass / classic / minimal / solid …) and
+  background templates. Must be tested across all combinations. Plan: `docs/ui_customization_plan.md` (Fable).
+
 ## Phase 5 UI — PAUSED mid-way (session 4)
 Agent B (train/library/home/check) — done: `components/train/util.ts` (forecasting ranks by MAE, `isForecast()`, labels,
 lower-is-better MASE/sMAPE/one-step, toast fix), new `components/train/forecast/` (`fcKit.ts`, `ForecastChart.tsx`,
