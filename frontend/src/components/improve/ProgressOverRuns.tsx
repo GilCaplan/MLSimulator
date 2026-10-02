@@ -3,7 +3,7 @@ import { timeAgo } from "../../lib/format";
 import type { Project } from "../../lib/types";
 import { LineChart } from "../charts";
 import { PALETTE } from "../../lib/colors";
-import { fmtMetric, metricLabel as baseMetricLabel } from "../train/util";
+import { better, fmtMetric, lowerBetter, metricLabel as baseMetricLabel } from "../train/util";
 
 /** Ranking metrics of recommenders (fallback labels until the shared table has them). */
 const REC_LABELS: Record<string, string> = {
@@ -37,17 +37,24 @@ export function ProgressOverRuns({ project, baselineModel, baselineLabel = "🎯
   baselineModel?: string;
   baselineLabel?: string;
 }) {
-  // the 'always guess' baseline row is a reference, never a run's best model
-  const runs = (project.history || []).map((h) => ({ ...h, leaderboard: (h.leaderboard || []).filter((r) => !r.baseline), base: (h.leaderboard || []).find((r) => r.baseline || (!!baselineModel && r.model_id === baselineModel)) }))
-    .filter((h) => h.leaderboard.length);
+  // the 'always guess' baseline row (and a regular model doubling as the reference) is never a run's best model
+  const runs = (project.history || []).map((h) => {
+    const lb = h.leaderboard || [];
+    const real = lb.filter((r) => !r.baseline && !(baselineModel && r.model_id === baselineModel));
+    return { ...h, leaderboard: real.length ? real : lb.filter((r) => !r.baseline), base: lb.find((r) => r.baseline || (!!baselineModel && r.model_id === baselineModel)) };
+  }).filter((h) => h.leaderboard.length);
   if (!runs.length) return <p className="small muted">Your training runs will show up here.</p>;
   const metric = runs[runs.length - 1].leaderboard[0].metric;
+  const lower = lowerBetter(metric);
+  const worst = lower ? Infinity : -Infinity;
+  const val = (s: number | null | undefined) => (s === null || s === undefined ? worst : s);
   const bests = runs.map((h) => h.leaderboard.find((r) => r.score !== null && r.score !== undefined) ?? h.leaderboard[0]);
   const hasBase = runs.some((h) => h.base?.score !== null && h.base?.score !== undefined);
   const latest = bests[bests.length - 1];
-  const prevBest = bests.length > 1 ? Math.max(...bests.slice(0, -1).map((b) => b.score ?? -Infinity)) : null;
-  const topIdx = bests.reduce((bi, b, i) => ((b.score ?? -Infinity) > (bests[bi].score ?? -Infinity) ? i : bi), 0);
-  const improved = prevBest !== null && latest.score !== null && latest.score > prevBest;
+  const prev = bests.slice(0, -1).map((b) => val(b.score));
+  const prevBest = prev.length ? (lower ? Math.min(...prev) : Math.max(...prev)) : null;
+  const topIdx = bests.reduce((bi, b, i) => (better(metric, val(b.score), val(bests[bi].score)) ? i : bi), 0);
+  const improved = prevBest !== null && Number.isFinite(prevBest) && latest.score !== null && better(metric, latest.score, prevBest);
   return (
     <div className="col" style={{ gap: 14 }}>
       <AnimatePresence>
@@ -58,7 +65,7 @@ export function ProgressOverRuns({ project, baselineModel, baselineLabel = "🎯
               <span style={{ position: "absolute", left: "50%", top: "50%" }}><Burst /></span>
               <motion.span animate={{ rotate: [0, -14, 14, 0], scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.6, repeatDelay: 2 }}>🎉</motion.span>
             </span>
-            <span><b>New personal best!</b> <span className="muted">Run #{runs.length} beat your previous best by {fmtMetric(metric, latest.score - (prevBest ?? 0))} — {latest.label} reached {fmtMetric(metric, latest.score)}.</span></span>
+            <span><b>New personal best!</b> <span className="muted">Run #{runs.length} beat your previous best by {fmtMetric(metric, Math.abs(latest.score - (prevBest ?? 0)))}{lower ? " less error" : ""} — {latest.label} reached {fmtMetric(metric, latest.score)}.</span></span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -74,7 +81,7 @@ export function ProgressOverRuns({ project, baselineModel, baselineLabel = "🎯
       )}
       <div className="inset scroll" style={{ maxHeight: 220 }}>
         <table className="table">
-          <thead><tr><th>Run</th><th>When</th><th>Best model</th><th style={{ textAlign: "right" }}>Test {metricLabel(metric)}</th></tr></thead>
+          <thead><tr><th>Run</th><th>When</th><th>Best model</th><th style={{ textAlign: "right" }}>Test {metricLabel(metric)}{lower ? " ↓" : ""}</th></tr></thead>
           <tbody>
             {[...bests].map((b, i) => ({ b, i })).reverse().map(({ b, i }) => {
               const isTop = i === topIdx;

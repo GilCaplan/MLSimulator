@@ -12,12 +12,14 @@ import { useSaved } from "../util";
 import { BASELINE_ID, IGNORES_EXOG, lastSeason, seasonalRef, stepsText } from "./fcKit";
 import { ForecastTiles, ForecastViews } from "./ForecastViews";
 
+const NONE: string[] = [];
+
 /** Report for one forecaster: headline numbers (vs "same as last season") and the forecasting tabs. */
 export function ForecastDetail({ result, model }: { result: RunResult; model: ModelResult }) {
   const [saving, setSaving] = useState(false);
   const spec = useProject((s) => s.registry.find((r) => r.id === model.model_id));
   const savedId = useSaved((s) => s.saved[`${result.job_id}:${model.key}`]);
-  const exog = useProject((s) => s.report?.forecast_config?.exog ?? s.project?.pipeline?.forecast?.exog ?? []);
+  const exog = useProject((s) => s.report?.forecast_config?.exog ?? s.project?.pipeline?.forecast?.exog) ?? NONE;
   const metrics = model.metrics.test ?? {};
   const fc = model.forecast;
   const isBase = !!model.baseline;
@@ -55,7 +57,7 @@ export function ForecastDetail({ result, model }: { result: RunResult; model: Mo
         )}
       </div>
       <div className="col" style={{ gap: 16 }}>
-        <ForecastTiles metrics={metrics} fc={fc} reference={ref?.metrics.test} />
+        <ForecastTiles metrics={metrics} fc={fc} reference={ref?.metrics.test} isRef={isRef} />
         <span className="tiny faint">
           ⏱ learned in {secs(model.fit_time_s)}
           {fc && fc.split === "time" ? ` · tested on a ${stepsText(fc.horizon, unit)} forecast of ${fc.series.length === 1 ? "the series" : `each of ${fc.series.length} series`}` : ""}

@@ -1,3 +1,4 @@
+import { colorAt } from "../../../lib/colors";
 import { useProject } from "../../../lib/store";
 import type { DatasetProfile, DatasetSummary, PipelineSpec, Project, TsPoint } from "../../../lib/types";
 
@@ -12,10 +13,6 @@ export const TS_ROLES: { id: TsRoleId; icon: string; label: string; help: string
   { id: "series", icon: "🏪", label: "Series", help: "Optional: a column that splits the data into several side-by-side series (one per shop, product or sensor). One model learns from all of them at once.", optional: true },
 ];
 
-/** Extra fields the backend adds to time-series dataset summaries (not in the shared DatasetSummary type). */
-type TsSummary = DatasetSummary & { exog?: string[]; horizon?: number };
-export const dsExog = (d: DatasetSummary | null | undefined): string[] => (d as TsSummary | null | undefined)?.exog ?? [];
-export const dsHorizon = (d: DatasetSummary | null | undefined): number | undefined => (d as TsSummary | null | undefined)?.horizon;
 
 const isNone = (v?: string | null) => !v || v === "none";
 
@@ -54,8 +51,8 @@ export function adoptTsDataset(d: DatasetSummary, preset?: { columns?: { time: s
   s.setProfile(null);
   s.setReport(null);
   const keep = (s.project?.pipeline ?? {}) as Partial<PipelineSpec>;
-  const horizon = preset?.horizon ?? dsHorizon(d);
-  const exog = preset?.exog ?? dsExog(d);
+  const horizon = preset?.horizon ?? d.horizon;
+  const exog = preset?.exog ?? d.exog ?? [];
   const pipeline: Partial<PipelineSpec> = {
     modality: "timeseries",
     ...(keep.split ? { split: keep.split } : {}),
@@ -158,6 +155,6 @@ export const fmtVal = (v: number) => {
 };
 
 /** Series colours (also used for small multiples). */
-export const SERIES_COLORS = ["#0A84FF", "#FF9F0A", "#30D158", "#BF5AF2", "#FF375F", "#64D2FF"];
+export const seriesColor = (i: number) => colorAt(i);
 /** Split part colours, shared by the Prepare timeline, the split illustration and the results. */
-export const PART_COLORS = { train: "#0A84FF", val: "#BF5AF2", test: "#FF9F0A" } as const;
+export const partColor = (part: "train" | "val" | "test") => colorAt(part === "train" ? 0 : part === "val" ? 4 : 3);

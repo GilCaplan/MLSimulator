@@ -64,7 +64,7 @@ export function ForecastChart({ history, actual = [], forecast, oneStep = [], sh
   }, [history, actual, forecast, oneStep, ghost, showOneStep, scattered]);
 
   const pad = (data.dy[1] - data.dy[0]) * 0.08;
-  const dy: [number, number] = [Math.max(data.dy[0] >= 0 ? 0 : -Infinity, data.dy[0] - pad), data.dy[1] + pad];
+  const dy: [number, number] = [data.dy[0] >= 0 ? Math.max(0, data.dy[0] - pad) : data.dy[0] - pad, data.dy[1] + pad];
   const sx = linear(data.dx[0], data.dx[1], m.l, Math.max(m.l + 10, width - m.r));
   const sy = linear(dy[0], dy[1], height - m.b, m.t);
   const line = (pts: P[]) => pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join("");
@@ -107,14 +107,16 @@ export function ForecastChart({ history, actual = [], forecast, oneStep = [], sh
           ))}
           {/* highlighted columns (promotion days…) */}
           {markSet.map((x) => (
-            <motion.rect key={`m${x}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.rect key={`m${x}`} initial={{ opacity: 0 }} animate={{ opacity: 0.16 }} exit={{ opacity: 0 }}
               x={sx(x) - Math.max(1.5, (sx(data.dx[0] + step) - sx(data.dx[0])) / 2)} width={Math.max(3, sx(data.dx[0] + step) - sx(data.dx[0]))}
-              y={m.t} height={height - m.b - m.t} fill={FC_COLORS.mark} opacity={0.12} />
+              y={m.t} height={height - m.b - m.t} fill={FC_COLORS.mark} />
           ))}
           {/* the future side of the chart */}
           <rect x={sx(startX)} y={m.t} width={Math.max(0, width - m.r - sx(startX))} height={height - m.b - m.t} fill="var(--fill)" opacity={0.55} />
           <line x1={sx(startX)} x2={sx(startX)} y1={m.t - 6} y2={height - m.b} stroke="var(--text-3)" strokeDasharray="3 4" />
-          <text x={sx(startX) + 5} y={m.t - 4} fontSize={10.5} fontWeight={600} fill="var(--text-2)">{startLabel} →</text>
+          {sx(startX) > width * 0.55
+            ? <text x={sx(startX) - 5} y={m.t - 4} textAnchor="end" fontSize={10.5} fontWeight={600} fill="var(--text-2)">{startLabel} →</text>
+            : <text x={sx(startX) + 5} y={m.t - 4} fontSize={10.5} fontWeight={600} fill="var(--text-2)">{startLabel} →</text>}
 
           {data.g.length > 0 && <path d={line(data.g)} fill="none" stroke="var(--text-3)" strokeWidth={1.6} strokeDasharray="4 4" />}
           {bandD && (
@@ -148,10 +150,10 @@ export function ForecastChart({ history, actual = [], forecast, oneStep = [], sh
           {hover !== null && hv && (
             <g pointerEvents="none">
               <line x1={sx(hover)} x2={sx(hover)} y1={m.t} y2={height - m.b} stroke="var(--text-2)" strokeWidth={1} />
-              {hv.h !== undefined && <circle cx={sx(hover)} cy={sy(hv.h)} r={3.5} fill={FC_COLORS.history} stroke="white" strokeWidth={1.4} />}
-              {hv.a !== undefined && <circle cx={sx(hover)} cy={sy(hv.a)} r={3.5} fill="var(--text)" stroke="white" strokeWidth={1.4} />}
-              {hv.f && <circle cx={sx(hover)} cy={sy(hv.f.y)} r={4} fill={FC_COLORS.forecast} stroke="white" strokeWidth={1.4} />}
-              {hv.o && <circle cx={sx(hover)} cy={sy(hv.o.y)} r={3.5} fill={FC_COLORS.oneStep} stroke="white" strokeWidth={1.4} />}
+              {hv.h !== undefined && <circle cx={sx(hover)} cy={sy(hv.h)} r={3.5} fill={FC_COLORS.history} stroke="var(--glass-strong)" strokeWidth={1.4} />}
+              {hv.a !== undefined && <circle cx={sx(hover)} cy={sy(hv.a)} r={3.5} fill="var(--text)" stroke="var(--glass-strong)" strokeWidth={1.4} />}
+              {hv.f && <circle cx={sx(hover)} cy={sy(hv.f.y)} r={4} fill={FC_COLORS.forecast} stroke="var(--glass-strong)" strokeWidth={1.4} />}
+              {hv.o && <circle cx={sx(hover)} cy={sy(hv.o.y)} r={3.5} fill={FC_COLORS.oneStep} stroke="var(--glass-strong)" strokeWidth={1.4} />}
             </g>
           )}
           <rect x={m.l} y={m.t} width={Math.max(0, width - m.l - m.r)} height={height - m.t - m.b} fill="transparent" onMouseMove={onMove} style={{ cursor: "crosshair" }} />

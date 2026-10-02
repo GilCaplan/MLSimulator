@@ -675,7 +675,7 @@ NEW_LESSONS.update({
 })
 
 ORDER = ["baselines", "missing", "outliers", "leakage", "features", "splits", "scaling", "imbalance", "overfitting",
-         "regularization", "regression_metrics", "thresholds", "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "popularity_bias", "cold_start",
+         "regularization", "regression_metrics", "thresholds", "calibration", "shortcut", "fairness", "choosing_k", "curse", "bag_of_words", "popularity_bias", "cold_start", "no_peeking",
          "convolutions", "augmentation"]
 _by_id = {l["id"]: l for l in LESSONS} | NEW_LESSONS
 LESSONS = [{**_by_id[i], "order": n + 1} for n, i in enumerate(ORDER)]

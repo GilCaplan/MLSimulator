@@ -4,6 +4,7 @@ import { EmptyState, Glass, Tooltip } from "../components/glass";
 import { LineupTray } from "../components/models/LineupTray";
 import { ModelCard } from "../components/models/ModelCard";
 import { ModelSettingsModal } from "../components/models/ModelSettingsModal";
+import { ForecastBaselineNote } from "../components/models/ForecastBaselineNote";
 import { RecBaselineNote } from "../components/models/RecBaselineNote";
 import { configsFor, FAMILIES, lineupLabels, modalityOf, specFits, specModalities, starterFor, TEXT_GROUPS, TEXT_NN_IDS, TEXT_ORDER_IDS, VISION_IDS } from "../components/models/meta";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
@@ -26,6 +27,21 @@ const REC_INTRO = (
     <br /><br /><b>Most popular</b> ignores taste completely. <b>Similar items</b> and <b>similar people</b> borrow from neighbours. <b>SVD</b> and <b>matrix factorisation</b> learn hidden “taste dials” for every person and item.
     <br /><br />Not sure? Hit <b>Recommender starter</b> — it races one of each.</>
 );
+
+const FC_INTRO = (
+  <>A forecaster continues a line into the future. Three very different ideas compete here:
+    <br /><br /><b>Baselines</b> repeat the past — “like yesterday”, “like last week”. <b>Exponential smoothing</b> keeps a running level, trend and rhythm. <b>Regression on lags</b> turns the past into clues (yesterday, the same day last week, the weekday) and learns the next value from them — the approach that wins most forecasting competitions.
+    <br /><br />Not sure? Hit <b>Forecast starter</b>.</>
+);
+
+/** Line-up tips for forecasting problems. */
+function forecastSuggestions(ids: string[]): Suggestion[] {
+  const out: Suggestion[] = [];
+  const lagModels = ["fc_linear", "fc_random_forest", "fc_gbm", "fc_gru"];
+  if (ids.length && !ids.some((id) => lagModels.includes(id))) out.push({ id: "lags", severity: "info", title: "Add a model that learns from clues", why: "Baselines and smoothing only look at the series itself. Gradient boosting on lags can also use the calendar and extra columns like promotions.", action: { kind: "add_models", label: "Add gradient boosting", model_ids: ["fc_gbm"] } });
+  if (ids.length && !ids.includes("fc_holt_winters")) out.push({ id: "hw", severity: "info", title: "Add a classic smoother", why: "Holt-Winters needs no clues at all and is often hard to beat on short, regular series.", action: { kind: "add_models", label: "Add Holt-Winters", model_ids: ["fc_holt_winters"] } });
+  return out;
+}
 
 /** Line-up tips for recommendation problems. */
 function recSuggestions(ids: string[]): Suggestion[] {
@@ -62,6 +78,7 @@ export function ModelsStep() {
   const image = modality === "image";
   const text = modality === "text";
   const rec = task === "recommendation";
+  const fc = task === "forecasting";
   const unsup = isUnsupervised(task);
   const models = project?.models ?? [];
   const available = useMemo(
@@ -119,7 +136,17 @@ export function ModelsStep() {
   };
   const starter = starterFor(task, image, modality);
   const starterNames = starter.map((id) => available.find((s) => s.id === id)?.label ?? id);
-  const picks: { label: string; icon: string; tip: string; run: () => void }[] = rec ? [
+  const picks: { label: string; icon: string; tip: string; run: () => void }[] = fc ? [
+    { label: "Forecast starter", icon: "🌱", tip: `Replace the line-up with ${starterNames.join(", ")} — a classic smoother, the competition favourite and a readable linear model.`, run: () => {
+      update((p) => ({ models: configsFor(starter, available, p.models) }));
+      toast.success("Forecast starter ready — Holt-Winters, gradient boosting and a linear model.");
+    } },
+    { label: "All baselines", icon: "🔁", tip: "Add the simple rules of thumb: last value, same as last season, moving average.", run: () =>
+      addIds(available.filter((s) => s.family === "Forecast baseline").map((s) => s.id), "Added {n} baselines.") },
+    { label: "Add them all", icon: "📚", tip: "Add every forecaster and race them on the same hidden future.", run: () =>
+      addIds(available.map((s) => s.id), "Added {n} forecasters.") },
+    { label: "Clear", icon: "🧹", tip: "Remove everything from the line-up.", run: () => update({ models: [] }) },
+  ] : rec ? [
     { label: "Recommender starter", icon: "🌱", tip: `Replace the line-up with ${starterNames.join(", ")} — a baseline, a “people who liked this also liked…” model and a taste-factor model.`, run: () => {
       update((p) => ({ models: configsFor(starter, available, p.models) }));
       toast.success("Recommender starter ready — most popular, similar items and matrix factorisation.");
@@ -164,7 +191,8 @@ export function ModelsStep() {
   ];
 
   const suggestions: Suggestion[] = [];
-  if (rec) suggestions.push(...recSuggestions(models.map((m) => m.model_id)));
+  if (fc) suggestions.push(...forecastSuggestions(models.map((m) => m.model_id)));
+  else if (rec) suggestions.push(...recSuggestions(models.map((m) => m.model_id)));
   else if (unsup) suggestions.push(...unsupSuggestions(task, models.map((m) => m.model_id)));
   else if (models.length === 1) suggestions.push({ id: "one", severity: "info", title: "Add a rival or two", why: "With a single model you can't tell whether its score is good. Two or three contenders make the comparison meaningful." });
   if (image && models.length && !models.some((m) => VISION_IDS.has(m.model_id))) suggestions.push({ id: "novision", severity: "warn", title: "Add a vision network", why: "None of your models are built for pictures. Add the Image CNN or Tiny ResNet — they usually beat pixel-by-pixel models by a wide margin.", action: { kind: "add_models", label: "Add CNN + ResNet", model_ids: ["cnn2d", "tiny_resnet"] } });
@@ -176,8 +204,10 @@ export function ModelsStep() {
 
   return (
     <StepLayout
-      title={rec ? "Pick your recommenders" : unsup ? "Pick your explorers" : "Pick your contenders"}
-      subtitle={rec
+      title={fc ? "Pick your forecasters" : rec ? "Pick your recommenders" : unsup ? "Pick your explorers" : "Pick your contenders"}
+      subtitle={fc
+        ? "Each forecaster has its own idea of what comes next. Race a few on the same hidden future."
+        : rec
         ? "Each recommender has its own idea of taste. Race a few and see which one guesses people's next favourites best."
         : unsup
         ? task === "clustering" ? "Each algorithm has its own idea of what a “group” is. Try a few and see which grouping makes the most sense."
@@ -191,7 +221,7 @@ export function ModelsStep() {
       coach={
         <CoachPanel
           suggestions={suggestions}
-          intro={rec ? REC_INTRO : unsup ? UNSUP_INTRO[task] : text
+          intro={fc ? FC_INTRO : rec ? REC_INTRO : unsup ? UNSUP_INTRO[task] : text
             ? <>Models can't read — so text first becomes numbers. The simplest way is a <b>bag of words</b>: count which words appear and forget their order. It's fast and often surprisingly good.
               <br /><br />But “the battery is <b>not</b> good” and “<b>not</b> bad — the battery is good” share almost the same words. Networks that <b>read in order</b> (GRU, Transformer) can tell them apart.
               <br /><br />Not sure? Hit <b>Text starter</b> and see whether word order matters for your data.</>
@@ -206,7 +236,7 @@ export function ModelsStep() {
         <NextBar
           back="problem"
           next="data"
-          nextLabel={image ? "Images" : text ? "Texts" : rec ? "Ratings" : undefined}
+          nextLabel={image ? "Images" : text ? "Texts" : rec ? "Ratings" : fc ? "Series" : undefined}
           nextDisabled={models.length === 0}
           status={models.length === 0 ? "Pick at least one model" : `${models.length} model${models.length === 1 ? "" : "s"} selected`}
         />
@@ -226,6 +256,7 @@ export function ModelsStep() {
 
       <LineupTray onSettings={setEditing} />
 
+      {fc && <ForecastBaselineNote />}
       {rec && <RecBaselineNote has={!!counts.popularity} onAdd={() => addIds(["popularity"], "Added the baseline.")} />}
 
       {loadError && !registry.length && (

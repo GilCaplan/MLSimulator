@@ -7,7 +7,8 @@ import type { SavedModel } from "../../lib/types";
 import { ProgressRing, Tooltip } from "../glass";
 import { Thumb } from "../train/visionKit";
 import { genreColor, genreIcon } from "../train/recsys/recKit";
-import { EditableText, headline, isRecsysModel, isTextModel, taskMeta } from "./shared";
+import { EditableText, headline, isForecastModel, isRecsysModel, isTextModel, taskMeta } from "./shared";
+import type { ForecastResult } from "../../lib/types";
 
 /** One saved model in the library grid. */
 export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: string; onRename: (name: string) => void; onDelete: () => void }>(
@@ -62,13 +63,15 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
 
         <div className="inset row" style={{ padding: "10px 12px", gap: 12 }}>
           <ProgressRing value={h.ring} size={46} stroke={5} color={tone}>
-            {["classification", "regression"].includes(model.task)
+            {(model.task as string) === "forecasting"
+              ? <span style={{ fontSize: 10.5 }} title="MASE: below 1 beats “same as last season”">{model.metrics?.test?.mase !== undefined ? model.metrics.test.mase.toFixed(2) : "—"}</span>
+              : ["classification", "regression"].includes(model.task)
               ? <span style={{ fontSize: 10.5 }}>{h.value === null ? "—" : Math.round(h.ring * 100)}</span>
               : <span style={{ fontSize: 13 }}>{task.icon}</span>}
           </ProgressRing>
           <div className="col grow" style={{ gap: 0 }}>
             <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }} className="num">{h.text}</span>
-            <span className="tiny muted">{["classification", "regression"].includes(model.task) ? "test " : ""}{h.label.toLowerCase()}</span>
+            <span className="tiny muted">{(model.task as string) === "forecasting" ? "average miss" : <>{["classification", "regression"].includes(model.task) ? "test " : ""}{h.label.toLowerCase()}</>}</span>
           </div>
           {isTextModel(model) && (
             <div className="col" style={{ gap: 3, alignItems: "flex-end" }} aria-hidden>
@@ -80,6 +83,7 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
               ))}
             </div>
           )}
+          {isForecastModel(model) && <ForecastSpark fc={model.detail?.forecast} hover={hover} />}
           {isRecsysModel(model) && <PosterStack hover={hover} genres={(model.detail?.recsys?.examples?.[0]?.recs ?? []).slice(0, 3).map((r) => r.genre ?? "")} />}
           {model.modality === "image" && model.dataset?.id && (
             <div className="row" style={{ gap: 0 }}>
@@ -97,6 +101,7 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
           {model.modality === "image" && <span className="badge">🖼️ Images</span>}
           {isTextModel(model) && <span className="badge">💬 Text</span>}
           {isRecsysModel(model) && <span className="badge" title="Learns from star ratings">⭐ Ratings</span>}
+          {isForecastModel(model) && <span className="badge" title="Learns from a time series">⏱️ Time series</span>}
           {model.dataset?.name && <span className="badge truncate" style={{ maxWidth: 170 }} title={model.dataset.name}>📊 {model.dataset.name}</span>}
           <span className="grow" />
           <span className="tiny faint">{timeAgo(model.created_at)}</span>
@@ -105,6 +110,34 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
     );
   },
 );
+
+/** A tiny history → forecast sparkline (forecasters); the forecast part draws itself when the card is hovered. */
+function ForecastSpark({ fc, hover }: { fc?: ForecastResult | null; hover: boolean }) {
+  const s = fc?.series?.[0];
+  // the library list carries no detail: fall back to a decorative weekly rhythm
+  const demo = !s?.history?.length;
+  const wk = [0.82, 0.78, 0.84, 0.93, 1.12, 1.38, 1.13];
+  const hist = demo ? Array.from({ length: 21 }, (_, i) => wk[i % 7] * (1 + i * 0.006)) : (s!.history).slice(-28).map((p) => p.y);
+  const fut = demo ? Array.from({ length: 10 }, (_, i) => { const y = wk[(21 + i) % 7] * (1 + (21 + i) * 0.006); const b = 0.05 + i * 0.02; return { y, lo: y - b, hi: y + b }; }) : (s!.forecast).slice(0, 14);
+  if (hist.length < 2 || !fut.length) return null;
+  const all = [...hist, ...fut.map((p) => p.hi), ...fut.map((p) => p.lo)];
+  const lo = Math.min(...all), hi = Math.max(...all);
+  const W = 74, Hh = 34, n = hist.length + fut.length - 1;
+  const x = (i: number) => (i / n) * W;
+  const y = (v: number) => Hh - 2 - ((v - lo) / (hi - lo || 1)) * (Hh - 4);
+  const hp = hist.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const off = hist.length - 1;
+  const fp = `M${x(off).toFixed(1)},${y(hist[off]).toFixed(1)}` + fut.map((p, i) => `L${x(off + i + 1).toFixed(1)},${y(p.y).toFixed(1)}`).join("");
+  const band = `M${x(off)},${y(hist[off])}` + fut.map((p, i) => `L${x(off + i + 1)},${y(p.hi)}`).join("") + [...fut].reverse().map((p, i) => `L${x(off + fut.length - i)},${y(p.lo)}`).join("") + "Z";
+  return (
+    <svg width={W} height={Hh} aria-hidden style={{ overflow: "visible" }}>
+      <path d={band} fill="#BF5AF2" opacity={0.18} />
+      <path d={hp} fill="none" stroke="#0A84FF" strokeWidth={1.6} strokeLinejoin="round" />
+      <motion.path key={hover ? "h" : "n"} d={fp} fill="none" stroke="#BF5AF2" strokeWidth={2} strokeLinecap="round" initial={{ pathLength: hover ? 0 : 1 }} animate={{ pathLength: 1 }} transition={{ duration: 0.7 }} />
+      <line x1={x(off)} x2={x(off)} y1={0} y2={Hh} stroke="var(--text-3)" strokeDasharray="2 3" />
+    </svg>
+  );
+}
 
 /** Three tiny fanned-out posters (recommenders) — they spread when the card is hovered. */
 function PosterStack({ hover, genres }: { hover: boolean; genres: string[] }) {

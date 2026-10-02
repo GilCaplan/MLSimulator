@@ -43,7 +43,7 @@ PROBLEMS: list[dict] = [
      "lower_is_better": False, "enabled": True,
      "steps": [["problem", "Problem"], ["models", "Models"], ["data", "Ratings"], ["prepare", "Prepare"], ["train", "Train"], ["improve", "Tune"]]},
     {"id": "forecasting", "task": "forecasting", "modality": "timeseries", "group": "Forecast", "emoji": "⏱️",
-     "label": "Forecasting", "question": "What happens next?", "primary_metric": "mae", "lower_is_better": True, "enabled": False,
+     "label": "Forecasting", "question": "What happens next?", "primary_metric": "mae", "lower_is_better": True, "enabled": True,
      "steps": [["problem", "Problem"], ["models", "Models"], ["data", "Series"], ["prepare", "Prepare"], ["train", "Train"], ["improve", "Improve"]]},
 ]
 

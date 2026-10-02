@@ -1,7 +1,7 @@
 import { api } from "../../lib/api";
 import { isUnsupervised, modelConfigFor, useProject } from "../../lib/store";
 import type { CSSProperties } from "react";
-import type { Modality, ModelConfig, Project, Task, UnsupervisedTask } from "../../lib/types";
+import type { Modality, ModelConfig, PipelineSpec, Project, Task, UnsupervisedTask } from "../../lib/types";
 
 export interface Template {
   id: string;
@@ -19,6 +19,10 @@ export interface Template {
   textSet?: string;
   /** synthetic ratings set (POST /datasets/ratings-set) — makes this a recommendation project */
   ratingsSet?: string;
+  /** synthetic time-series set (POST /datasets/timeseries-set) — makes this a forecasting project */
+  timeseriesSet?: string;
+  /** preset preparation (column roles, forecast settings…) */
+  pipeline?: Partial<PipelineSpec>;
   modality?: Modality;
   /** target column (defaults to the dataset's hint) */
   target?: string;
@@ -49,6 +53,10 @@ export const TEMPLATES: Template[] = [
     sample: "sensors", truth: "status", models: ["isolation_forest", "lof", "one_class_svm"], tint: "rgba(255,69,58,.14)" },
   { id: "movies", emoji: "🎬", title: "Movie night (recommendations)", blurb: "800 viewers, 400 films, thousands of star ratings. Build a recommender that knows what you'll want to watch next.", task: "recommendation",
     ratingsSet: "movies", modality: "ratings", models: ["popularity", "item_knn", "mf_als"], tint: "rgba(94,92,230,.18)" },
+  { id: "shop_sales", emoji: "🛒", title: "Shop sales forecast", blurb: "Two years of daily sales for 3 shops. Forecast the next 4 weeks — and see what a promotion would do.", task: "forecasting",
+    timeseriesSet: "store_sales", modality: "timeseries", models: ["fc_holt_winters", "fc_gbm", "fc_linear"], tint: "rgba(100,210,255,.2)",
+    pipeline: { modality: "timeseries", columns: { time: "date", value: "sales", series: "store" },
+      forecast: { horizon: 28, lags: null, windows: null, calendar: true, trend: false, diff: false, log: false, exog: ["promo"] } } },
   { id: "moons", emoji: "🌙", title: "Two moons playground", blurb: "Two interlocking crescents — watch each model draw its own boundary.", task: "classification", preset: "moons",
     models: ["svm", "mlp", "decision_tree"], tint: "rgba(191,90,242,.16)" },
 ];
@@ -58,7 +66,8 @@ export async function createFromTemplate(t: Template): Promise<Project> {
   const st = useProject.getState();
   const registry = await st.ensureRegistry();
   let dataset;
-  if (t.ratingsSet) dataset = await api.createRatingsSet(t.ratingsSet);
+  if (t.timeseriesSet) dataset = await api.createTimeseriesSet(t.timeseriesSet);
+  else if (t.ratingsSet) dataset = await api.createRatingsSet(t.ratingsSet);
   else if (t.imageSet) dataset = await api.createImageSet(t.imageSet);
   else if (t.textSet) dataset = await api.createTextSet(t.textSet);
   else if (t.sample) dataset = await api.sample(t.sample);
@@ -73,7 +82,7 @@ export async function createFromTemplate(t: Template): Promise<Project> {
   const modality: Modality = t.modality ?? "tabular";
   const created = await api.createProject({ name: t.title, task: t.task, emoji: t.emoji, modality });
   const unsup = isUnsupervised(t.task);
-  const noTarget = unsup || t.task === "recommendation";
+  const noTarget = unsup || t.task === "recommendation" || t.task === "forecasting";
   return api.saveProject({
     ...created,
     task: t.task,
@@ -83,6 +92,7 @@ export async function createFromTemplate(t: Template): Promise<Project> {
     target: noTarget ? null : t.target ?? dataset.target_hint ?? null,
     ...(unsup ? { truth: t.truth ?? dataset.truth_hint ?? null } : {}),
     // the synthetic ratings set always has these roles; the Data step can still change them
+    ...(t.pipeline ? { pipeline: t.pipeline } : {}),
     ...(t.ratingsSet ? { pipeline: { modality: "ratings" as const, columns: { user: "user", item: "item", rating: "rating", time: "day" } } } : {}),
     models,
     step: "models",
@@ -97,4 +107,5 @@ export const TASK_BADGE: Record<string, { label: string; icon: string; cls?: str
   reduction: { label: "Data map", icon: "🗺️", cls: "success" },
   anomaly: { label: "Anomaly", icon: "🚨", cls: "danger" },
   recommendation: { label: "Recommender", icon: "🎬", style: { background: "rgba(94,92,230,.16)", color: "#5E5CE6" } },
+  forecasting: { label: "Forecasting", icon: "⏱️", style: { background: "color-mix(in srgb, #64D2FF 22%, transparent)", color: "var(--text)" } },
 };

@@ -6,7 +6,8 @@ import { SplitBar } from "../charts";
 import { Glass, InfoTip } from "../glass";
 import { NetworkDiagram } from "../nn/NetworkDiagram";
 import { diagramLayers, imageDims } from "../train/archLayers";
-import { SectionTitle, isRecsysModel, isTextModel, rise, specFor, useRegistry } from "./shared";
+import { SectionTitle, isForecastModel, isRecsysModel, isTextModel, rise, specFor, useRegistry } from "./shared";
+import { IGNORES_EXOG, exogName, lastSeason, plainFeature, stepsText } from "../train/forecast/fcKit";
 import { textNetCaption } from "../train/textKit";
 
 const OVER: Record<string, string> = { random: "random copies", smote: "SMOTE", borderline_smote: "Borderline-SMOTE", adasyn: "ADASYN", svm_smote: "SVM-SMOTE" };
@@ -300,6 +301,52 @@ function recsysSteps(p: PipelineSpec, m: SavedModel): Step[] {
   ];
 }
 
+function forecastSteps(p: PipelineSpec, m: SavedModel): Step[] {
+  const cols = { time: "time", value: "value", series: null as string | null, ...(p.columns ?? {}) };
+  const fc = { horizon: 14, lags: null as number[] | null, windows: null as number[] | null, calendar: true, trend: false, diff: false, log: false, exog: [] as string[], ...(p.forecast ?? {}) };
+  const d = m.detail?.forecast;
+  const unit = d?.unit ?? "day";
+  const season = d?.season ?? 7;
+  const H = d?.horizon ?? fc.horizon;
+  const random = (d?.split ?? p.split?.method) === "random";
+  const ignores = IGNORES_EXOG.has(d?.kind ?? "");
+  const chip = (t: string) => <span key={t} className="badge" title={t}>{t}</span>;
+  return [
+    { icon: "⏱️", title: `Forecast “${cols.value}” over time`,
+      text: <>Each row is one moment: time in <b>{cols.time}</b>, the value in <b>{cols.value}</b>{cols.series ? <>, and <b>{cols.series}</b> says which series it belongs to — one model learns from all of them at once</> : null}. Steps are {unit}s; the rhythm repeats every {season} {unit === "step" ? "steps" : `${unit}s`}.</> },
+    { icon: "🔭", title: `Look ${stepsText(H, unit)} ahead`, text: "The horizon: how far the forecast runs past the last known value. Every step further builds on more of its own guesses." },
+    { icon: random ? "🔀" : "✂️", title: random ? "Random split (it peeked)" : `Test on the last ${stepsText(H, unit)}`, off: random,
+      text: random
+        ? "Test days were scattered between training days and guessed one step ahead with the true values — the score flatters it. A time split would have been honest."
+        : <>The model learned from everything before the last stretch{H ? <> (with the {stepsText(H, unit)} before it for validation)</> : null}, then forecast the hidden stretch in one go — exactly like a forecast made on the last day of data.</>,
+      extra: !random ? (
+        <div className="row" style={{ gap: 2, marginTop: 8, maxWidth: 420 }}>
+          <span style={{ flex: 6, height: 10, borderRadius: "5px 0 0 5px", background: "#0A84FF", opacity: 0.6 }} title="learn" />
+          <span style={{ flex: 1, height: 10, background: "#BF5AF2", opacity: 0.7 }} title="validation" />
+          <span style={{ flex: 1, height: 10, borderRadius: "0 5px 5px 0", background: "#FF9F0A", opacity: 0.9 }} title="test" />
+        </div>
+      ) : undefined },
+    { icon: "🔁", title: "Clues from the past",
+      text: <>Each guess uses only values from <i>before</i> the moment it predicts.{fc.lags === null && fc.windows === null ? " Lags and rolling averages were chosen automatically for this rhythm." : ""}</>,
+      extra: (
+        <div className="row wrap" style={{ gap: 5, marginTop: 6 }}>
+          {(fc.lags ?? [1, 2, 3, season, 2 * season]).map((k) => chip(plainFeature(`lag_${k}`, unit, season)))}
+          {(fc.windows ?? [season]).map((w) => chip(plainFeature(`mean_${w}`, unit, season)))}
+          {fc.lags === null && <span className="tiny faint">(automatic)</span>}
+        </div>
+      ) },
+    { icon: "📅", title: fc.calendar ? "Calendar flags" : "No calendar flags", off: !fc.calendar,
+      text: fc.calendar ? `Day-of-week / hour / month flags let it learn the rhythm directly (“is it Saturday?”).` : `It had to reconstruct the rhythm from lags — calendar flags usually help.` },
+    { icon: "📈", title: fc.trend ? "Trend counter" : "No trend counter", off: !fc.trend, text: fc.trend ? "A steadily growing counter lets linear models follow growth." : "No explicit trend feature." },
+    { icon: "📐", title: fc.diff ? "Predict the change" : "Predict the level", off: !fc.diff, text: fc.diff ? "It forecast the step-to-step change (differencing), so trees can follow a trend past values they've seen." : "It forecast the value itself." },
+    { icon: "🪵", title: fc.log ? "Log transform" : "No log transform", off: !fc.log, text: fc.log ? "Values were forecast as log(1 + value), turning growing swings into steady ones." : "Values were used as they are (each series standardised)." },
+    { icon: "🧩", title: fc.exog.length ? `Known in advance: ${fc.exog.join(", ")}` : "No extra columns", off: !fc.exog.length,
+      text: fc.exog.length
+        ? <>{fc.exog.map(exogName).join(", ")} — values you'd know before the day, so you can plan them in the playground.{ignores ? " (This model only reads the series itself, so it ignores them.)" : ""}</>
+        : <>Only the series itself. The baseline it was compared with: “{lastSeason(unit)}”.</> },
+  ];
+}
+
 /** "Recipe": the model's settings, its network (if any) and the data-prep steps that feed it. */
 export function Recipe({ model }: { model: SavedModel }) {
   const registry = useRegistry();
@@ -311,7 +358,8 @@ export function Recipe({ model }: { model: SavedModel }) {
   const isImage = model.modality === "image";
   const isText = isTextModel(model);
   const isRec = isRecsysModel(model);
-  const steps = model.pipeline ? (isRec ? recsysSteps(model.pipeline, model) : isImage ? imageSteps(model.pipeline, model) : isText ? textSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
+  const isFc = isForecastModel(model);
+  const steps = model.pipeline ? (isFc ? forecastSteps(model.pipeline, model) : isRec ? recsysSteps(model.pipeline, model) : isImage ? imageSteps(model.pipeline, model) : isText ? textSteps(model.pipeline, model) : pipelineSteps(model.pipeline, model)) : [];
   const dims = imageDims(model.image_shape);
   const nOut = model.task === "classification" ? model.classes?.length ?? 2 : 1;
 
@@ -321,7 +369,7 @@ export function Recipe({ model }: { model: SavedModel }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))", gap: 16, alignItems: "start" }}>
         <Glass>
           <h3 style={{ marginBottom: 4 }}>Data preparation</h3>
-          <p className="small muted" style={{ marginBottom: 14 }}>{isRec ? "How the ratings were turned into a fair exam for the recommender." : "The exact same steps run automatically on every new example you predict."}</p>
+          <p className="small muted" style={{ marginBottom: 14 }}>{isFc ? "How the series was turned into clues and a fair, forward-looking exam." : isRec ? "How the ratings were turned into a fair exam for the recommender." : "The exact same steps run automatically on every new example you predict."}</p>
           <div style={{ position: "relative" }}>
           <div style={{ position: "absolute", left: 16, top: 20, bottom: 20, width: 2, background: "var(--hairline)", borderRadius: 2 }} />
           <motion.ol variants={stagger(0.05)} initial="hidden" whileInView="show" viewport={{ once: true }} style={{ listStyle: "none", margin: 0, padding: 0, position: "relative" }}>
@@ -380,7 +428,20 @@ export function Recipe({ model }: { model: SavedModel }) {
             </Glass>
           )}
 
-          {isRec ? (
+          {isFc ? (
+            <Glass>
+              <h3 style={{ marginBottom: 10 }}>What it needs</h3>
+              <div className="row" style={{ gap: 14 }}>
+                <span style={{ width: 52, height: 52, borderRadius: 14, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>⏱️</span>
+                <div className="col" style={{ gap: 4 }}>
+                  <b>Nothing to type in — it remembers its history</b>
+                  <span className="small muted" style={{ lineHeight: 1.5 }}>
+                    It forecasts from where its data ends. Pick a series and how far ahead{model.pipeline?.forecast?.exog?.length ? <>, and plan the columns known in advance ({model.pipeline.forecast.exog.join(", ")})</> : null}.
+                  </span>
+                </div>
+              </div>
+            </Glass>
+          ) : isRec ? (
             <Glass>
               <h3 style={{ marginBottom: 10 }}>What it needs</h3>
               <div className="row" style={{ gap: 14 }}>

@@ -16,7 +16,27 @@ export const FAMILIES: { id: string; icon: string; blurb: string }[] = [
   { id: "Reduction", icon: "🗺️", blurb: "Squash many columns down to a 2-D map you can actually look at." },
   { id: "Anomaly", icon: "🚨", blurb: "Learn what 'normal' looks like, then flag the rows that don't fit." },
   { id: "Recommender", icon: "🎬", blurb: "Learn tastes from who-liked-what, then fill in the blanks: what would each person enjoy next?" },
+  // forecasting families (values over time)
+  { id: "Forecast baseline", icon: "🔁", blurb: "Simple rules of thumb — “like yesterday”, “like last week”. Every real model has to beat them." },
+  { id: "Statistical", icon: "🌊", blurb: "Classic forecasting: keep a running level, trend and seasonal pattern and roll them forward." },
+  { id: "Regression on lags", icon: "📏", blurb: "Turn the past into clues (yesterday, same day last week, the calendar) and learn the next value from them." },
+  { id: "Neural network", icon: "🧠", blurb: "Reads the recent stretch step by step with a memory — flexible, but hungry for long histories." },
 ];
+
+/** Forecasting projects: how each forecaster thinks, in plain words (shown as the card's 👉 hint). */
+export const FORECAST_HINTS: Record<string, string> = {
+  fc_naive: "The simplest possible guess — a good sanity check for one step ahead.",
+  fc_seasonal_naive: "Added to every run automatically, so you always see whether a model beats it.",
+  fc_moving_average: "Smooth and steady; shows how much the rhythm matters.",
+  fc_holt_winters: "Great first try: follows level, trend and rhythm with no clues needed.",
+  fc_linear: "Learns how much yesterday, last week and each weekday matter. Can follow a trend.",
+  fc_random_forest: "Catches interactions like “Saturdays with a promotion” — but can't go beyond values it has seen.",
+  fc_gbm: "Usually the strongest on lag clues. Turn on “predict the change” if there's a trend.",
+  fc_gru: "Needs a long history to shine — compare it with the linear model.",
+};
+
+/** Forecasting: a classic smoother, the competition favourite and a readable linear model. */
+export const FORECAST_STARTER = ["fc_holt_winters", "fc_gbm", "fc_linear"];
 
 /** Recommendation projects: how each recommender thinks, in plain words (shown as the card's 👉 hint). */
 export const REC_HINTS: Record<string, string> = {
@@ -91,6 +111,13 @@ export function badgesFor(spec: ModelSpec, modality: Modality = "tabular"): { te
   const text = modality === "text";
   if (text ? spec.id === "logistic_regression" || spec.id === "multinomial_nb" : image ? VISION_IDS.has(spec.id) && spec.id === "cnn2d" : FIRST_TRY.has(spec.id)) out.push({ text: "Great first try", tone: "success" });
   if (text && TEXT_ORDER_IDS.has(spec.id)) out.push({ text: "Reads word order", tone: "accent" });
+  if (modality === "timeseries") {
+    if (spec.id === "fc_seasonal_naive") out.push({ text: "Baseline to beat", tone: "warning" });
+    if (spec.id === "fc_holt_winters") out.push({ text: "Great first try", tone: "success" });
+    if (spec.id === "fc_gbm") out.push({ text: "Competition favourite", tone: "accent" });
+    if (spec.id === "fc_gru") out.push({ text: "Neural network", tone: "accent" });
+    return out;
+  }
   if (modality === "ratings") {
     if (spec.id === "popularity") out.push({ text: "Baseline to beat", tone: "warning" });
     if (spec.id === "item_knn") out.push({ text: "Great first try", tone: "success" });
@@ -123,6 +150,7 @@ export const TEXT_STARTER = ["logistic_regression", "multinomial_nb", "gru"];
 export function starterFor(task: string, image: boolean, modality: Modality = image ? "image" : "tabular"): string[] {
   if (isUnsupervised(task)) return UNSUP_STARTER[task] ?? [];
   if (task === "recommendation" || modality === "ratings") return REC_STARTER;
+  if (task === "forecasting" || modality === "timeseries") return FORECAST_STARTER;
   if (modality === "text") return TEXT_STARTER;
   const t = task as Task;
   return (image ? BEGINNER_IMAGE : BEGINNER)[t] ?? [];

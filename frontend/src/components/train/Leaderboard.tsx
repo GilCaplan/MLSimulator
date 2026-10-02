@@ -4,7 +4,8 @@ import { secs } from "../../lib/format";
 import { isUnsupervised, useProject } from "../../lib/store";
 import type { ModelResult, RunResult } from "../../lib/types";
 import { Glass, InfoTip, Select, Tooltip } from "../glass";
-import { type BoardRow, boardRows, fmtMetric, isRecsys, isUnit, lowerBetter, metricHelp, metricLabel, rankMetrics, useSaved, vsBaseline } from "./util";
+import { BASELINE_ID, lastSeason, masePhrase } from "./forecast/fcKit";
+import { type BoardRow, boardRows, fmtMetric, isForecast, isRecsys, isUnit, lowerBetter, metricHelp, metricLabel, rankMetrics, useSaved, vsBaseline } from "./util";
 
 /** Unsupervised runs have no train/test gap to show — a short fact about what each model found instead. */
 function sideFact(task: string, m: ModelResult): { text: string; tip: string } {
@@ -17,6 +18,10 @@ function sideFact(task: string, m: ModelResult): { text: string; tip: string } {
   if (task === "recommendation") {
     const c = t.coverage, nov = t.novelty;
     return { text: c === undefined ? "—" : `${Math.round(c * 100)}% of films`, tip: `Coverage: share of the catalogue that lands in anyone's top 10.${nov !== undefined ? ` Novelty ${Math.round(nov * 100)}% (0% = only blockbusters, 100% = only niche titles).` : ""}` };
+  }
+  if (task === "forecasting") {
+    const mp = masePhrase(t.mase, m.forecast?.unit);
+    return { text: t.mase === undefined ? "—" : `MASE ${t.mase.toFixed(2)}`, tip: `${mp ? `${mp.text[0].toUpperCase()}${mp.text.slice(1)}. ` : ""}MASE compares its errors with “${lastSeason(m.forecast?.unit)}”: below 1 beats that simple rule.` };
   }
   if (task === "anomaly") return { text: t.flagged_share === undefined ? "—" : `${Math.round(t.flagged_share * 100)}% flagged`, tip: "Share of rows it marks as unusual." };
   return { text: t.explained_2d !== undefined ? `${Math.round(t.explained_2d * 100)}% kept` : "neighbours only", tip: "PCA: share of the data's variation its 2-D map keeps. t-SNE doesn't keep variation — it only tries to keep neighbours together." };
@@ -42,12 +47,15 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
   };
   const task = result.task as string;
   const rec = isRecsys(task);
-  const unsup = isUnsupervised(task) || rec;
+  const fc = isForecast(task);
+  const unsup = isUnsupervised(task) || rec || fc;
+  const fcUnit = Object.values(result.models).find((m) => m.forecast)?.forecast?.unit;
+  const fcRandom = fc && Object.values(result.models).some((m) => m.forecast?.split === "random");
   const available = rankMetrics(result);
   const rows = boardRows(result, metric);
   const lower = lowerBetter(metric);
   const help = metricHelp(metric, task);
-  const noTruth = unsup && !rec && task !== "reduction" && !Object.values(result.models).some((r) => r.metrics.test?.[task === "anomaly" ? "roc_auc" : "ari"] !== undefined);
+  const noTruth = unsup && !rec && !fc && task !== "reduction" && !Object.values(result.models).some((r) => r.metrics.test?.[task === "anomaly" ? "roc_auc" : "ari"] !== undefined);
   const scores = rows.map((r) => r.score).filter((s): s is number => s !== null);
   const best = scores.length ? (lower ? Math.min(...scores) : Math.max(...scores)) : 0;
   const worst = scores.length ? (lower ? Math.max(...scores) : Math.min(...scores)) : 0;
@@ -60,7 +68,9 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
     return Math.max(0.02, (v - lo) / (Math.max(1, best) - lo || 1));
   };
   // recommenders have no automatic baseline row: "Most popular" (same list for everyone) is the baseline to beat
-  const popRow = rec ? rows.find((r) => r.model_id === "popularity" && !r.baseline) : undefined;
+  // forecasting: when the learner trains "same as last season" themselves, there's no automatic baseline row — theirs is the one to beat
+  const popRow = rec ? rows.find((r) => r.model_id === "popularity" && !r.baseline) : fc && !rows.some((r) => r.baseline) ? rows.find((r) => r.model_id === BASELINE_ID) : undefined;
+  const refName = rec ? "most popular" : fc ? lastSeason(fcUnit) : "baseline";
   const base = rows.find((r) => r.baseline) ?? popRow;
   const baseScore = base?.score ?? null;
   const baseBar = baseScore !== null ? barOf(baseScore) : null;
@@ -77,7 +87,10 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         <div className="col" style={{ gap: 2 }}>
           <h3>🏆 Leaderboard</h3>
           <span className="small muted">
-            {rec ? <>Each model wrote a top-10 list for every viewer; it scores when the films they rated (and liked) most recently — hidden from it — show up. Click a row to see real lists.</>
+            {fc ? (fcRandom
+              ? <>Scored on single days scattered between the training days, each guessed one step ahead. Click a row to see why that flatters every model.</>
+              : <>We hid the last stretch of the series and asked each model to forecast all of it — one guess feeding the next. Ranked by the average miss (lower is better). Click a row to see its forecast.</>)
+              : rec ? <>Each model wrote a top-10 list for every viewer; it scores when the films they rated (and liked) most recently — hidden from it — show up. Click a row to see real lists.</>
               : unsup
               ? task === "clustering" ? "No answer key here — models are ranked by how crisp and well-separated their groups are. Click a row to see the groups." : task === "anomaly" ? "Ranked by how well the most unusual scores line up with the real anomalies you hid. Click a row to see what got flagged." : "Ranked by how honestly each map keeps real neighbours together. Click a row to explore the map."
               : <>Scored on test {project?.modality === "image" ? "pictures" : project?.modality === "text" ? "texts" : "rows"} none of the models saw while learning. Click a row for the full report.</>}
@@ -90,14 +103,30 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         </div>
       </div>
 
-      {base && baseScore !== null && real.length > 0 && (
+      {fcRandom && (
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={spring.pop}
+          className="inset row" style={{ gap: 12, padding: "12px 14px", marginBottom: 12, alignItems: "flex-start", background: "color-mix(in srgb, var(--danger) 12%, transparent)", borderColor: "color-mix(in srgb, var(--danger) 45%, transparent)" }}>
+          <motion.span animate={{ scale: [1, 1.18, 1] }} transition={{ repeat: Infinity, duration: 1.6 }} style={{ fontSize: 24 }}>🚨</motion.span>
+          <span className="small" style={{ lineHeight: 1.55 }}>
+            <b style={{ color: "var(--danger)" }}>These scores peeked at the future.</b>{" "}
+            <span className="muted">With a random split every test day sits between days the models trained on, and each one is guessed with the true values from the day before. A real forecast has to run weeks ahead on its own guesses — expect it to be much worse than these numbers. Use a <b>time split</b> in Prepare for an honest score.</span>
+          </span>
+        </motion.div>
+      )}
+
+      {base && baseScore !== null && real.length > 0 && !fcRandom && (
         <motion.div key={`${metric}-${beaten}`} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={spring.gentle}
           className="inset row" style={{ gap: 10, padding: "9px 12px", marginBottom: 12, alignItems: "flex-start",
             background: beaten === real.length ? "rgba(48,209,88,.08)" : beaten === 0 ? "rgba(255,69,58,.08)" : "rgba(255,159,10,.08)",
             borderColor: beaten === real.length ? "rgba(48,209,88,.3)" : beaten === 0 ? "rgba(255,69,58,.3)" : "rgba(255,159,10,.3)" }}>
           <span style={{ fontSize: 18 }}>{beaten === real.length ? "✅" : beaten === 0 ? "🚨" : "🎯"}</span>
           <span className="small" style={{ lineHeight: 1.5 }}>
-            {rec ? (beaten === real.length
+            {fc ? (beaten === real.length
+              ? <><b>Every model beats “{refName}”</b> <span className="muted">— they learned more than the repeating rhythm.</span></>
+              : beaten === 0
+                ? <><b>Nothing beats “{refName}” on {metricLabel(metric)}.</b> <span className="muted">The repeating pattern is doing all the work. Add a lag at the season length and calendar flags in Prepare, or try exponential smoothing.</span></>
+                : <><b>{beaten} of {real.length} models beat “{refName}”.</b> <span className="muted">Anything ranked below it forecasts worse than simply copying the last {lastSeason(fcUnit).replace("same as last ", "")}.</span></>)
+            : rec ? (beaten === real.length
               ? <><b>Every personal model beats “Most popular”</b> <span className="muted">on {metricLabel(metric)} — they learned real tastes, not just “show everyone the hits”.</span></>
               : beaten === 0
                 ? <><b>Nothing beats “Most popular” on {metricLabel(metric)}.</b> <span className="muted">Showing everyone the same blockbusters does at least as well here.{metric === "coverage" || metric === "novelty" ? "" : " Try ranking by coverage too — the hits list is easy to beat there."}</span></>
@@ -108,7 +137,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                 ? <><b>No model beats the baseline on {metricLabel(metric)}.</b> <span className="muted">Always guessing the same answer does at least as well — so the score isn't showing real learning.{!lower && metric === "accuracy" ? " If one answer is very common, accuracy flatters lazy guessing: try ranking by balanced accuracy." : " Look at the data and features again."}</span></>
                 : <><b>{beaten} of {real.length} models beat the baseline.</b> <span className="muted">Anything ranked below the 🎯 line is worse than always giving the same answer.</span></>}
           </span>
-          <InfoTip text={rec ? "“Most popular” recommends the most-liked films to everyone — no personalisation at all. It's surprisingly hard to beat on hits, and terrible at showing the rest of the catalogue. A personal recommender has to beat it to be worth the effort." : "A baseline is the simplest possible “model”: it ignores every input and always predicts the most common class (classification) or the average (regression). A real model has to beat it to be worth anything."} />
+          <InfoTip text={fc ? `“${lastSeason(fcUnit)[0].toUpperCase()}${lastSeason(fcUnit).slice(1)}” (seasonal naive) copies the last full cycle forward: next Monday is forecast to be exactly like last Monday. It needs no learning at all, so a forecaster that can't beat it isn't worth using.` : rec ? "“Most popular” recommends the most-liked films to everyone — no personalisation at all. It's surprisingly hard to beat on hits, and terrible at showing the rest of the catalogue. A personal recommender has to beat it to be worth the effort." : "A baseline is the simplest possible “model”: it ignores every input and always predicts the most common class (classification) or the average (regression). A real model has to beat it to be worth anything."} />
         </motion.div>
       )}
 
@@ -130,7 +159,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
         <span style={{ width: 30 }} />
         <span className="lb-model" style={{ flex: "0 0 180px" }}>Model</span>
         <span className="grow">{unsup ? metricLabel(metric) : `Test ${metricLabel(metric)}`}{lower ? " · lower is better" : ""}</span>
-        <span className="lb-side" style={{ width: 120, textAlign: "right" }}>{unsup ? (rec ? "Catalogue shown" : task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
+        <span className="lb-side" style={{ width: 120, textAlign: "right" }}>{unsup ? (fc ? `vs ${lastSeason(fcUnit).replace("same as ", "")}` : rec ? "Catalogue shown" : task === "clustering" ? "Found" : task === "anomaly" ? "Flagged" : "Kept in 2-D") : "Train → Test"}</span>
         <span className="lb-fit" style={{ width: 64, textAlign: "right" }}>Fit time</span>
       </div>
 
@@ -139,7 +168,8 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
           {rows.map((r, i) => {
             if (r.baseline) {
               passedBase = true;
-              return <BaselineRow key={r.key} r={r} i={i} metric={metric} sel={selected === r.key} onSelect={onSelect} bar={barOf(r.score)} />;
+              return <BaselineRow key={r.key} r={r} i={i} metric={metric} sel={selected === r.key} onSelect={onSelect} bar={barOf(r.score)} side={fc ? sideFact(task, r.model) : undefined}
+              note={fc ? `the simplest forecast: ${lastSeason(fcUnit)}` : undefined} />;
             }
             const below = passedBase && r.score !== null && baseScore !== null;
             const isPop = r === popRow;
@@ -178,7 +208,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
                     {vs && (
                       <motion.span key={`${metric}-vs`} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.25 + i * 0.05 }}
                         className="tiny num" style={{ color: vs.delta > 0 ? "var(--success)" : "var(--danger)", fontWeight: 600 }}>
-                        {vs.delta > 0 ? "▲" : "▼"} {vs.text} vs {rec ? "most popular" : "baseline"}
+                        {vs.delta > 0 ? "▲" : "▼"} {vs.text} vs {fc ? "baseline" : rec ? "most popular" : "baseline"}
                       </motion.span>
                     )}
                     {isPop && <span className="tiny" style={{ color: "var(--text-2)", fontWeight: 600 }}>🎯 the baseline to beat</span>}
@@ -234,7 +264,7 @@ export function Leaderboard({ result, metric, onMetric, selected, onSelect }: {
 }
 
 /** The "always guess" reference: dashed, muted, never gets a medal — anything ranked under it is worse than guessing. */
-function BaselineRow({ r, i, metric, sel, onSelect, bar }: { r: BoardRow; i: number; metric: string; sel: boolean; onSelect: (k: string) => void; bar: number }) {
+function BaselineRow({ r, i, metric, sel, onSelect, bar, side, note }: { r: BoardRow; i: number; metric: string; sel: boolean; onSelect: (k: string) => void; bar: number; side?: { text: string; tip: string }; note?: string }) {
   return (
     <motion.button
       layout
@@ -252,7 +282,7 @@ function BaselineRow({ r, i, metric, sel, onSelect, bar }: { r: BoardRow; i: num
         style={{ width: 30, textAlign: "center", fontSize: 20, display: "inline-block" }}>🎯</motion.span>
       <span className="col lb-model" style={{ flex: "0 0 180px", gap: 0, minWidth: 0 }}>
         <b className="truncate" style={{ fontSize: 13, color: "var(--text-2)" }}>Baseline</b>
-        <span className="tiny faint" style={{ lineHeight: 1.3 }}>what you'd get by always guessing</span>
+        <span className="tiny faint" style={{ lineHeight: 1.3 }}>{note ?? "what you'd get by always guessing"}</span>
         <span className="tiny truncate" style={{ color: "var(--text-2)", fontWeight: 600 }} title={r.label}>{r.label.replace(/^Baseline\s*·\s*/, "")}</span>
       </span>
       <span className="row grow" style={{ gap: 10 }}>
@@ -262,7 +292,7 @@ function BaselineRow({ r, i, metric, sel, onSelect, bar }: { r: BoardRow; i: num
         </span>
         <b className="num muted" style={{ width: 62, textAlign: "right", fontSize: 14 }}>{fmtMetric(metric, r.score)}</b>
       </span>
-      <span className="row num small faint lb-side" style={{ width: 120, justifyContent: "flex-end" }}>{fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}</span>
+      <span className="row num small faint lb-side" style={{ width: 120, justifyContent: "flex-end" }} title={side?.tip}>{side ? side.text : <>{fmtMetric(metric, r.train)} → {fmtMetric(metric, r.score)}</>}</span>
       <span className="small faint lb-fit" style={{ width: 64, textAlign: "right" }}>reference</span>
     </motion.button>
   );

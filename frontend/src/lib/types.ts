@@ -460,6 +460,10 @@ export interface FeatureStep {
 
 export interface SplitInfo {
   method: "random" | "group" | "time";
+  /** forecasting (time split): first time step of the test block; also `horizon` and `val_steps` */
+  test_start?: string | number | null;
+  horizon?: number;
+  val_steps?: number;
   group_column?: string;
   groups?: { train: number; val: number; test: number };
   /** groups appearing in both train and test (random split with a known group column) */

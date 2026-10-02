@@ -2,13 +2,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { fadeUp, spring } from "../../design/motion";
 import { useProject } from "../../lib/store";
 import type { ModelSpec } from "../../lib/types";
-import { badgesFor, modalityOf, REC_HINTS, TEXT_HINTS, UNSUP_HINTS } from "./meta";
+import { badgesFor, FORECAST_HINTS, modalityOf, REC_HINTS, TEXT_HINTS, UNSUP_HINTS } from "./meta";
 
 /** Selectable glass card for one algorithm. */
 export function ModelCard({ spec, count, onToggle, onSettings }: { spec: ModelSpec; count: number; onToggle: () => void; onSettings?: () => void }) {
   const selected = count > 0;
   const modality = useProject((s) => modalityOf(s.project?.modality));
-  const hint = UNSUP_HINTS[spec.id] ?? (modality === "text" ? TEXT_HINTS[spec.id] : modality === "ratings" ? REC_HINTS[spec.id] : undefined);
+  const hint = UNSUP_HINTS[spec.id] ?? (modality === "text" ? TEXT_HINTS[spec.id] : modality === "ratings" ? REC_HINTS[spec.id] : modality === "timeseries" ? FORECAST_HINTS[spec.id] : undefined);
   return (
     <motion.div
       variants={fadeUp}

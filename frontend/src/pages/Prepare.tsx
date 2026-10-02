@@ -8,6 +8,7 @@ import { FlowStrip } from "../components/prepare/FlowStrip";
 import { ImagePrepareStep } from "../components/prepare/image/ImagePrepareStep";
 import { RatingsPrepareStep } from "../components/prepare/ratings/RatingsPrepareStep";
 import { TextPrepareStep } from "../components/prepare/text/TextPrepareStep";
+import { TimeseriesPrepareStep } from "../components/prepare/timeseries/TimeseriesPrepareStep";
 import { HoldoutCard, ReduceCard } from "../components/prepare/ReduceHoldoutCards";
 import { Results, ResultsSkeleton } from "../components/prepare/Results";
 import { SelectCard, TargetCard } from "../components/prepare/SelectTargetCards";
@@ -34,7 +35,7 @@ const UNSUP_INTRO = (
 
 export function PrepareStep() {
   const modality = useProject((s) => s.project?.modality);
-  return modality === "image" ? <ImagePrepareStep /> : modality === "text" ? <TextPrepareStep /> : modality === "ratings" ? <RatingsPrepareStep /> : <TabularPrepareStep />;
+  return modality === "image" ? <ImagePrepareStep /> : modality === "text" ? <TextPrepareStep /> : modality === "ratings" ? <RatingsPrepareStep /> : modality === "timeseries" ? <TimeseriesPrepareStep /> : <TabularPrepareStep />;
 }
 
 function TabularPrepareStep() {

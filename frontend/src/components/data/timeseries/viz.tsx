@@ -63,7 +63,7 @@ export function TimeChart({ lines, bands = [], dots = [], isDate, height = 220, 
             <g key={`b${i}`}>
               <motion.rect y={m.t} height={height - m.t - m.b} fill={b.color} rx={4}
                 initial={{ opacity: 0, x: sx(b.x0), width: 0 }} animate={{ opacity: 0.13, x: sx(b.x0), width: Math.max(2, sx(b.x1) - sx(b.x0)) }} transition={spring.gentle} />
-              {b.label && <text x={sx(b.x0) + 4} y={m.t + 11} fontSize={10} fontWeight={650} fill={b.color}>{b.label}</text>}
+              {b.label && sx(b.x1) - sx(b.x0) > 34 && <text x={sx(b.x0) + 4} y={m.t + 11} fontSize={10} fontWeight={650} fill={b.color}>{b.label}</text>}
             </g>
           ))}
           {yt.map((t) => (
@@ -88,7 +88,7 @@ export function TimeChart({ lines, bands = [], dots = [], isDate, height = 220, 
           {hx !== undefined && (
             <g pointerEvents="none">
               <line x1={sx(hx)} x2={sx(hx)} y1={m.t} y2={height - m.b} stroke="var(--text-3)" strokeDasharray="2 3" />
-              {nearest.map((n) => <circle key={n.key} cx={sx(n.p.x)} cy={sy(n.p.y)} r={4} fill={n.color} stroke="white" strokeWidth={1.5} />)}
+              {nearest.map((n) => <circle key={n.key} cx={sx(n.p.x)} cy={sy(n.p.y)} r={4} fill={n.color} stroke="var(--glass-strong)" strokeWidth={1.5} />)}
             </g>
           )}
         </svg>
@@ -169,7 +169,7 @@ export function AcfBars({ acf, season, height = 150, onHover }: { acf: { lag: nu
           {acf.map((a, i) => {
             const s = isSeason(a.lag);
             const y0 = sy(0), y1 = sy(a.r);
-            const color = s ? "var(--warning)" : a.r >= 0 ? "var(--accent)" : "#FF375F";
+            const color = s ? "var(--warning)" : a.r >= 0 ? "var(--accent)" : "var(--danger)";
             return (
               <g key={a.lag} onMouseEnter={() => set(a.lag)}>
                 <rect x={m.l + i * bw} y={m.t} width={bw} height={plotH} fill="transparent" />

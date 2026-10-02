@@ -14,12 +14,13 @@ import { ModelSettings as Settings } from "./ModelSettings";
 import { SaveModal } from "./SaveModal";
 import { UnsupDetail } from "./unsup/UnsupDetail";
 import { RecsysDetail } from "./recsys/RecsysDetail";
+import { ForecastDetail } from "./forecast/ForecastDetail";
 import { VisionFilters } from "./VisionFilters";
 import { VisionGallery } from "./VisionGallery";
 import { VisionLooks } from "./VisionLooks";
 import { TextExplain, TextMistakes, TextWords } from "./TextViews";
 import { ClassChip, ExplainedSentence } from "./textKit";
-import { baselineOf, fmtMetric, isRecsys, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
+import { baselineOf, fmtMetric, isForecast, isRecsys, isUnit, metricLabel, useSaved, vsBaseline } from "./util";
 
 type Tab = "overview" | "surface" | "errors" | "mistakes" | "calibration" | "features" | "curve" | "settings" | "gallery" | "looks" | "filters"
   | "text_mistakes" | "words" | "explain";
@@ -41,6 +42,7 @@ const turnOnCalibration = () => {
 export function ModelDetail({ result, model }: { result: RunResult; model: ModelResult }) {
   if (isUnsupervised(result.task)) return <UnsupDetail result={result} model={model} />;
   if (isRecsys(result.task) || model.recsys) return <RecsysDetail result={result} model={model} />;
+  if (isForecast(result.task) || model.forecast) return <ForecastDetail result={result} model={model} />;
   return <SupervisedDetail result={result} model={model} />;
 }
 

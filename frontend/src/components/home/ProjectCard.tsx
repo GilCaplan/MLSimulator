@@ -67,7 +67,7 @@ export function ProjectCard({ project: p, onDelete, onRename }: { project: Proje
               </span>
             ) : <span className="badge">No goal yet</span>}
             {p.truth && <Tooltip content={`Hidden answer column “${p.truth}” — used only to check the result.`} width={200}><span className="badge">🙈 {p.truth}</span></Tooltip>}
-            <span className={`badge ${p.dataset_id ? "success" : ""}`}>{p.dataset_id ? (p.modality === "image" ? "🖼️ Images" : p.modality === "text" ? "💬 Text" : p.modality === "ratings" ? "⭐ Ratings" : "📊 Data") : "No data yet"}</span>
+            <span className={`badge ${p.dataset_id ? "success" : ""}`}>{p.dataset_id ? (p.modality === "image" ? "🖼️ Images" : p.modality === "text" ? "💬 Text" : p.modality === "ratings" ? "⭐ Ratings" : p.modality === "timeseries" ? "⏱️ Time series" : "📊 Data") : "No data yet"}</span>
           </span>
         </div>
         <span className="row" style={{ gap: 0 }} onClick={(e) => e.stopPropagation()}>

@@ -4,6 +4,7 @@ import { EmptyState, Glass, InfoTip } from "../components/glass";
 import { KSweep } from "../components/improve/KSweep";
 import { ProgressOverRuns } from "../components/improve/ProgressOverRuns";
 import { BaselineRace, RecWays } from "../components/improve/RecWays";
+import { ForecastRace, ForecastWays } from "../components/improve/ForecastWays";
 import { ThresholdTuner } from "../components/improve/ThresholdTuner";
 import { Tuner } from "../components/improve/Tuner";
 import { UnsupWays } from "../components/improve/UnsupWays";
@@ -27,7 +28,7 @@ function Section({ icon, title, help, sub, children, sectionRef }: { icon: strin
 
 export function ImproveStep() {
   const task = useProject((s) => s.project?.task);
-  return task === "recommendation" ? <RecommendImprove /> : isUnsupervised(task) ? <RefineStep /> : <SupervisedImprove />;
+  return task === "forecasting" ? <ForecastImprove /> : task === "recommendation" ? <RecommendImprove /> : isUnsupervised(task) ? <RefineStep /> : <SupervisedImprove />;
 }
 
 const REFINE_COPY: Record<string, { sub: string; intro: React.ReactNode }> = {
@@ -134,6 +135,51 @@ function RecommendImprove() {
           </Section>
           <Section icon="💡" title="Ways to improve" sub="Classic moves for better recommendations. Click one to apply it or jump to the right step.">
             <RecWays projectId={project.id} />
+          </Section>
+          <motion.div style={{ height: 8 }} />
+        </>
+      )}
+    </StepLayout>
+  );
+}
+
+/** Forecasting projects: progress over runs, this run vs "same as last season", and what to try next (no automatic tuner). */
+function ForecastImprove() {
+  const project = useProject((s) => s.project)!;
+  const result = useProject((s) => s.result);
+  const title = useStepLabel("improve");
+  useEffect(() => { useProject.getState().ensureRegistry().catch(() => {}); }, []);
+  const random = !!result && Object.values(result.models).some((m) => m.forecast?.split === "random");
+  return (
+    <StepLayout
+      title={title}
+      subtitle="Sharper forecasts, one change at a time: beat “same as last season”, give the models better clues, and keep the exam honest."
+      coach={
+        <CoachPanel
+          intro={<>A forecast is judged on the <b>future it never saw</b>: the average miss (<b>MAE</b>) over the hidden last stretch. <b>MASE</b> below 1 means it beats simply repeating the last season.
+            <br /><br />Change <b>one thing at a time</b> — a clue, a model, the horizon — train again, and watch the chart below. Keep the <b>time split</b>: a random split makes every change look good.</>}
+          suggestions={(result?.coach ?? []).filter((s) => !(s.action?.kind === "goto" && s.action.step === "improve"))}
+        />
+      }
+      footer={<NextBar back="train" next={() => navigate("/library")} nextLabel="Open library" />}
+    >
+      {!result ? (
+        <Glass animate_in>
+          <EmptyState icon="⏱️" title="Train some forecasters first" text="Once your models have forecast the hidden stretch, this page helps you make them sharper."
+            action={<button className="btn primary" onClick={() => navigate(`/p/${project.id}/train`)}>Go to Train →</button>} />
+        </Glass>
+      ) : (
+        <>
+          <Section icon="📈" title="Progress over runs" sub={`The lowest average miss (MAE) from each time you trained — lower is better.${random ? " (Random-split runs are flattered.)" : ""} The dashed line is “same as last season”.`}>
+            <ProgressOverRuns project={project} baselineModel="fc_seasonal_naive" baselineLabel="🔁 Same as last season (baseline)" />
+          </Section>
+          <Section icon="🏁" title="Beat the baseline" help="Each model's average miss on the hidden stretch, next to the simplest forecast: repeating the last season. A forecaster has to clear the dashed line to be worth using."
+            sub="How much less error each model makes than copying the last season.">
+            <ForecastRace result={result} />
+          </Section>
+          <Section icon="💡" title="What to try next" help="Automatic hyperparameter tuning isn't available for forecasters (it would need a time-aware search). These are the moves forecasters reach for instead."
+            sub="Built from what this run tells us. Click one to apply it or jump to the right step.">
+            <ForecastWays projectId={project.id} />
           </Section>
           <motion.div style={{ height: 8 }} />
         </>

@@ -6,7 +6,7 @@ import { navigate } from "../../lib/router";
 import { isUnsupervised, toast, useProject } from "../../lib/store";
 import type { ChallengeCheck as Check } from "../../lib/types";
 import { Glass, InfoTip, Spinner, Tooltip } from "../glass";
-import { fmtMetric, isRecsys, metricLabel, primaryMetric } from "../train/util";
+import { fmtMetric, isForecast, isRecsys, metricLabel, primaryMetric } from "../train/util";
 import { CheckReveal } from "./CheckReveal";
 import { Confetti } from "./Confetti";
 import { Rich, invalidateLesson, openLesson, useHints, useLesson } from "./shared";
@@ -36,6 +36,7 @@ export function ChallengeCheck() {
   const rows = [...result.leaderboard].filter((r) => !r.baseline && !result.models[r.key]?.baseline).sort((a, b) => a.rank - b.rank);
   const hints = lesson?.challenge.hints ?? [];
   const unsup = isUnsupervised(result.task);
+  const fc = isForecast(result.task);
 
   const run = async (key: string) => {
     setBusy(key);
@@ -84,7 +85,9 @@ export function ChallengeCheck() {
       </div>
 
       <p className="small muted" style={{ lineHeight: 1.55, marginBottom: 12, maxWidth: 680 }}>
-        {rec
+        {fc
+          ? <>Your leaderboard scores each model on <b>your</b> test. Pick a model to send its forecast into the <b>real future</b> — the days right after your data ends, which we kept hidden — and compare. If the real error is far bigger than your test promised, something let the model peek.</>
+          : rec
           ? lessonId === "cold_start"
             ? <>Your leaderboard tests viewers the models already know well. The real world keeps sending <b>brand-new viewers</b> who've rated only a couple of films. Pick a model to see how its top-10 lists do for them — the only score that decides the challenge.</>
             : <>The leaderboard shows how each model's top-10 lists did on <b>your</b> held-out ratings. Pick a model to test it on <b>hidden viewers from the real world</b> — the only score that decides the challenge.</>
@@ -111,7 +114,7 @@ export function ChallengeCheck() {
                 <span style={{ fontSize: 18 }}>{spec(m.model_id)?.emoji ?? "🤖"}</span>
                 <span className="col" style={{ gap: 0, minWidth: 0 }}>
                   <b className="truncate" style={{ fontSize: 13.5 }}>{m.label}{rec && m.params?.cold_start === "popularity" ? " · 🛟 fallback" : ""}</b>
-                  <span className="tiny faint">{unsup ? "On your rows" : "Your test"}: {metricLabel(metric)} {fmtMetric(metric, m.metrics.test?.[metric])}</span>
+                  <span className="tiny faint">{unsup ? "On your rows" : "Your test"}: {fc ? "average miss" : metricLabel(metric)} {fmtMetric(metric, m.metrics.test?.[metric])}{fc && m.forecast?.split === "random" ? " · random split" : ""}</span>
                 </span>
               </span>
               {blocked ? (

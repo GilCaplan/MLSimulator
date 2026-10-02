@@ -14,7 +14,9 @@ import { VisionLooks } from "../train/VisionLooks";
 import { TextExplain, TextMistakes, TextWords } from "../train/TextViews";
 import { UnsupMetricTiles, UnsupViews } from "../train/unsup/UnsupViews";
 import { RecsysTiles, RecsysViews } from "../train/recsys/RecsysViews";
-import { MetricTiles, SectionTitle, isRecsysModel, isUnsupModel, rise } from "./shared";
+import { ForecastTiles, ForecastViews } from "../train/forecast/ForecastViews";
+import { lastSeason, masePhrase, stepsText } from "../train/forecast/fcKit";
+import { MetricTiles, SectionTitle, isForecastModel, isRecsysModel, isUnsupModel, rise } from "./shared";
 
 function ChartCard({ title, help, caption, children, wide }: { title: string; help?: string; caption?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
@@ -82,8 +84,46 @@ function RecsysPerformance({ model }: { model: SavedModel }) {
   );
 }
 
+/** Forecasters: the MAE / MASE headline (vs "same as last season") and the same tabs as on the Train results. */
+function ForecastPerformance({ model }: { model: SavedModel }) {
+  const metrics = model.metrics?.test ?? {};
+  const fc = model.detail?.forecast;
+  const unit = fc?.unit ?? "day";
+  const mp = masePhrase(metrics.mase, unit);
+  const random = fc?.split === "random";
+  return (
+    <motion.section variants={rise}>
+      <SectionTitle id="performance" icon="🏆" title="How its forecasts did"
+        subtitle={random
+          ? "Tested with a random split: single days scattered between training days, guessed one step ahead. These scores flatter it — a real forecast runs ahead on its own guesses."
+          : `We hid the last ${stepsText(fc?.horizon ?? metrics.horizon ?? 0, unit)} of the series and asked for a forecast of all of it — one guess feeding the next — then compared it with what really happened.`} />
+      <Glass>
+        <div className="col" style={{ gap: 18 }}>
+          {mp && (
+            <div className="inset row" style={{ gap: 12, padding: "12px 14px", alignItems: "center", borderColor: mp.good ? "color-mix(in srgb, var(--success) 45%, transparent)" : "color-mix(in srgb, var(--warning) 45%, transparent)" }}>
+              <span style={{ fontSize: 26 }}>{mp.good ? "📉" : "⚠️"}</span>
+              <span className="small" style={{ lineHeight: 1.5 }}>
+                <b>Off by {metrics.mae !== undefined ? (Math.abs(metrics.mae) >= 100 ? Math.round(metrics.mae).toLocaleString() : fmt(metrics.mae, 1)) : "—"} {fc?.value_name ?? ""} per {unit} on average</b>
+                <span className="muted"> — {mp.text} (MASE {metrics.mase?.toFixed(2)}). {mp.good ? "It has learned more than the repeating rhythm." : `A forecaster should beat “${lastSeason(unit)}” to be worth using.`}</span>
+              </span>
+            </div>
+          )}
+          <ForecastTiles metrics={metrics} fc={fc} />
+          <div className="row wrap tiny faint" style={{ gap: 14 }}>
+            {model.fit_time_s != null && <span>⏱ learned in {model.fit_time_s < 1 ? `${Math.round(model.fit_time_s * 1000)} ms` : `${model.fit_time_s.toFixed(1)} s`}</span>}
+            {model.dataset?.n_rows != null && <span>📊 {model.dataset.n_rows.toLocaleString()} rows in the dataset</span>}
+            {fc && fc.series.length > 1 && <span>📚 {fc.series.length} series</span>}
+          </div>
+          <ForecastViews detail={model.detail ?? {}} metrics={metrics} height={320} />
+        </div>
+      </Glass>
+    </motion.section>
+  );
+}
+
 /** "How it performed": test scores and the evaluation charts saved with the model. */
 export function Performance({ model }: { model: SavedModel }) {
+  if (isForecastModel(model)) return <ForecastPerformance model={model} />;
   if (isRecsysModel(model)) return <RecsysPerformance model={model} />;
   if (isUnsupModel(model)) return <UnsupPerformance model={model} />;
   return <SupervisedPerformance model={model} />;

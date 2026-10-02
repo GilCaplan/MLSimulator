@@ -4,7 +4,7 @@ import { fadeUp } from "../../../design/motion";
 import type { DatasetProfile } from "../../../lib/types";
 import { Glass, Segmented } from "../../glass";
 import { SectionTitle } from "../ui";
-import { fmtMs, fmtTime, fmtVal, isDateSeries, lagWords, SERIES_COLORS, tNum } from "./tsData";
+import { fmtMs, fmtTime, fmtVal, isDateSeries, lagWords, seriesColor, tNum } from "./tsData";
 import { AcfBars, SeasonBars, TimeChart } from "./viz";
 
 /** The whole history, per series: all together or one at a time. */
@@ -15,7 +15,7 @@ export function TimelineCard({ profile, valueName }: { profile: DatasetProfile; 
   const isDate = tl.length > 0 && isDateSeries(tl[0].points);
   const lines = shown.map((s) => {
     const i = tl.indexOf(s);
-    return { key: s.series === "all" ? valueName : s.series, color: SERIES_COLORS[i % SERIES_COLORS.length], points: s.points.map((p) => ({ x: tNum(p.t), y: p.y })), width: shown.length > 1 ? 1.3 : 1.7 };
+    return { key: s.series === "all" ? valueName : s.series, color: seriesColor(i), points: s.points.map((p) => ({ x: tNum(p.t), y: p.y })), width: shown.length > 1 ? 1.3 : 1.7 };
   });
   const more = (profile.n_series ?? 0) - tl.length;
   const info = profile.series ?? [];
@@ -35,7 +35,7 @@ export function TimelineCard({ profile, valueName }: { profile: DatasetProfile; 
           <div className="row wrap" style={{ gap: 8, marginTop: 10 }}>
             {info.slice(0, 6).map((s, i) => (
               <span key={s.name} className="badge" style={{ gap: 6, height: 24 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 4, background: i < 4 ? SERIES_COLORS[i] : "var(--text-3)" }} />
+                <span style={{ width: 8, height: 8, borderRadius: 4, background: i < 4 ? seriesColor(i) : "var(--text-3)" }} />
                 {s.name === "all" ? valueName : s.name}
                 <span className="faint num">avg {fmtVal(s.mean)} · {fmtVal(s.min)}–{fmtVal(s.max)}</span>
               </span>

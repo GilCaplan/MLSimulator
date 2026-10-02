@@ -451,3 +451,31 @@ export function RecommendArt({ active }: { active: boolean }) {
     </svg>
   );
 }
+
+/** A weekly-rhythm line draws itself up to "now", then a dashed forecast continues it inside a widening band. Loops. */
+export function ForecastArt({ active }: { active: boolean }) {
+  const D = 5.4;
+  const NOW = 136;
+  const y = (i: number) => 82 - i * 0.9 - [0, -6, 4, 10, 18, 30, 14][i % 7] * 0.9;
+  const hist = Array.from({ length: 22 }, (_, i) => ({ x: 12 + i * 5.9, y: y(i) }));
+  const fut = Array.from({ length: 14 }, (_, k) => ({ x: NOW + k * 5.9, y: y(22 + k), w: 3 + k * 1.6 }));
+  const d = (pts: { x: number; y: number }[]) => pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join("");
+  const band = `${d(fut.map((p) => ({ x: p.x, y: p.y - p.w })))}${fut.slice().reverse().map((p) => `L${p.x.toFixed(1)},${(p.y + p.w).toFixed(1)}`).join("")}Z`;
+  const loop = { duration: D, repeat: Infinity, ease: "easeInOut" as const };
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ overflow: "visible" }}>
+      <rect x={NOW} y={6} width={W - NOW - 6} height={H - 16} rx={8} fill="var(--accent-soft)" opacity={active ? 0.9 : 0.55} />
+      <motion.path d={band} fill="#FF9F0A" animate={{ opacity: [0, 0, active ? 0.28 : 0.18, active ? 0.28 : 0.18, 0] }} transition={{ ...loop, times: [0, 0.5, 0.7, 0.9, 1] }} />
+      <motion.path d={d(hist)} fill="none" stroke="var(--accent)" strokeWidth={2.6} strokeLinejoin="round" strokeLinecap="round"
+        animate={{ pathLength: [0, 1, 1, 1, 0], opacity: [1, 1, 1, 1, 0] }} transition={{ ...loop, times: [0, 0.42, 0.5, 0.9, 1] }} />
+      <motion.line x1={NOW} x2={NOW} y1={4} y2={H - 8} stroke="var(--text-2)" strokeWidth={1.5} strokeDasharray="3 3"
+        animate={{ opacity: [0, 0, 1, 1, 0] }} transition={{ ...loop, times: [0, 0.4, 0.46, 0.9, 1] }} />
+      <motion.text x={NOW - 4} y={H - 2} fontSize={9.5} fontWeight={700} textAnchor="end" fill="var(--text-2)"
+        animate={{ opacity: [0, 0, 1, 1, 0] }} transition={{ ...loop, times: [0, 0.4, 0.46, 0.9, 1] }}>now</motion.text>
+      <motion.text x={NOW + 6} y={18} fontSize={9.5} fontWeight={700} fill="#E08A00"
+        animate={{ opacity: [0, 0, 1, 1, 0] }} transition={{ ...loop, times: [0, 0.55, 0.62, 0.9, 1] }}>next?</motion.text>
+      <motion.path d={d([hist[hist.length - 1], ...fut])} fill="none" stroke="#FF9F0A" strokeWidth={2.4} strokeDasharray="4 3" strokeLinecap="round"
+        animate={{ pathLength: [0, 0, 1, 1, 0], opacity: [0, 0, 1, 1, 0] }} transition={{ ...loop, times: [0, 0.48, 0.74, 0.9, 1] }} />
+    </svg>
+  );
+}

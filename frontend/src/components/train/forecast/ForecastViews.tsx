@@ -6,14 +6,14 @@ import { LineChart, useSize, type Series } from "../../charts";
 import { AnimatedNumber, InfoTip, Segmented, Toggle, Tooltip } from "../../glass";
 import { fmtMetric, metricHelp, metricLabel, vsBaseline } from "../util";
 import { FC_COLORS, ForecastChart, ForecastLegend } from "./ForecastChart";
-import { HOW_IT_WORKS, IGNORES_EXOG, featureGroup, fmtV, lastSeason, masePhrase, plainFeature, seasonName, stepsText } from "./fcKit";
+import { HOW_IT_WORKS, IGNORES_EXOG, tNum, featureGroup, fmtV, lastSeason, masePhrase, plainFeature, seasonName, stepsText } from "./fcKit";
 
 export type FcTab = "forecast" | "growth" | "uses" | "curve" | "settings";
 
 /* ------------------------------------------------------------------ headline tiles */
 
 /** MAE in the value's units, MASE vs "same as last season", the one-step contrast, bias — optionally vs the baseline. */
-export function ForecastTiles({ metrics, fc, reference, refLabel }: { metrics: Record<string, number>; fc?: ForecastResult | null; reference?: Record<string, number> | null; refLabel?: string }) {
+export function ForecastTiles({ metrics, fc, reference, refLabel, isRef }: { metrics: Record<string, number>; fc?: ForecastResult | null; reference?: Record<string, number> | null; refLabel?: string; isRef?: boolean }) {
   const unit = fc?.unit ?? "day";
   const random = fc?.split === "random";
   const vn = fc?.value_name ?? "units";
@@ -22,7 +22,7 @@ export function ForecastTiles({ metrics, fc, reference, refLabel }: { metrics: R
   if (metrics.mae !== undefined) tiles.push({ k: "mae", label: random ? "Average miss (one step)" : "Average miss", value: metrics.mae, format: (v) => fmtV(v),
     says: <>{vn} off per {unit}, {random ? "guessing one step at a time" : <>over a {stepsText(metrics.horizon ?? fc?.horizon ?? 0, unit)} forecast</>}</> });
   if (metrics.mase !== undefined) tiles.push({ k: "mase", label: "vs " + lastSeason(unit), value: metrics.mase, format: (v) => v.toFixed(2),
-    says: mp ? mp.text : "", tone: mp?.good ? "var(--success)" : "var(--warning)" });
+    says: isRef ? "this rule is the yardstick: MASE divides by its usual error in the history, so it lands near 1" : mp ? mp.text : "", tone: isRef ? undefined : mp?.good ? "var(--success)" : "var(--warning)" });
   if (!random && metrics.one_step_mae !== undefined) tiles.push({ k: "one_step_mae", label: "If it always knew yesterday", value: metrics.one_step_mae, format: (v) => fmtV(v),
     says: metrics.mae ? <>one step ahead it misses by {fmtV(metrics.one_step_mae)} — {metrics.mae > metrics.one_step_mae * 1.05 ? `errors grow ${(metrics.mae / metrics.one_step_mae).toFixed(1)}× over the forecast` : "barely worse further out"}</> : "" });
   if (metrics.bias !== undefined) tiles.push({ k: "bias", label: "Bias", value: metrics.bias, format: (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${fmtV(Math.abs(v))}`,
@@ -99,6 +99,7 @@ export function ForecastTab({ fc, metrics, height = 300 }: { fc: ForecastResult;
   const names = fc.series.map((s) => s.series);
   const [series, setSeries] = useState(names[0]);
   const [oneStep, setOneStep] = useState(false);
+  const [zoom, setZoom] = useState<"near" | "all">("near");
   useEffect(() => { if (!names.includes(series)) setSeries(names[0]); }, [fc]); // eslint-disable-line react-hooks/exhaustive-deps
   const s = fc.series.find((x) => x.series === series) ?? fc.series[0];
   const random = fc.split === "random";
@@ -113,6 +114,11 @@ export function ForecastTab({ fc, metrics, height = 300 }: { fc: ForecastResult;
     return { forecast: mean(fe), one: mean(oe), inside, n: s.actual.length };
   }, [s, random]);
   if (!s) return null;
+  // zoomed in: just enough history to see the rhythm leading into the forecast
+  const nearN = random ? Math.max(4 * fc.horizon, 90) : Math.max(2 * fc.horizon, 3 * fc.season, 30);
+  const history = zoom === "near" ? s.history.slice(-nearN) : s.history;
+  const from = history.length ? tNum(history[0].t) : -Infinity;
+  const oneSteps = s.one_step.filter((p) => tNum(p.t) >= from);
 
   return (
     <div className="col" style={{ gap: 12 }}>
@@ -129,13 +135,16 @@ export function ForecastTab({ fc, metrics, height = 300 }: { fc: ForecastResult;
         {names.length > 1 ? (
           <Segmented value={s.series} onChange={setSeries} size="sm" options={names.map((n) => ({ value: n, label: n }))} />
         ) : <span className="small muted">{s.series === "all" ? fc.value_name : s.series}</span>}
-        {!random && (
-          <Toggle checked={oneStep} onChange={setOneStep}
+        <span className="row wrap" style={{ gap: 12 }}>
+          {s.history.length > nearN && (
+            <Segmented value={zoom} onChange={setZoom} size="sm" options={[{ value: "near", label: "🔍 Close-up" }, { value: "all", label: "More history" }]} />
+          )}
+          {!random && <Toggle checked={oneStep} onChange={setOneStep}
             label={<span className="small">One-step guesses</span>}
-            help="What it would score if it always knew yesterday: each orange dot is a guess for one day made with the true values up to the day before. In real forecasting those true values don't exist yet — so the purple line has to build on its own guesses." />
-        )}
+            help="What it would score if it always knew yesterday: each orange dot is a guess for one day made with the true values up to the day before. In real forecasting those true values don't exist yet — so the purple line has to build on its own guesses." />}
+        </span>
       </div>
-      <ForecastChart history={s.history} actual={s.actual} forecast={s.forecast} oneStep={s.one_step} showOneStep={oneStep} scattered={random}
+      <ForecastChart history={history} actual={s.actual} forecast={s.forecast} oneStep={oneSteps} showOneStep={oneStep} scattered={random}
         unit={unit} valueName={fc.value_name} height={height} startLabel={random ? "past the end of the data" : "test: the model forecasts from here"} />
       <ForecastLegend items={[
         { color: FC_COLORS.history, label: random ? "the whole series (thinned)" : "history it learned from" },

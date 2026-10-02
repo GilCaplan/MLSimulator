@@ -76,6 +76,7 @@ export const TASK_META: Record<string, { label: string; icon: string; badge: str
   reduction: { label: "Data map", icon: "🗺️", badge: "accent" },
   anomaly: { label: "Anomaly detection", icon: "🚨", badge: "danger" },
   recommendation: { label: "Recommender", icon: "🎬", badge: "accent" },
+  forecasting: { label: "Forecaster", icon: "⏱️", badge: "success" },
 };
 export const taskMeta = (task: string) => TASK_META[task] ?? { label: task, icon: "🤖", badge: "" };
 
@@ -85,6 +86,9 @@ export const isUnsupModel = (m: Pick<SavedModel, "task">) => ["clustering", "red
 /** Saved recommenders (user–item ratings in, top-k lists out). */
 export const isRecsysModel = (m: Pick<SavedModel, "task" | "modality">) => (m.task as string) === "recommendation" || m.modality === "ratings";
 
+/** Saved forecasters (a time series in, the next steps out). */
+export const isForecastModel = (m: Pick<SavedModel, "task" | "modality">) => (m.task as string) === "forecasting" || m.modality === "timeseries";
+
 /** Saved models that read free text (one text input). */
 export const isTextModel = (m: Pick<SavedModel, "modality" | "input_schema">) => m.modality === "text" || m.input_schema?.[0]?.type === "text";
 
@@ -92,7 +96,7 @@ export const isTextModel = (m: Pick<SavedModel, "modality" | "input_schema">) =>
 
 const RATIO = new Set(["accuracy", "balanced_accuracy", "precision", "recall", "f1", "f1_weighted", "roc_auc", "avg_precision", "r2", "explained_variance", "mape",
   "purity", "trustworthiness", "explained_2d", "explained_all", "flagged_share", "noise_share",
-  "recall_at_10", "precision_at_10", "hit_rate", "coverage", "novelty"]);
+  "recall_at_10", "precision_at_10", "hit_rate", "coverage", "novelty", "smape"]);
 
 export const isRatioMetric = (k: string) => RATIO.has(k);
 export const formatMetric = (k: string, v: number | null | undefined) => (v === null || v === undefined ? "—" : RATIO.has(k) ? pct(v, 1) : fmt(v, 3));
@@ -104,6 +108,14 @@ export const formatMetric = (k: string, v: number | null | undefined) => (v === 
 export function headline(m: Pick<SavedModel, "task" | "metrics">): { key: string; label: string; value: number | null; text: string; ring: number; tone: string } {
   const test = m.metrics?.test ?? {};
   const task = m.task as string;
+  if (task === "forecasting") {
+    // forecasters lead with the average miss (in the series' units); the ring shows how far it beats "same as last season"
+    const mae = test.mae ?? null;
+    const mase = test.mase;
+    const ring = mase === undefined ? 0 : Math.max(0, Math.min(1, 1 - mase / 2));
+    const tone = mase === undefined ? "var(--text-3)" : mase < 0.8 ? "var(--success)" : mase < 1 ? "var(--accent)" : "var(--warning)";
+    return { key: "mae", label: "Average miss", value: mae, text: mae === null ? "—" : Math.abs(mae) >= 100 ? Math.round(mae).toLocaleString() : fmt(mae, 1), ring, tone };
+  }
   let key = primaryMetric(task);
   if (task === "anomaly" && test[key] === undefined) key = "flagged_share";
   // recommenders lead with the plainest number: share of liked films found in the top 10

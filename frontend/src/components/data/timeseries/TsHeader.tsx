@@ -35,7 +35,7 @@ export function TsHeader({ dataset, profile, roles, pickerOpen, onTogglePicker, 
       <div className="row between wrap" style={{ gap: 14 }}>
         <div className="row" style={{ gap: 14, minWidth: 0 }}>
           <motion.div initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1, rotate: 0 }} transition={spring.pop}
-            style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, #64D2FF, #0A84FF 55%, #5E5CE6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0, boxShadow: "0 8px 22px rgba(10,132,255,.28)" }}>
+            style={{ width: 52, height: 52, borderRadius: 16, background: "var(--accent-soft)", border: "1px solid var(--hairline)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, flexShrink: 0 }}>
             {uploaded ? "📁" : "⏱️"}
           </motion.div>
           <div className="col" style={{ gap: 4, minWidth: 0 }}>
@@ -50,11 +50,11 @@ export function TsHeader({ dataset, profile, roles, pickerOpen, onTogglePicker, 
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))", gap: 10, marginTop: 16 }}>
-        <Tile icon="🗓️" label="Rhythm of the data" help="How far apart the time steps are. It decides the natural season: hours repeat every day, days every week, months every year.">
+        <Tile icon="🗓️" label="Rhythm" help="How far apart the time steps are. It decides the natural season: hours repeat every day, days every week, months every year.">
           {ok ? freqWord(profile.freq) : "—"}
         </Tile>
-        <Tile icon="🔁" label="Season length" help="How many steps until the pattern repeats — 7 for daily data (a week), 24 for hourly data (a day), 12 for monthly data (a year). Seasonal models and lags lean on it.">
-          {ok ? (profile.season ?? 1) > 1 ? <>{profile.season} <span className="small muted" style={{ fontWeight: 500 }}>{profile.unit}s = 1 {profile.season_name}</span></> : "none" : "—"}
+        <Tile icon="🔁" label="Season length" sub={ok && (profile.season ?? 1) > 1 ? `= 1 ${profile.season_name ?? "season"}` : undefined} help="How many steps until the pattern repeats — 7 for daily data (a week), 24 for hourly data (a day), 12 for monthly data (a year). Seasonal models and lags lean on it.">
+          {ok ? (profile.season ?? 1) > 1 ? <>{profile.season} {profile.unit}s</> : "none" : "—"}
         </Tile>
         <Tile icon="🏪" label="Series">{ok ? <AnimatedNumber value={profile.n_series ?? 1} format={(v) => String(Math.round(v))} /> : "—"}</Tile>
         <Tile icon="👣" label="Time steps" help="Total number of time steps across all series, after sorting by time.">
@@ -112,11 +112,12 @@ function hintFor(err: string): string {
   return "";
 }
 
-function Tile({ icon, label, help, children }: { icon: string; label: string; help?: string; children: ReactNode }) {
+function Tile({ icon, label, help, sub, children }: { icon: string; label: string; help?: string; sub?: string; children: ReactNode }) {
   return (
     <div className="inset col" style={{ padding: "10px 12px", gap: 2, minWidth: 0 }}>
       <span className="tiny muted row" style={{ gap: 4 }}>{icon} {label} {help && <InfoTip text={help} />}</span>
       <b className="num truncate" style={{ fontSize: 18 }}>{children}</b>
+      {sub && <span className="tiny faint">{sub}</span>}
     </div>
   );
 }

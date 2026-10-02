@@ -2,13 +2,14 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { spring, stagger } from "../../../design/motion";
 import { api } from "../../../lib/api";
+import { colorAt } from "../../../lib/colors";
 import { toast } from "../../../lib/store";
 import type { DatasetSummary, TimeseriesSetInfo } from "../../../lib/types";
 import { Glass, Spinner } from "../../glass";
 import { SectionTitle } from "../ui";
 import { MiniLine, previewValues } from "./viz";
 
-const TINT: Record<string, string> = { store_sales: "#0A84FF", energy: "#FF9F0A", airline: "#BF5AF2", web_traffic: "#30D158" };
+const TINT: Record<string, number> = { store_sales: 0, energy: 3, airline: 4, web_traffic: 2 };
 const STEP_WORD: Record<string, string> = { store_sales: "days", energy: "hours", airline: "months", web_traffic: "days" };
 
 /** Gallery of built-in series: one click generates the set and makes it the project's data. */
@@ -49,7 +50,7 @@ export function TsSetsPanel({ onLoaded }: { onLoaded: (d: DatasetSummary, info: 
       ) : (
         <motion.div variants={stagger(0.06)} initial="hidden" animate="show" className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 12 }}>
           {Object.entries(sets).map(([name, s]) => {
-            const color = TINT[name] ?? "var(--accent)";
+            const color = name in TINT ? colorAt(TINT[name]) : "var(--accent)";
             const loading = busy === name;
             return (
               <motion.button key={name}

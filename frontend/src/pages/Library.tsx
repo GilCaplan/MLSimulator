@@ -2,13 +2,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatedNumber, EmptyState, Glass, Modal, Segmented, Spinner } from "../components/glass";
 import { CardSkeleton, ModelCard } from "../components/library/ModelCard";
-import { PageFrame, PageHeader, emojiFor, isRecsysModel, isTextModel, rise, useRegistry } from "../components/library/shared";
+import { PageFrame, PageHeader, emojiFor, isForecastModel, isRecsysModel, isTextModel, rise, useRegistry } from "../components/library/shared";
 import { api } from "../lib/api";
 import { navigate } from "../lib/router";
 import { toast } from "../lib/store";
 import type { SavedModel, Task } from "../lib/types";
 
-type Filter = "all" | Task | "image" | "text" | "discover" | "recommend";
+type Filter = "all" | Task | "image" | "text" | "discover" | "recommend" | "forecast";
 const UNSUP = ["clustering", "reduction", "anomaly"];
 
 export function LibraryPage() {
@@ -26,8 +26,8 @@ export function LibraryPage() {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (models ?? []).filter((m) =>
-      (filter === "all" || m.task === filter || (filter === "image" && m.modality === "image") || (filter === "text" && isTextModel(m)) || (filter === "discover" && UNSUP.includes(m.task)) || (filter === "recommend" && isRecsysModel(m))) &&
-      (!q || [m.name, m.label, m.dataset?.name, m.target, m.notes, m.task, m.modality === "image" ? "image picture" : isTextModel(m) ? "text words nlp" : isRecsysModel(m) ? "recommender recommendation movies ratings" : ""].some((s) => s && s.toLowerCase().includes(q))));
+      (filter === "all" || m.task === filter || (filter === "image" && m.modality === "image") || (filter === "text" && isTextModel(m)) || (filter === "discover" && UNSUP.includes(m.task)) || (filter === "recommend" && isRecsysModel(m)) || (filter === "forecast" && isForecastModel(m))) &&
+      (!q || [m.name, m.label, m.dataset?.name, m.target, m.notes, m.task, m.modality === "image" ? "image picture" : isTextModel(m) ? "text words nlp" : isRecsysModel(m) ? "recommender recommendation movies ratings" : isForecastModel(m) ? "forecast forecasting time series sales" : ""].some((s) => s && s.toLowerCase().includes(q))));
   }, [models, query, filter]);
 
   const counts = useMemo(() => ({
@@ -37,6 +37,7 @@ export function LibraryPage() {
     text: (models ?? []).filter((m) => isTextModel(m)).length,
     discover: (models ?? []).filter((m) => UNSUP.includes(m.task)).length,
     recommend: (models ?? []).filter((m) => isRecsysModel(m)).length,
+    forecast: (models ?? []).filter((m) => isForecastModel(m)).length,
   }), [models]);
 
   const rename = async (m: SavedModel, name: string) => {
@@ -104,6 +105,7 @@ export function LibraryPage() {
               ...(counts.text ? [{ value: "text" as Filter, label: `💬 Text · ${counts.text}` }] : []),
               ...(counts.discover ? [{ value: "discover" as Filter, label: `🫧 Discover · ${counts.discover}` }] : []),
               ...(counts.recommend ? [{ value: "recommend" as Filter, label: `🎬 Recommenders · ${counts.recommend}` }] : []),
+              ...(counts.forecast ? [{ value: "forecast" as Filter, label: `⏱️ Forecasters · ${counts.forecast}` }] : []),
             ]}
           />
         </motion.div>

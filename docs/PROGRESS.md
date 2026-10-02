@@ -66,8 +66,7 @@ _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
   `lesson_eval(kind="forecast")`, auto seasonal-naive baseline (skipped if the learner picks it), coach rules.
 - Lesson `no_peeking` (leaky `customers` column + random split; goals error_ratio ≤ 2 and MASE ≤ 1.2; validated 5 seeds).
 - Smoke: `scripts/smoke_forecast.py PORT`.
-- **Hidden until the UI lands:** `problems.py` forecasting `enabled: False` and `no_peeking` not in `ORDER` (catalog.py).
-  Re-enable both when the forecasting UI is merged.
+- Enabled (session 4).
 
 ## Lessons: regularization / regression metrics / thresholds — session 4
 - Lessons `regularization` (wine tastings, 90 lab columns; Lasso α≈0.3 or Ridge α≈60; R² ≥ 0.62),
@@ -100,7 +99,7 @@ _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
   everywhere via pref-aware primitives; plus whole-site templates (glass / classic / minimal / solid …) and
   background templates. Must be tested across all combinations. Plan: `docs/ui_customization_plan.md` (Fable).
 
-## Phase 5 UI — RESUMED (session 4, user order: labs → forecasting → colour sweep); both forecasting agents running again
+## Phase 5 (forecasting) — DONE (session 4): full UI (problem/models/series/prepare/train/detail/improve/library playground/home template/lesson check), forecasting + no_peeking enabled. Tested: 200 template renders, API smoke, lesson check. NEXT: colour sweep (hard-coded light-only colours, see Builder B list).
 ## (older pause notes below)
 Agent B (train/library/home/check) — done: `components/train/util.ts` (forecasting ranks by MAE, `isForecast()`, labels,
 lower-is-better MASE/sMAPE/one-step, toast fix), new `components/train/forecast/` (`fcKit.ts`, `ForecastChart.tsx`,

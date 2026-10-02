@@ -37,12 +37,16 @@ function fmtG(metric: string, v: number | null | undefined) {
   return fmtGoal(metric, v);
 }
 
+/** Forecasting challenges compare the forecast past the end of the data with what really happened next. */
+const isFcCheck = (check: ChallengeCheck) => !!check.real_world || (check.goals ?? []).some((g) => g.metric === "error_ratio");
+
 /** Recommendation challenges are graded on hidden viewers' top-10 lists. */
 const isRecCheck = (check: ChallengeCheck) => (check.goals ?? []).some((g) => g.metric === "recall_at_10" || g.metric === "coverage");
 
 /** What the hidden test items are called (text challenges grade messages, recommenders viewers, not rows). */
 const hiddenNoun = (check?: ChallengeCheck) => {
   const modality = useProject.getState().project?.modality;
+  if ((check && isFcCheck(check)) || modality === "timeseries") return "days";
   return (check && isRecCheck(check)) || modality === "ratings" ? "viewers" : modality === "text" ? "messages" : "rows";
 };
 
@@ -60,6 +64,19 @@ function contrast(check: ChallengeCheck, lessonId?: string | null) {
   const comparable = (g: Goal) => !!OWN[g.metric] && own[OWN[g.metric]!] !== undefined;
   const goal = goals.find((x) => !x.passed && (comparable(x) || special(x))) ?? goals.find((x) => !x.passed) ?? goals.find((x) => comparable(x) || special(x)) ?? goals[0];
   const hidden = `${check.n_hidden.toLocaleString()} hidden ${hiddenNoun(check)}`;
+  if (goal && isFcCheck(check)) {
+    // forecasting: the learner's own test MAE vs the MAE of the forecast past the end of their data
+    const mine = own.mae;
+    const real = check.real_world?.mae;
+    const ratio = goals.find((g) => g.metric === "error_ratio");
+    const mase = goals.find((g) => g.metric === "mase");
+    return {
+      goal, ownMetric: "mae", ownValue: mine, realValue: real ?? goal.value,
+      left: { eyebrow: "🧪 Your test said", value: mine, format: (v: number) => fmt(v, 1), caption: <>average miss per day on your own test</> } as Side,
+      right: { eyebrow: "🌍 The real future says", value: real, format: (v: number) => fmt(v, 1), caption: <>average miss per day over the next {check.n_hidden.toLocaleString()} real days{check.real_world?.mase !== undefined ? <> · MASE {check.real_world.mase.toFixed(2)}</> : null}</> } as Side,
+      chip: ratio ? <span className={`badge ${ratio.passed && (!mase || mase.passed) ? "success" : "danger"}`}>{fmtG("error_ratio", ratio.value)} your test error · goal ≤ {fmtG("error_ratio", ratio.target)}</span> : null,
+    };
+  }
   if (goal?.metric === "ari") {
     // clustering has no test score: the only number available without answers is silhouette (how crisp the groups look)
     const sil = own.silhouette;
@@ -143,9 +160,9 @@ export function CheckReveal({ check, reveal = false, compact = false, lessonId }
   const yours: Record<string, number> = check.your_test ?? {};
   const h = contrast(check, lessonId);
   if (!h.goal) return null;
-  const sameMetric = OWN[h.goal.metric] === h.ownMetric || h.goal.metric === "estimate_gap";
+  const sameMetric = OWN[h.goal.metric] === h.ownMetric || h.goal.metric === "estimate_gap" || isFcCheck(check);
   const lowerBetter = h.goal.op === "<=";
-  const drop = h.ownValue !== undefined && !lowerBetter && h.goal.metric !== "mae_vs_baseline" ? h.ownValue - h.realValue : h.goal.metric === "estimate_gap" && h.ownValue !== undefined ? h.ownValue - h.realValue : 0;
+  const drop = isFcCheck(check) ? 0 : h.ownValue !== undefined && !lowerBetter && h.goal.metric !== "mae_vs_baseline" ? h.ownValue - h.realValue : h.goal.metric === "estimate_gap" && h.ownValue !== undefined ? h.ownValue - h.realValue : 0;
   const big = compact ? 30 : 46;
   const fairness = goals.find((g) => g.per_group);
   const passedSide = h.goal.passed;
@@ -248,6 +265,10 @@ function GoalNote({ g, own }: { g: Goal; own?: number }) {
     text = `average miss ${fmt(g.mae, 3)} vs ${fmt(g.baseline_mae, 3)} for always-the-average`;
   } else if (g.metric === "ece" && g.predicted_cases !== undefined && g.actual_cases !== undefined) {
     text = `its probabilities add up to ${Math.round(g.predicted_cases).toLocaleString()} cases · ${g.actual_cases.toLocaleString()} really happened`;
+  } else if (g.metric === "error_ratio") {
+    text = "how many times bigger the real-world error is than your test promised · 1× = your test was honest";
+  } else if (g.metric === "mase") {
+    text = "real-world error ÷ the error of “same as last week” · below 1 beats the simple rule";
   } else if (g.metric === "ari") {
     text = own !== undefined ? `agreement on your own rows: ${fmtG("ari", own)} · 1 = the hidden groups exactly, 0 = random` : "1 = matches the hidden groups exactly · 0 = no better than random grouping";
   } else if (own !== undefined) {
@@ -268,6 +289,23 @@ function verdict(check: ChallengeCheck, h: ReturnType<typeof contrast>, drop: nu
     return g.passed
       ? <>{sil !== undefined ? <>Silhouette said {T(fmtG("silhouette", sil))} — and </> : null}the hidden groups agree: {T(`ARI ${fmtG("ari", g.value)}`)}. Your clusters aren't just tidy blobs, they're the real segments. Clustering has no test score, so a hidden truth like this is the only way to be sure.</>
       : <>{sil !== undefined ? <>Silhouette said {T(fmtG("silhouette", sil))}{crisp ? " — the groups look crisp" : ""}. </> : null}But against the hidden groups the agreement is only {B(`ARI ${fmtG("ari", g.value)}`)} (goal ≥ {fmtG("ari", g.target)}). Clustering has no test score: silhouette rewards neat blobs, not meaningful ones — which is exactly why a hidden truth is so valuable. Look at the profiles: is one cluster really two kinds of rows?</>;
+  }
+  if (isFcCheck(check)) {
+    const goals = check.goals as Goal[];
+    const ratio = goals.find((x) => x.metric === "error_ratio");
+    const mase = goals.find((x) => x.metric === "mase");
+    const mine = (check.your_test ?? {}).mae;
+    const real = check.real_world?.mae;
+    const suspicious = !!ratio && !ratio.passed;
+    if (check.passed) {
+      return <>Your test said the forecast would miss by about {T(fmt(mine, 1))} a day, and the real future gave {T(fmt(real, 1))} — {ratio ? <>{T(fmtG("error_ratio", ratio.value))}</> : null} your estimate. {mase ? <>With MASE {T(fmtG("mase", mase.value))} it also beats “same as last week”. </> : null}
+        That's an honest forecast: built only from what you'd know on the day, and tested on the last stretch of time.</>;
+    }
+    if (suspicious) {
+      return <>Your test promised a miss of just {T(fmt(mine, 1))} a day — suspiciously good. In the real future it's {B(fmt(real, 1))}: {B(fmtG("error_ratio", ratio!.value))} worse than your test said.
+        Something let the model peek. Look for a column that's only known <b>after</b> the day is over (<code className="mono">customers</code> is recorded at closing time) and test with a <b>time split</b> — a random split guesses scattered days with the true values around them.</>;
+    }
+    return <>Your test is honest now ({T(fmtG("error_ratio", ratio?.value))} the real-world error) — but the forecast only reaches MASE {B(fmtG("mase", mase?.value))} (goal ≤ {fmtG("mase", mase?.target)}): it doesn't beat “same as last week” by enough. Keep the planned <b>promo</b> column, and give the model calendar flags and a lag at 7 days.</>;
   }
   if (isRecCheck(check)) {
     const goals = check.goals as Goal[];

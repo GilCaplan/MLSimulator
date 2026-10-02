@@ -2,11 +2,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Glass } from "../components/glass";
 import { CheckDot } from "../components/models/ModelCard";
-import { AnomalyArt, ClassificationArt, ClusteringArt, ImageClassifyArt, ImageNumberArt, MapArt, RecommendArt, RegressionArt, TextClassifyArt } from "../components/models/TaskArt";
+import { FORECAST_STARTER } from "../components/models/meta";
+import { AnomalyArt, ClassificationArt, ClusteringArt, ForecastArt, ImageClassifyArt, ImageNumberArt, MapArt, RecommendArt, RegressionArt, TextClassifyArt } from "../components/models/TaskArt";
 import { CoachPanel, NextBar, StepLayout } from "../components/shell/Wizard";
 import { fadeUp, spring, stagger } from "../design/motion";
 import { api } from "../lib/api";
-import { isUnsupervised, toast, useProject } from "../lib/store";
+import { isUnsupervised, modelConfigFor, toast, useProject } from "../lib/store";
 import type { Modality, ProblemType, Project } from "../lib/types";
 
 /** Used until /api/problems answers (or if it can't be reached) so the page is never empty. */
@@ -57,6 +58,11 @@ const LOOK: Record<string, { examples: string[]; art?: (active: boolean) => Reac
     art: (a) => <RecommendArt active={a} />,
     tint: "linear-gradient(135deg, rgba(255,214,10,.15), rgba(255,55,95,.11))",
   },
+  forecasting: {
+    examples: ["🛒 Next month's daily sales", "⚡ Tomorrow's electricity demand", "✈️ Passengers next summer"],
+    art: (a) => <ForecastArt active={a} />,
+    tint: "linear-gradient(135deg, rgba(10,132,255,.13), rgba(255,159,10,.13))",
+  },
   anomaly: {
     examples: ["💳 Odd card transactions", "🏭 Machines about to fail", "🧾 Data-entry mistakes"],
     art: (a) => <AnomalyArt active={a} />,
@@ -83,6 +89,12 @@ function chooseProblem(taskIn: string, modality: Modality) {
   // pictures are always supervised (an unsupervised task falls back to image classification); text is classification only;
   // ratings tables are always recommendation, and recommendation needs a ratings table
   if (taskIn === "recommendation" && modality !== "ratings") taskIn = "classification";
+  // forecasting always learns from values over time, and values over time are always forecast
+  if (taskIn === "forecasting" && modality !== "timeseries") taskIn = "classification";
+  if (modality === "timeseries" && taskIn !== "forecasting") {
+    if (taskIn === "classification" || taskIn === "regression" || isUnsupervised(taskIn) || taskIn === "recommendation") modality = taskIn === "recommendation" ? "ratings" : "tabular";
+    else taskIn = "forecasting";
+  }
   if (modality === "ratings" && taskIn !== "recommendation") {
     if (taskIn === "classification" || taskIn === "regression" || isUnsupervised(taskIn)) modality = "tabular";
     else taskIn = "recommendation";
@@ -94,6 +106,7 @@ function chooseProblem(taskIn: string, modality: Modality) {
   if (sameTask && sameModality) return;
   if (!p.task) {
     st.update({ task, modality });
+    if (task === "forecasting") seedForecastModels();
     return;
   }
   const patch: Partial<typeof p> = { task, modality, models: [], pipeline: null, prepared_id: null, last_job_id: null };
@@ -104,12 +117,26 @@ function chooseProblem(taskIn: string, modality: Modality) {
   // a table can't feed an image or text model (and vice versa): forget the dataset too
   if (!sameModality) Object.assign(patch, { dataset_id: null, target: null, truth: null });
   st.update(patch);
+  if (task === "forecasting") seedForecastModels();
   st.setReport(null);
   st.setResult(null);
   if (!sameModality) { st.setDataset(null); st.setProfile(null); }
   if (p.models.length || p.prepared_id || p.last_job_id || (!sameModality && p.dataset_id)) {
     toast.info(sameModality ? "Switched problem type — model picks and preparation were reset." : "Switched to a different kind of data — models, data and preparation were reset.");
   }
+}
+
+/** A new forecasting project starts with a sensible line-up (the seasonal-naive baseline is added at training anyway). */
+function seedForecastModels() {
+  const st = useProject.getState();
+  st.ensureRegistry()
+    .then((reg) => {
+      const p = useProject.getState().project;
+      if (!p || p.task !== "forecasting" || p.models.length) return;
+      const models = FORECAST_STARTER.map((id) => reg.find((s) => s.id === id)).filter((s) => !!s).map((s) => modelConfigFor(s!));
+      if (models.length) useProject.getState().update({ models });
+    })
+    .catch(() => { /* the Models step offers the starter set too */ });
 }
 
 export function ProblemStep() {
@@ -137,7 +164,9 @@ export function ProblemStep() {
 
   const current = problems.find((p) => p.task === task && p.modality === modality);
   const status = current
-    ? current.task === "recommendation"
+    ? current.task === "forecasting"
+      ? <>Great — we'll learn from the <b>past</b> and forecast <b>what comes next</b>.</>
+      : current.task === "recommendation"
       ? <>Great — we'll learn people's <b>tastes</b> and suggest what they'll like next.</>
       : current.unsupervised
       ? <>Great — no answers needed. We'll explore: <b>{current.question.replace(/\?$/, "").toLowerCase()}?</b></>
@@ -155,6 +184,7 @@ export function ProblemStep() {
             <br /><br />The first big choice is <b>what kind of answer</b> it gives: a <b>category</b> (classification) or a <b>number</b> (regression).
             <br /><br />The second is <b>what the examples are</b>: rows in a table, <b>pictures</b>, or <b>sentences</b>. Together they decide which algorithms and scores make sense later on.
             <br /><br />No answer column at all? That's <b>unsupervised learning</b> — the <b>Discover</b> problems find groups, draw a map of your data or flag the odd rows out, all without being told what's right.
+            <br /><br />Got <b>values measured over time</b> — sales per day, visitors per hour? That's <b>forecasting</b>: learn the trend and the rhythm, then continue the line into the future.
             <br /><br />Got <b>people</b> and the <b>things they rated or bought</b>? That's a <b>recommender</b> — it learns tastes and fills in the blanks: what would this person rate highly that they haven't seen yet?</>}
         />
       }
@@ -207,6 +237,7 @@ export function ProblemStep() {
           <TextQuestion on={modality === "text" && !!task} />
           <DiscoverQuestion problems={discover} task={task} />
           <RecommendQuestion on={task === "recommendation"} available={problems.some((p) => p.id === "recommendation" && p.enabled)} />
+          <ForecastQuestion on={task === "forecasting"} available={problems.some((p) => p.id === "forecasting" && p.enabled)} />
         </div>
       </Glass>
     </StepLayout>
@@ -255,6 +286,29 @@ function RecommendQuestion({ on, available }: { on: boolean; available: boolean 
         ))}
       </div>
       <div className="row" style={{ minWidth: 170 }}><PictureButton on={on} onClick={() => chooseProblem("recommendation", "ratings")}>🎬 Yes → Recommend</PictureButton></div>
+    </div>
+  );
+}
+
+/** "Values measured over time? → Forecast". */
+function ForecastQuestion({ on, available }: { on: boolean; available: boolean }) {
+  if (!available) return null;
+  const bars = [0.5, 0.42, 0.55, 0.62, 0.78, 1, 0.7, 0.52, 0.45, 0.6];
+  return (
+    <div className="inset row wrap" style={{ padding: 14, gap: 14, flex: "1 1 100%", transition: "border-color .2s", borderColor: on ? "var(--accent)" : undefined }}>
+      <div className="col" style={{ gap: 6, flex: "2 1 300px" }}>
+        <span className="small" style={{ fontWeight: 650 }}>6 · Do you have one number measured again and again over time?</span>
+        <span className="tiny muted" style={{ lineHeight: 1.55 }}>
+          Sales per day, visitors per hour, passengers per month → <b>Forecast</b>. The model learns the trend and the rhythm of the past, then continues the line.
+        </span>
+      </div>
+      <div className="row" style={{ gap: 3, alignItems: "flex-end", height: 34 }}>
+        {bars.map((h, i) => (
+          <motion.span key={i} animate={{ scaleY: [1, 0.85, 1] }} transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.12 }}
+            style={{ width: 7, height: 34 * h, borderRadius: 3, transformOrigin: "bottom", background: i >= 7 ? "var(--warning)" : on ? "var(--accent)" : "var(--fill-2)", opacity: i >= 7 ? 0.75 : 1 }} />
+        ))}
+      </div>
+      <div className="row" style={{ minWidth: 170 }}><PictureButton on={on} onClick={() => chooseProblem("forecasting", "timeseries")}>⏱️ Yes → Forecast</PictureButton></div>
     </div>
   );
 }

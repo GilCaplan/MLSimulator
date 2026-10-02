@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { spring } from "../../../design/motion";
 import type { DatasetProfile, PipelineSpec } from "../../../lib/types";
-import { fmtMs, isDateSeries, tNum } from "../../data/timeseries/tsData";
+import { fmtMs, isDateSeries, partColor, tNum } from "../../data/timeseries/tsData";
 import { TimeChart } from "../../data/timeseries/viz";
 import { Slider } from "../../glass";
 import { StageCard } from "../StageCard";
@@ -62,7 +62,7 @@ export function HorizonCard({ spec, profile, lim, open, onToggle, flash }: {
           {hist.length > 1 && fut ? (
             <TimeChart key={H} height={150} isDate={isDate}
               lines={[{ key: "history", color: "var(--accent)", points: hist }, { key: "future", color: "var(--text-3)", points: ghost, dashed: true, width: 1.4 }]}
-              bands={[{ x0: fut.x0, x1: fut.x1, color: "#FF9F0A", label: "forecast ?" }]} />
+              bands={[{ x0: fut.x0, x1: fut.x1, color: partColor("test"), label: "forecast ?" }]} />
           ) : <div className="skeleton" style={{ height: 150 }} />}
         </div>
       </div>

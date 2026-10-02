@@ -5,7 +5,7 @@ import { CoachPanel, NextBar, StepLayout, useStepLabel } from "../components/she
 import { LiveDashboard } from "../components/train/LiveDashboard";
 import { TrainResults } from "../components/train/TrainResults";
 import { TrainSetup } from "../components/train/TrainSetup";
-import { isRecsys, liveProjectId } from "../components/train/util";
+import { isForecast, isRecsys, liveProjectId } from "../components/train/util";
 import { navigate } from "../lib/router";
 import { isUnsupervised, useJob, useProject } from "../lib/store";
 
@@ -41,7 +41,13 @@ export function TrainStep() {
   const txt = project.modality === "text";
   const unsup = isUnsupervised(project.task);
   const rec = isRecsys(project.task);
-  const intro = rec ? {
+  const fc = isForecast(project.task);
+  const intro = fc ? {
+    cta: <>Before training, your series needs to be prepared — the time, value and series columns chosen, clues like lags and calendar flags built from the past, and the last stretch of time hidden away for the exam.</>,
+    setup: <>Each model learns to guess <b>the next step</b> from what came before. The exam: we hide the <b>last stretch</b> of the series and ask for a forecast of all of it — <b>one guess feeding the next</b>, like a real forecast. <b>Same as last season</b> (next Monday = last Monday) is the baseline to beat.</>,
+    live: <>Most forecasters learn in one go. The <b>GRU</b> learns epoch by epoch: watch its training and validation loss fall. Those losses are one-step errors — the real exam is the multi-step forecast that comes after.</>,
+    results: <>Rank by <b>MAE</b> — the average miss in your series' own units. <b>MASE</b> below 1 means a model beats “same as last season”. Open a model's <b>Forecast</b> to see its guesses against what really happened, and <b>Error growth</b> to watch errors snowball further ahead.</>,
+  }[mode] : rec ? {
     cta: <>Before training, your ratings need to be prepared — viewers and films with too few ratings filtered out, and each viewer's most recent ratings hidden away for the exam.</>,
     setup: <>Each model studies <b>who rated what</b>, then writes a <b>top-10 list</b> for every viewer. The exam: how many of the films each viewer rated (and liked) <i>most recently</i> made their list? <b>Most popular</b> gives everyone the same list — it's the baseline to beat.</>,
     live: <>Most recommenders learn in one go. <b>Matrix factorisation</b> learns step by step: every round it refines a hidden “taste vector” for each viewer and film, and the <b>RMSE</b> lines show its star-guesses getting closer.</>,
@@ -81,7 +87,7 @@ export function TrainStep() {
   return (
     <StepLayout
       title={stepLabel}
-      subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : rec ? "Teach your models who likes what — then see whose top-10 lists hit the mark." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
+      subtitle={mode === "results" ? "The results are in. Compare the models and dig into how each one behaves." : fc ? "Teach your models the rhythm of the series — then see whose forecast of the hidden future comes closest." : rec ? "Teach your models who likes what — then see whose top-10 lists hit the mark." : unsup ? "Let your models explore the data on their own — and watch what they discover." : "Send your models off to learn from the data — and watch it happen live."}
       coach={<CoachPanel intro={intro} suggestions={mode === "results" ? result?.coach ?? [] : []} />}
       footer={
         <NextBar back="prepare" next="improve" nextLabel={nextLabel} nextDisabled={!result}

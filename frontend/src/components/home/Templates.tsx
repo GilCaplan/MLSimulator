@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "../../lib/api";
 import { fadeUp, stagger } from "../../design/motion";
 import { navigate } from "../../lib/router";
 import { toast } from "../../lib/store";
@@ -9,6 +10,12 @@ import { createFromTemplate, TASK_BADGE, TEMPLATES, type Template } from "./temp
 /** Quick-start cards that create a ready-to-go project (data + models) and jump straight to Models. */
 export function Templates() {
   const [busy, setBusy] = useState<string | null>(null);
+  // problems still switched off on the server (e.g. while their UI is being built) keep their templates hidden
+  const [disabled, setDisabled] = useState<Set<string>>(new Set(["forecasting"]));
+  useEffect(() => {
+    api.problems().then((ps) => setDisabled(new Set(ps.filter((p) => !p.enabled).map((p) => p.task as string)))).catch(() => {});
+  }, []);
+  const shown = TEMPLATES.filter((t) => !(disabled.has(t.task) && t.task === "forecasting"));
 
   const start = async (t: Template) => {
     if (busy) return;
@@ -30,7 +37,7 @@ export function Templates() {
         <p className="muted">One click: a dataset, a goal and a few models, ready to train.</p>
       </div>
       <motion.div variants={stagger(0.06)} initial="hidden" animate="show" className="grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(208px, 1fr))", gap: 14 }}>
-        {TEMPLATES.map((t) => (
+        {shown.map((t) => (
           <motion.button
             key={t.id}
             variants={fadeUp}
@@ -50,6 +57,7 @@ export function Templates() {
                 {t.modality === "image" && <span className="badge" title="Learns from pictures" style={{ padding: "0 7px" }}>🖼️</span>}
                 {t.modality === "text" && <span className="badge" title="Learns from text" style={{ padding: "0 7px" }}>💬</span>}
                 {t.modality === "ratings" && <span className="badge" title="Learns from star ratings" style={{ padding: "0 7px" }}>⭐</span>}
+                {t.modality === "timeseries" && <span className="badge" title="Learns from a time series" style={{ padding: "0 7px" }}>⏱️</span>}
                 <span className={`badge ${TASK_BADGE[t.task]?.cls ?? ""}`} style={TASK_BADGE[t.task]?.style}>
                   {TASK_BADGE[t.task]?.label ?? t.task}
                 </span>
@@ -59,7 +67,7 @@ export function Templates() {
             <b style={{ fontSize: 15, letterSpacing: "-0.01em" }}>{t.title}</b>
             <span className="small muted" style={{ lineHeight: 1.45 }}>{t.blurb}</span>
             <div className="grow" />
-            <span className="tiny faint">{busy === t.id ? (t.imageSet ? "Drawing the pictures…" : t.textSet ? "Writing the messages…" : t.ratingsSet ? "Collecting the ratings…" : "Setting things up…") : `${t.models.length} models${t.truth ? " · hidden answers to check" : ""} · opens on Models →`}</span>
+            <span className="tiny faint">{busy === t.id ? (t.imageSet ? "Drawing the pictures…" : t.textSet ? "Writing the messages…" : t.ratingsSet ? "Collecting the ratings…" : t.timeseriesSet ? "Recording two years of sales…" : "Setting things up…") : `${t.models.length} models${t.truth ? " · hidden answers to check" : ""} · opens on Models →`}</span>
           </motion.button>
         ))}
       </motion.div>
