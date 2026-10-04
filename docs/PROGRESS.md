@@ -1,5 +1,16 @@
 # Build progress & resume checkpoint
 
+## Latest (2026-10-03, session 4 end) — everything committed, CI green, nothing in progress
+Done this session (newest first): model export/import (signed bundles, trust gate, architecture/weights, design
+transfer); ranking metric persisted + custom metrics (formulas / cost of mistakes); save-anytime + "Try it" on trained
+models; colour sweep (all screens template-aware); forecasting UI (enabled, no_peeking lesson); Labs (GAN, VAE,
+transfer, bandit, gridworld); UI customization (5 templates, backgrounds, per-control renderers, matrix-tested);
+lessons regularization / regression_metrics / thresholds; one-command installers for macOS/Linux/Windows +
+AGENT_INSTALL.md; Linux/Windows support.
+Possible next: tighten backend `/nn/validate` (accepts negative units / unknown layers by clamping);
+library list sparklines use a generic shape for forecasters.
+Test tooling: scratchpad-only `ui/ui_matrix.mjs` (modes default / --quick / --controls / --forecast / --labs).
+
 _Last updated: 2026-10-02 (session 4). If a session ends mid-task, start here._
 
 ## Done
