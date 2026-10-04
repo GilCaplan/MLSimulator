@@ -112,7 +112,18 @@ Most tips have a one-click fix. In lesson challenges the tips are hidden behind 
   - **Batch predictions**: drop a CSV, JSON or Excel file to predict every row and download the results. If the file
     contains the true answers, you also get scores and a confusion matrix.
   - **How it performed** and **Recipe**: the full configuration and data-preparation steps.
-  - **Export (.zip)**: the trained model plus its preprocessing.
+  - **Export ▾**:
+    - *Full bundle (.zip)*: the trained model, its data-preparation recipe, `architecture.json` (model type,
+      settings, network layers) and, for neural networks, PyTorch weights (`weights.pt`). Re-import it here or on
+      another computer.
+    - *Architecture only (.json)*: share the design without the trained weights.
+- **Import model** (Model Library): drop an exported bundle.
+  - Bundles exported from your own ML Playground import straight away.
+  - Bundles from anywhere else ask you to confirm that you trust the file first, because model files can run code
+    when they're opened. Damaged or modified bundles are refused.
+  - Imported models are marked 📥 Imported (plus "unverified source" when unsigned).
+- **Network designs**: in a neural network's settings on the Models step, *Export design* / *Import design* moves
+  a layer layout between models or projects.
 
 ## Forecasting in short
 - **Series step**: pick a built-in series (shop sales, electricity demand, airline passengers, website visits) or upload

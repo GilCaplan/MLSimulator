@@ -4,6 +4,7 @@ import type { ModelConfig, NNArch, Task } from "../../lib/types";
 import { HyperparamForm } from "../HyperparamForm";
 import { Modal } from "../glass";
 import { ArchPreview } from "./ArchPreview";
+import { DesignTransfer } from "./DesignTransfer";
 import { GcnBuilder, TransformerBuilder } from "./ArchBuilders";
 import { LayerBuilder } from "./LayerBuilder";
 import { badgesFor, familyOf, isTextKind, modalityOf } from "./meta";
@@ -64,6 +65,9 @@ export function ModelSettingsModal({ modelKey, label, onClose }: { modelKey: str
               <p className="muted small" style={{ lineHeight: 1.5, maxWidth: 640 }}>{spec.description}</p>
             </div>
           </div>
+
+          {spec.nn && spec.default_arch && <DesignTransfer key={cfg.key} cfg={cfg} spec={spec} task={(project?.task ?? null) as Task | null} label={label ?? spec.label}
+            apply={(p) => patchModel(cfg.key, p)} />}
 
           {spec.nn && arch && (
             <section className="col" style={{ gap: 12 }}>

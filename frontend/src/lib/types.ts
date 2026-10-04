@@ -660,6 +660,9 @@ export interface InputSchemaItem {
 export interface SavedModel {
   id: string;
   threshold?: number | null;
+  /** set on models imported from a bundle; imported_signed = the bundle was signed by this install */
+  imported_at?: number | null;
+  imported_signed?: boolean;
   name: string;
   notes: string;
   task: Task | UnsupervisedTask;

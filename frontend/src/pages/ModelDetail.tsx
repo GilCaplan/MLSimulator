@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { EmptyState, Glass, ProgressRing } from "../components/glass";
 import { BatchPredict } from "../components/library/BatchPredict";
+import { ExportMenu } from "../components/library/ExportMenu";
+import { ImportedBadge } from "../components/library/ImportedBadge";
 import { ImagePlayground } from "../components/library/ImagePlayground";
 import { Performance } from "../components/library/Performance";
 import { Playground } from "../components/library/Playground";
@@ -63,7 +65,7 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
         <button className="btn ghost sm" onClick={() => navigate("/library")}>← Model Library</button>
         <div className="row wrap" style={{ gap: 8 }}>
           {model.project_id && <button className="btn sm" onClick={() => navigate(`/p/${model.project_id}/train`)}>🧭 Open source project</button>}
-          <a className="btn sm" href={api.exportUrl(model.id)} download>⬇︎ Export (.zip)</a>
+          <ExportMenu model={model} />
         </div>
       </div>
       <div className="row" style={{ gap: 20, alignItems: "flex-start" }}>
@@ -86,6 +88,7 @@ function Header({ model, onPatch }: { model: SavedModel; onPatch: (p: { name?: s
             {model.dataset?.name && <span className="badge">📊 {model.dataset.name}{model.dataset.n_rows ? ` · ${model.dataset.n_rows.toLocaleString()} ${fc ? "rows" : model.modality === "image" ? "pictures" : isTextModel(model) ? "texts" : rec ? "ratings" : "rows"}` : ""}</span>}
             {model.n_params != null && <span className="badge accent">🧮 {model.n_params.toLocaleString()} params</span>}
             <span className="badge">🕒 saved {timeAgo(model.created_at)}</span>
+            <ImportedBadge model={model} />
           </div>
         </div>
         <div className="col center" style={{ gap: 4, flexShrink: 0 }}>

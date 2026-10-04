@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { AnimatedNumber, EmptyState, Glass, Modal, Segmented, Spinner } from "../components/glass";
+import { ImportModal } from "../components/library/ImportModal";
 import { CardSkeleton, ModelCard } from "../components/library/ModelCard";
 import { PageFrame, PageHeader, emojiFor, isForecastModel, isRecsysModel, isTextModel, rise, useRegistry } from "../components/library/shared";
 import { api } from "../lib/api";
@@ -18,6 +19,7 @@ export function LibraryPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [doomed, setDoomed] = useState<SavedModel | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     api.library().then(setModels).catch((e) => { toast.error(e); setModels([]); });
@@ -82,6 +84,7 @@ export function LibraryPage() {
           </span>
         }
         subtitle="Every model you save lands here — open one to play with live predictions, run a whole file through it, or export it."
+        right={<button className="btn" onClick={() => setImporting(true)}>📥 Import model</button>}
       />
 
       {models && total > 0 && (
@@ -121,7 +124,12 @@ export function LibraryPage() {
             icon="📚"
             title="No saved models yet"
             text="Train a model in one of your projects, then press “Save to library” on the one you like. It will show up here, ready to make predictions."
-            action={<button className="btn primary" onClick={() => navigate("/")}>Go to projects →</button>}
+            action={
+              <div className="row wrap center" style={{ gap: 8 }}>
+                <button className="btn primary" onClick={() => navigate("/")}>Go to projects →</button>
+                <button className="btn" onClick={() => setImporting(true)}>📥 Import a model file</button>
+              </div>
+            }
           />
         </Glass>
       ) : (
@@ -140,6 +148,16 @@ export function LibraryPage() {
           )}
         </motion.div>
       )}
+
+      <ImportModal
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImported={(m) => {
+          setImporting(false);
+          setModels((list) => [m, ...(list ?? [])]);
+          navigate(`/library/${m.id}`);
+        }}
+      />
 
       <Modal
         open={!!doomed}

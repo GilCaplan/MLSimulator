@@ -7,6 +7,7 @@ import type { SavedModel } from "../../lib/types";
 import { ProgressRing, Tooltip } from "../glass";
 import { Thumb } from "../train/visionKit";
 import { genreColor, genreIcon } from "../train/recsys/recKit";
+import { ImportedBadge } from "./ImportedBadge";
 import { EditableText, headline, isForecastModel, isRecsysModel, isTextModel, taskMeta } from "./shared";
 import type { ForecastResult } from "../../lib/types";
 
@@ -102,6 +103,7 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
           {isTextModel(model) && <span className="badge">💬 Text</span>}
           {isRecsysModel(model) && <span className="badge" title="Learns from star ratings">⭐ Ratings</span>}
           {isForecastModel(model) && <span className="badge" title="Learns from a time series">⏱️ Time series</span>}
+          <ImportedBadge model={model} compact />
           {model.dataset?.name && <span className="badge truncate" style={{ maxWidth: 170 }} title={model.dataset.name}>📊 {model.dataset.name}</span>}
           <span className="grow" />
           <span className="tiny faint">{timeAgo(model.created_at)}</span>
