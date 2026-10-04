@@ -10,6 +10,7 @@ import { genreColor, genreIcon } from "../train/recsys/recKit";
 import { ImportedBadge } from "./ImportedBadge";
 import { EditableText, headline, isForecastModel, isRecsysModel, isTextModel, taskMeta } from "./shared";
 import type { ForecastResult } from "../../lib/types";
+import { ExportMenu } from "./ExportMenu";
 
 /** One saved model in the library grid. */
 export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: string; onRename: (name: string) => void; onDelete: () => void }>(
@@ -53,6 +54,9 @@ export const ModelCard = forwardRef<HTMLDivElement, { model: SavedModel; emoji: 
             <span className="small muted truncate">{model.label}</span>
           </div>
           <motion.div className="row" style={{ gap: 2 }} animate={{ opacity: hover || renaming ? 1 : 0 }} transition={{ duration: 0.15 }}>
+            <Tooltip content="Export (bundle or architecture)" width={190}>
+              <ExportMenu model={model} compact />
+            </Tooltip>
             <Tooltip content="Rename" width={80}>
               <button className="btn ghost sm icon" aria-label="Rename" onClick={(e) => { e.stopPropagation(); setRenaming(true); }}>✏️</button>
             </Tooltip>

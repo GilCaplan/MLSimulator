@@ -33,7 +33,8 @@ const MENU_CSS = `
 `;
 
 /** "Export ▾" on a saved model's page: full bundle, architecture-only JSON, PyTorch weights hint, and "What's inside?". */
-export function ExportMenu({ model }: { model: SavedModel }) {
+/** `compact`: an icon-only trigger for model cards (clicks never reach the card underneath). */
+export function ExportMenu({ model, compact = false }: { model: SavedModel; compact?: boolean }) {
   const btn = useRef<HTMLButtonElement>(null);
   const infoBtn = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -58,15 +59,20 @@ export function ExportMenu({ model }: { model: SavedModel }) {
   return (
     <>
       <style>{MENU_CSS}</style>
-      <div className="row" style={{ gap: 4 }}>
-        <button ref={btn} className={`btn sm${open ? " primary" : ""}`} aria-haspopup="menu" aria-expanded={open} onClick={() => { setInfo(false); setOpen((o) => !o); }}>
-          ⬇︎ Export <span style={{ fontSize: 10, opacity: 0.8 }}>▾</span>
-        </button>
-        <button ref={infoBtn} className="btn ghost sm icon" aria-label="What's inside an export?" title="What's inside?" onClick={() => { setOpen(false); setInfo((o) => !o); }}>ⓘ</button>
-      </div>
+      {compact ? (
+        <button ref={btn} className={`btn ghost sm icon${open ? " primary" : ""}`} aria-label="Export" aria-haspopup="menu" aria-expanded={open}
+          onClick={(e) => { e.stopPropagation(); setInfo(false); setOpen((o) => !o); }}>⬇️</button>
+      ) : (
+        <div className="row" style={{ gap: 4 }}>
+          <button ref={btn} className={`btn sm${open ? " primary" : ""}`} aria-haspopup="menu" aria-expanded={open} onClick={() => { setInfo(false); setOpen((o) => !o); }}>
+            ⬇︎ Export <span style={{ fontSize: 10, opacity: 0.8 }}>▾</span>
+          </button>
+          <button ref={infoBtn} className="btn ghost sm icon" aria-label="What's inside an export?" title="What's inside?" onClick={() => { setOpen(false); setInfo((o) => !o); }}>ⓘ</button>
+        </div>
+      )}
 
       <Popover anchor={btn} open={open} onClose={() => setOpen(false)} width={420}>
-        <div role="menu" className="col" style={{ gap: 2 }}>
+        <div role="menu" className="col" style={{ gap: 2 }} onClick={(e) => e.stopPropagation()}>
           <a role="menuitem" className="exm-item" href={api.exportUrl(model.id)} download onClick={() => { setOpen(false); toast.info("Preparing the bundle — your download will start in a moment."); }}>
             <span className="exm-ico">🗜️</span>
             <span className="col" style={{ gap: 2 }}>
