@@ -40,7 +40,8 @@ class Job:
     def summary(self) -> dict:
         return {"id": self.id, "kind": self.kind, "status": self.status, "created_at": self.created_at,
                 "started_at": self.started_at, "ended_at": self.ended_at, "error": self.error,
-                "progress": self.progress, "project_id": self.request.get("project_id")}
+                "progress": self.progress, "project_id": self.request.get("project_id"),
+                "prepared_id": self.request.get("prepared_id")}
 
 
 class JobManager:
@@ -94,6 +95,19 @@ class JobManager:
         d = DATA_DIR / "jobs" / job.id
         d.mkdir(parents=True, exist_ok=True)
         (d / "result.json").write_text(json.dumps(jsonable({"job": job.summary(), "request": job.request, "result": job.result})))
+        (d / "job.json").write_text(json.dumps(jsonable(job.summary())))
+
+    def finished_on_disk(self) -> list[dict]:
+        """Summaries of jobs from earlier server runs (in-memory jobs are listed from memory)."""
+        out = []
+        for p in (DATA_DIR / "jobs").glob("*/job.json"):
+            if p.parent.name in self.jobs:
+                continue
+            try:
+                out.append(json.loads(p.read_text()))
+            except (OSError, ValueError):
+                pass
+        return out
 
     def load_result(self, jid: str) -> dict | None:
         if jid in self.jobs and self.jobs[jid].result is not None:

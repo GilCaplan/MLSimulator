@@ -118,7 +118,7 @@ export const api = {
     post<{ job_id: string }>("/jobs/train", body),
   tune: (body: { prepared_id: string; model_id: string; params: Record<string, any>; space: Record<string, any>; search: "random" | "grid"; n_iter: number; cv: number; scoring?: string; project_id?: string }) =>
     post<{ job_id: string }>("/jobs/tune", body),
-  jobs: () => get<{ id: string; kind: string; status: string; project_id?: string; created_at: number }[]>("/jobs"),
+  jobs: () => get<{ id: string; kind: string; status: string; project_id?: string; prepared_id?: string; created_at: number }[]>("/jobs"),
   /** k sweep for clustering → job with `sweep.k` events, result via sweepResult */
   sweep: (body: { prepared_id: string; model_id: "kmeans" | "gmm" | "agglomerative"; k_min: number; k_max: number; project_id?: string }) =>
     post<{ job_id: string }>("/jobs/sweep", body),

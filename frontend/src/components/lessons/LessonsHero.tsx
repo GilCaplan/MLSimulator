@@ -25,7 +25,7 @@ export function LessonsHero({ lessons, next, onContinue }: { lessons: LessonSumm
       <div className="row wrap" style={{ gap: 28, alignItems: "center" }}>
         <div className="col" style={{ gap: 16, flex: "1 1 520px", minWidth: 0 }}>
           <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="badge accent" style={{ alignSelf: "flex-start" }}>
-            🎓 Lessons · 8 classic pitfalls
+            🎓 Lessons · {total} classic pitfalls
           </motion.span>
           <motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...spring.gentle, delay: 0.15 }}
             style={{ fontSize: "clamp(32px, 4.4vw, 48px)", lineHeight: 1.05, letterSpacing: "-0.035em" }}>

@@ -336,13 +336,32 @@ export function attachTrainJob(job_id: string, projectId: string, models: { key:
   });
 }
 
-/** After a page reload, re-attach to a training job that is still running for this project. */
+/** After a page reload, re-attach to a training job that is still running for this project — or pick up the
+ *  results of one that finished while no tab was watching (closed tab, sleeping laptop), so they aren't lost. */
 export async function resumeRunningJob(projectId: string) {
   if (useJob.getState().status === "running") return;
   try {
     const jobs = await api.jobs();
-    const job = jobs.find((j) => j.kind === "train" && j.project_id === projectId && (j.status === "running" || j.status === "queued"));
-    if (job) attachTrainJob(job.id, projectId, []);
+    const mine = jobs.filter((j) => j.kind === "train" && j.project_id === projectId);
+    const job = mine.find((j) => j.status === "running" || j.status === "queued");
+    if (job) {
+      attachTrainJob(job.id, projectId, []);
+      return;
+    }
+    const p = useProject.getState().project;
+    if (!p || p.id !== projectId || !p.prepared_id) return;
+    const seen = new Set([p.last_job_id, ...(p.history || []).map((h) => h.job_id)]);
+    const lastAt = Math.max(0, ...(p.history || []).map((h) => h.at));
+    const missed = mine
+      .filter((j) => j.status === "finished" && j.prepared_id === p.prepared_id && !seen.has(j.id) && j.created_at > lastAt)
+      .sort((a, b) => b.created_at - a.created_at)[0];
+    if (!missed) return;
+    const result = await api.result(missed.id);
+    const cur = useProject.getState();
+    if (cur.project?.id !== projectId) return;
+    cur.setResult(result);
+    cur.update((pp) => ({ last_job_id: missed.id, history: [...(pp.history || []), { job_id: missed.id, at: missed.created_at, leaderboard: result.leaderboard }] }));
+    toast.info("Picked up the results of training that finished while this page was closed.");
   } catch { /* server may be restarting */ }
 }
 

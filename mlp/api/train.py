@@ -64,7 +64,8 @@ def start_sweep(body: dict = Body(...)):
 
 @router.get("/jobs")
 def list_jobs():
-    return [j.summary() for j in sorted(manager.jobs.values(), key=lambda j: -j.created_at)][:50]
+    jobs = [j.summary() for j in manager.jobs.values()] + manager.finished_on_disk()
+    return sorted(jobs, key=lambda j: -j["created_at"])[:50]
 
 
 @router.get("/jobs/{jid}")
