@@ -109,6 +109,35 @@ async def predict_file(mid: str, file: UploadFile = File(...)):
     return jsonable(library.predict_frame(mid, df))
 
 
+
+@router.post("/library/{mid}/check-file")
+async def check_file(mid: str, file: UploadFile = File(...)):
+    """Step 1 of testing on a new file: upload it and see which of the model's columns it has, lacks or has trouble with."""
+    path = await _save_upload(file)
+    try:
+        df = clean_frame(read_table(path, file.filename or "data.csv"))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"Couldn't read that file: {e}") from None
+    finally:
+        path.unlink(missing_ok=True)
+    return jsonable(library.check_file(mid, df))
+
+
+@router.post("/library/{mid}/check-upload")
+def check_upload(mid: str, body: dict = Body(...)):
+    """Re-check a staged file after the learner matched columns, filled values or cleaned them (`fixes`)."""
+    return jsonable(library.recheck(mid, body["upload_id"], body.get("fixes") or {}))
+
+
+@router.post("/library/{mid}/model-view")
+def model_view(mid: str, body: dict = Body(...)):
+    return jsonable(library.model_view(mid, body["upload_id"], body.get("fixes") or {}))
+
+
+@router.post("/library/{mid}/predict-upload")
+def predict_upload(mid: str, body: dict = Body(...)):
+    return jsonable(library.predict_upload(mid, body["upload_id"], body.get("fixes") or {}))
+
 @router.post("/library/import")
 async def import_model(file: UploadFile = File(...), trust: bool = False):
     """Import an exported bundle. Unsigned bundles answer 409 {needs_trust, reason, summary} until re-sent with ?trust=true."""
