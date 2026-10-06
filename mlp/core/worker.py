@@ -273,6 +273,12 @@ def serve_entry(conn, family: str):
         if op == "predict":
             out, _ = predict_frame(pp, est, pd.DataFrame(kw["rows"]))
             return out
+        if op == "transform_rows":
+            names = list(getattr(pp, "feature_names_out", None) or [])
+            if not names or kw["frame"].empty:
+                return {"model": None}
+            X = np.asarray(pp.transform(kw["frame"]), dtype=float)
+            return {"model": {"columns": names, "rows": np.round(X, 4).tolist()}}
         if op == "predict_frame":
             df = kw["frame"]
             out, pred = predict_frame(pp, est, df)

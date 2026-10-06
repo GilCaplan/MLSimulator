@@ -11,7 +11,7 @@ import pandas as pd
 
 from ..config import DATA_DIR
 from ..util.jsonable import jsonable
-from . import procs
+from . import filecheck, procs
 from .jobs import manager
 from .store import datasets, new_id, prepared_store
 
@@ -164,6 +164,47 @@ def predict_frame(mid: str, df: pd.DataFrame) -> dict:
 BUNDLE_FILES = {"meta.json", "result.json", "model.joblib", "preprocessor.joblib", "architecture.json", "weights.pt",
                 "MANIFEST.json", "SIGNATURE", "README.txt"}
 MAX_IMPORT_BYTES = 500 * 1024 * 1024
+
+
+# ----------------------------------------------------------------------------- new file: check, fix, then predict
+def _meta(mid: str) -> dict:
+    p = ROOT / mid / "meta.json"
+    if not p.exists():
+        raise KeyError(mid)
+    return json.loads(p.read_text())
+
+
+def check_file(mid: str, df: pd.DataFrame) -> dict:
+    """Stage an uploaded file and report how its columns line up with the model's inputs (with obvious renames pre-matched)."""
+    meta = _meta(mid)
+    fixes = {"mapping": filecheck.auto_mapping(df, meta), "fill": {}, "clean": []}
+    return {"upload_id": filecheck.stage(df), "fixes": fixes, "report": filecheck.check(df, meta, fixes)}
+
+
+def recheck(mid: str, upload_id: str, fixes: dict) -> dict:
+    return filecheck.check(filecheck.load(upload_id), _meta(mid), fixes)
+
+
+def predict_upload(mid: str, upload_id: str, fixes: dict) -> dict:
+    meta = _meta(mid)
+    raw = filecheck.load(upload_id)
+    report = filecheck.check(raw, meta, fixes)
+    if not report["ready"]:
+        missing = [c["name"] for c in report["columns"] if c["status"] == "missing"]
+        raise ValueError(f"Still missing: {', '.join(missing)}. Match each to a column in your file or fill it with a value.")
+    out = predict_frame(mid, filecheck.apply_fixes(raw, meta, fixes))
+    out["warnings"] = filecheck.warnings_of(report)
+    return out
+
+
+def model_view(mid: str, upload_id: str, fixes: dict) -> dict:
+    """A few of the file's rows as typed, next to the numbers the model actually receives after the saved recipe."""
+    meta = _meta(mid)
+    df = filecheck.preview_rows(filecheck.apply_fixes(filecheck.load(upload_id), meta, fixes))
+    names = [s["name"] for s in meta.get("input_schema") or []]
+    raw = df.reindex(columns=names)
+    out = procs.call(_fam(mid), "transform_rows", model_dir=str(ROOT / mid), frame=df)
+    return {"raw": {"columns": names, "rows": raw.astype("object").where(raw.notna(), None).values.tolist()}, **out}
 
 
 def _bundle_key() -> bytes:

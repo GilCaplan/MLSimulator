@@ -1,6 +1,6 @@
 import type { UIPrefs } from "../design/prefs";
 import type {
-  ArchSummary, BatchPredictResponse, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
+  ArchSummary, BatchPredictResponse, FileCheckReport, FileCheckResponse, FileFixes, ModelView, Catalog, DatasetProfile, DatasetSummary, Health, ModelSpec, NNArch, PipelineSpec,
   PortsInfo, PredictResponse, PrepareReport, Project, RunResult, SavedModel, SyntheticPreview, SyntheticSpec, SystemInfo,
   Task, TuneResult, ModelConfig, TrainOptions, FeatureStep, ColumnSummary, ProblemType, ImageSetInfo, ImagePredictResponse, Modality, SweepResult, AssignResponse, TextSetInfo, TextPredictResponse, RatingsSetInfo, RecommendResponse, RecItem, TimeseriesSetInfo, ForecastResponse, LabsCatalog, TryExample, TryResult, TryInputs, ModelArchitecture, LessonSummary, Lesson, LessonProgress, ChallengeCheck,
 } from "./types";
@@ -177,6 +177,14 @@ export const api = {
     fd.append("file", file);
     return req<BatchPredictResponse>("POST", `/library/${id}/predict-file`, fd);
   },
+  checkFile: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return req<FileCheckResponse>("POST", `/library/${id}/check-file`, fd);
+  },
+  checkUpload: (id: string, upload_id: string, fixes: FileFixes) => post<FileCheckReport>(`/library/${id}/check-upload`, { upload_id, fixes }),
+  modelView: (id: string, upload_id: string, fixes: FileFixes) => post<ModelView>(`/library/${id}/model-view`, { upload_id, fixes }),
+  predictUpload: (id: string, upload_id: string, fixes: FileFixes) => post<BatchPredictResponse>(`/library/${id}/predict-upload`, { upload_id, fixes }),
   // lessons
   lessons: () => get<LessonSummary[]>("/lessons"),
   lesson: (id: string) => get<Lesson>(`/lessons/${id}`),

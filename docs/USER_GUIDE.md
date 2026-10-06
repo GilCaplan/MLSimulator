@@ -109,8 +109,16 @@ Most tips have a one-click fix. In lesson challenges the tips are hidden behind 
 - Open a model to:
   - **Try it live**: one control per input (sliders, toggles, choices). The prediction updates as you move them. Tiny
     *what-if* curves under each slider show how the answer would change if only that input moved.
-  - **Batch predictions**: drop a CSV, JSON or Excel file to predict every row and download the results. If the file
-    contains the true answers, you also get scores and a confusion matrix.
+  - **Batch predictions**: drop a CSV, JSON or Excel file to predict every row and download the results. Before
+    predicting, a check lists each column the model needs as ready, to look at, or missing. Columns that differ only
+    in capitals or spacing are matched automatically. For each column you can:
+    - pick which column in your file holds it, or fill every row with one value;
+    - tidy numbers like `$1,200`, and match categories that differ only in capitals or spaces;
+    - choose a value for blanks.
+
+    The check also warns about values outside the training range and categories the model never saw. *What the model
+    will see* shows a few rows before and after the saved data recipe. If the file contains the true answers, you also
+    get scores and a confusion matrix.
   - **How it performed** and **Recipe**: the full configuration and data-preparation steps.
   - **Export ▾**:
     - *Full bundle (.zip)*: the trained model, its data-preparation recipe, `architecture.json` (model type,

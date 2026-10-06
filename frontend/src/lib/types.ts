@@ -704,6 +704,58 @@ export interface BatchPredictResponse {
   classes?: string[] | null;
   prediction_counts?: { labels: string[]; counts: number[] };
   prediction_hist?: Histogram;
+  /** problems the check found in the file that were left as they are (from /predict-upload) */
+  warnings?: string[];
+}
+
+/** Learner's fixes for a new file, keyed by the model's column names. */
+export interface FileFixes {
+  /** model column -> the file column that holds it */
+  mapping: Record<string, string>;
+  /** model column -> a value for every row (missing column) or for its blanks */
+  fill: Record<string, string | number>;
+  /** columns to tidy: numbers lose $ , % etc.; categories are matched ignoring case and spaces */
+  clean: string[];
+}
+
+export interface FileIssue {
+  kind: "missing" | "not_numbers" | "out_of_range" | "unseen" | "not_dates" | "blanks" | "filled";
+  level: "error" | "warn" | "info";
+  text: string;
+  rows?: number;
+  examples?: string[];
+  /** rows the "clean" fix would rescue */
+  fixable?: number;
+}
+
+export interface FileColumnCheck {
+  name: string;
+  type: InputSchemaItem["type"];
+  /** the file column feeding this input (null when missing or filled) */
+  source: string | null;
+  filled: boolean;
+  status: "ok" | "warn" | "error" | "missing";
+  issues: FileIssue[];
+  blanks: number;
+  examples?: string[];
+  suggestions?: string[];
+}
+
+export interface FileCheckReport {
+  n_rows: number;
+  columns: FileColumnCheck[];
+  extra: string[];
+  target: { name: string; source: string | null; suggestions: string[]; labelled?: number; unknown?: { rows: number; examples: string[] } | null } | null;
+  counts: { ok: number; warn: number; error: number; missing: number };
+  ready: boolean;
+  file_columns: string[];
+}
+
+export interface FileCheckResponse { upload_id: string; fixes: FileFixes; report: FileCheckReport }
+
+export interface ModelView {
+  raw: { columns: string[]; rows: any[][] };
+  model: { columns: string[]; rows: number[][] } | null;
 }
 
 export interface Health { ok: boolean; ready: boolean; port: number; pid: number; version: string; jobs_running: number }

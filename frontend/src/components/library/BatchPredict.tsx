@@ -5,9 +5,10 @@ import { api } from "../../lib/api";
 import { classColor } from "../../lib/colors";
 import { fmt } from "../../lib/format";
 import { toast } from "../../lib/store";
-import type { BatchPredictResponse, SavedModel } from "../../lib/types";
+import type { BatchPredictResponse, FileCheckResponse, FileFixes, SavedModel } from "../../lib/types";
 import { BarList, ConfusionMatrix, Histogram } from "../charts";
 import { AnimatedNumber, Dropzone, Glass, Spinner } from "../glass";
+import { FileCheck } from "./FileCheck";
 import { typicalRow } from "./inputs";
 import { MetricTiles, SectionTitle, rise } from "./shared";
 
@@ -33,19 +34,37 @@ const isPredCol = (c: string) => c === "prediction" || c.startsWith("prob_");
 /** Batch predictions: drop a file, get every row predicted, plus a score if the file had the answers. */
 export function BatchPredict({ model }: { model: SavedModel }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [checked, setChecked] = useState<FileCheckResponse | null>(null);
   const [res, setRes] = useState<BatchPredictResponse | null>(null);
   const [fileName, setFileName] = useState("");
 
-  const run = async (f: File) => {
+  const upload = async (f: File) => {
     setBusy(f.name);
     setFileName(f.name);
     try {
-      setRes(await api.predictFile(model.id, f));
+      setChecked(await api.checkFile(model.id, f));
     } catch (e) {
       toast.error(e);
     } finally {
       setBusy(null);
     }
+  };
+
+  const run = async (fixes: FileFixes) => {
+    if (!checked) return;
+    setBusy(fileName);
+    try {
+      setRes(await api.predictUpload(model.id, checked.upload_id, fixes));
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const reset = () => {
+    setRes(null);
+    setChecked(null);
   };
 
   const classes = res?.classes ?? model.classes ?? [];
@@ -56,25 +75,38 @@ export function BatchPredict({ model }: { model: SavedModel }) {
         id="batch"
         icon="📦"
         title="Batch predictions"
-        subtitle="Have a whole spreadsheet of new examples? Drop it here and the model will fill in an answer for every row."
-        right={res && <button className="btn sm" onClick={() => setRes(null)}>↺ Another file</button>}
+        subtitle="Have a whole spreadsheet of new examples? Drop it here, check its columns match what the model learned from, and the model will fill in an answer for every row."
+        right={res && <button className="btn sm" onClick={reset}>↺ Another file</button>}
       />
       <Glass>
         <AnimatePresence mode="wait" initial={false}>
-          {!res ? (
+          {!res && checked ? (
+            <motion.div key={`check-${checked.upload_id}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <FileCheck
+                model={model}
+                uploadId={checked.upload_id}
+                fileName={fileName}
+                initialFixes={checked.fixes}
+                initialReport={checked.report}
+                busy={!!busy}
+                onRun={run}
+                onCancel={reset}
+              />
+            </motion.div>
+          ) : !res ? (
             <motion.div key="drop" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="col" style={{ gap: 12 }}>
-              <Dropzone onFile={run} busy={!!busy} accept=".csv,.tsv,.txt,.json,.xlsx,.xls,.parquet">
+              <Dropzone onFile={upload} busy={!!busy} accept=".csv,.tsv,.txt,.json,.xlsx,.xls,.parquet">
                 {busy ? (
                   <div className="col center" style={{ gap: 10, padding: 10 }}>
                     <Spinner size={26} color="var(--accent)" />
-                    <b>Predicting every row of {busy}…</b>
+                    <b>Reading {busy}…</b>
                   </div>
                 ) : (
                   <div className="col center" style={{ gap: 8, padding: 10 }}>
                     <motion.span animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2.4 }} style={{ fontSize: 34 }}>📄</motion.span>
                     <b style={{ fontSize: 15 }}>Drop a CSV, JSON or Excel file — or click to choose</b>
                     <span className="small muted" style={{ maxWidth: 520 }}>
-                      It needs the same columns the model learned from. If it also has a <b>{model.target}</b> column, we'll check the model's answers against it.
+                      It needs the same columns the model learned from — next you'll see what matches and fix what doesn't. If it also has a <b>{model.target}</b> column, we'll check the model's answers against it.
                     </span>
                   </div>
                 )}
@@ -100,6 +132,17 @@ export function BatchPredict({ model }: { model: SavedModel }) {
                 <span className="grow" />
                 <a className="btn primary" href={api.downloadUrl(res.download_id)} download>⬇︎ Download CSV</a>
               </motion.div>
+
+              {res.warnings && res.warnings.length > 0 && (
+                <motion.details variants={rise} className="inset" style={{ padding: "10px 14px" }}>
+                  <summary className="small" style={{ cursor: "pointer" }}>
+                    ⚠️ <b>{res.warnings.length} thing{res.warnings.length === 1 ? "" : "s"} to keep in mind</b> about this file — the predictions may be less reliable for those rows
+                  </summary>
+                  <ul className="small muted" style={{ margin: "8px 0 0", paddingLeft: 22, lineHeight: 1.6 }}>
+                    {res.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                </motion.details>
+              )}
 
               <motion.div variants={rise} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))", gap: 16 }}>
                 <div className="inset" style={{ padding: 16 }}>
